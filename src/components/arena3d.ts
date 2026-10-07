@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createCoverHero } from './coverHero';
 import { createCoverGuardian } from './coverGuardian';
+import { createChapterBoss } from './chapterBoss';
 import { poseMage, type MageArticulation } from './magePose';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
@@ -86,7 +87,7 @@ export function createHero(): Rig & MageArticulation {
 }
 
 function createEnemy(theme: number): Rig {
-  return createCoverGuardian(theme);
+  return createChapterBoss(theme);
 }
 
 function makeCourtyard(scene: THREE.Scene) {
@@ -230,7 +231,7 @@ function disposeScene(scene: THREE.Scene) {
 
 /** Local articulated 3D models, physical lighting and bundled cover-matched campus art. */
 export function createArenaScene(host: HTMLDivElement, chapter: number, reducedMotion: boolean,
-  onPhase: (phase: string) => void, initialShot?: CinemaShot) {
+  onPhase: (phase: string) => void, initialShot?: CinemaShot, companion = false) {
   const theme = clamp(chapter, 1, 6);
   const scene = new THREE.Scene();
   scene.background = null;
@@ -260,7 +261,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   sun.shadow.bias = -.00015; sun.shadow.radius = 3; scene.add(sun);
   const fill = new THREE.DirectionalLight(0xc9efff, 1.25); fill.position.set(4, 3, -2); scene.add(fill);
   makeCourtyard(scene);
-  const hero = createHero(), enemy = createEnemy(theme); scene.add(hero.root, enemy.root);
+  const hero = createHero(), enemy = companion ? createCoverGuardian(1) : createEnemy(theme); scene.add(hero.root, enemy.root);
+  renderer.domElement.setAttribute('data-guardian', companion ? 'mimi-companion' : enemy.root.userData.character || enemy.root.userData.creature || 'sorting-robot');
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
   const drone = createDrone(scene), effects = createEffects(scene, theme);
   const cinemaMagic = new THREE.Group(); scene.add(cinemaMagic);

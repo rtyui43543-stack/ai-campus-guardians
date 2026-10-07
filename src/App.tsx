@@ -363,9 +363,10 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
     <div className="chapter-card-header"><div className="chapter-icon"><Icon size={23} /></div><span className="chapter-number">{modeNames[progress.settings.mode]} 0{chapter.id}</span>
       <span className={'chapter-status ' + (missions.every(l => progress.completed.includes(l.id)) ? 'complete' : '')}>{missions.every(l => progress.completed.includes(l.id)) ? <><Check size={13} />已完成</> : '尚未挑戰'}</span></div>
     <div className="chapter-card-body"><div><h3>{chapter.title}</h3><p>{chapter.subtitle}</p><span className="skill-label"><Sparkles size={13} />解鎖能力：{chapter.skill}</span></div><GuardianPortrait chapter={chapter.id} /></div>
-    <div className="level-list">{missions.map(level => <div className="level-entry" key={level.id}><button className={'level-row ' + (progress.completed.includes(level.id) ? 'completed' : '') + (nextLevel === level.id ? ' recommended' : '')} onClick={() => onLevel(level)}>
-      <span className="level-number">{progress.completed.includes(level.id) ? <Check size={15} /> : String(level.id).padStart(2, '0')}</span>
-      <span>{level.title}</span>{nextLevel === level.id ? <span className="next-tag">下一站</span> : null}<ChevronRight size={16} />
+    <div className="level-list">{missions.map(level => <div className="level-entry" key={level.id}><button className={'level-row ' + (progress.completed.includes(level.id) ? 'completed' : '') + (nextLevel === level.id ? ' recommended' : '')} aria-label={(progress.completed.includes(level.id) ? '再次挑戰：' : '開始闖關：') + level.title} onClick={() => onLevel(level)}>
+      <span className="level-play" aria-hidden="true"><Play size={23} fill="currentColor" /></span>
+      <span className="level-action"><strong>{progress.completed.includes(level.id) ? '再次挑戰' : '開始闖關'}</strong><span className="level-title">{level.title}</span></span>
+      {nextLevel === level.id ? <span className="next-tag">下一站</span> : null}<ArrowRight className="level-arrow" size={23} aria-hidden="true" />
     </button><LevelScore progress={progress} levelId={level.id} /></div>)}</div>
   </article>;
 }
