@@ -196,6 +196,50 @@ describe('generated complete offline pack', () => {
     build();
     expect(JSON.stringify(manifest)).toBe(before);
   });
+  it('keeps teacher preparation files online and rejects them in the student offline manifest', () => {
+    mkdirSync(resolve(folder, 'teacher'));
+    writeFileSync(resolve(folder, 'teacher', 'index.html'), '<a href="./question-list.csv">下載題庫</a><a href="../">學生遊戲</a>');
+    for (const name of ['question-list.csv', 'question-list.html', 'question-list.md', 'question-bank.json']) {
+      writeFileSync(resolve(folder, 'teacher', name), 'teacher answers');
+    }
+    writeFileSync(resolve(folder, 'manifest.webmanifest'), '{"name":"AI 校園守護隊","start_url":"./","scope":"./"}');
+    build();
+    const studentVersion = manifest.version;
+    expect(manifest.files).toHaveLength(5);
+    expect(manifest.files.some((file) => file.url.startsWith('/teacher/'))).toBe(false);
+    expect(manifest.files.find((file) => file.url.endsWith('.mp3'))).toBeDefined();
+    expect(readFileSync(resolve(folder, 'teacher', 'question-list.csv'), 'utf8')).toBe('teacher answers');
+    writeFileSync(resolve(folder, 'teacher', 'question-list.csv'), 'revised teacher answers');
+    build();
+    expect(manifest.version).toBe(studentVersion);
+    const checked = spawnSync(process.execPath, ['scripts/check-pages.mjs', folder], { cwd: process.cwd(), encoding: 'utf8' });
+    expect(checked.status, checked.stderr).toBe(0);
+    expect(JSON.parse(checked.stdout)).toMatchObject({ teacherFilesOnline: 5, teacherFilesOffline: 0 });
+    const teacherBytes = readFileSync(resolve(folder, 'teacher', 'question-list.csv'));
+    manifest.files.push({ url: '/teacher/question-list.csv', hash: sha(teacherBytes), size: teacherBytes.length, core: true });
+    manifest.totalBytes += teacherBytes.length;
+    writeFileSync(resolve(folder, 'offline-manifest.json'), JSON.stringify(manifest));
+    const rejected = spawnSync(process.execPath, ['scripts/check-pages.mjs', folder], { cwd: process.cwd(), encoding: 'utf8' });
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain('學生離線清單不得收錄教師教材');
+  });
+  it('leaves teacher pages to the network without serving an old cached answer or the student shell', async () => {
+    for (const scope of ['/', '/ethics-game/']) {
+      const scopedAssets = new Map([...assets].map(([url, bytes]) => [scope + url.slice(1), bytes]));
+      const worker = workerHarness(source, scopedAssets, new Map(), scope);
+      await worker.dispatch('install'); await worker.message('DOWNLOAD'); await worker.dispatch('activate');
+      const oldPack = [...worker.store.entries()].find(([name]) => name.startsWith('ai-campus-guardians-pack-'))![1];
+      oldPack.set(scope + 'teacher/question-list.csv', new Response('old cached answer key'));
+      worker.disconnect();
+      for (const path of ['teacher', 'teacher/', 'teacher/index.html', 'teacher/question-list.csv', '%74eacher/question-bank.json']) {
+        const request = { url: 'https://school.test' + scope + path, method: 'GET', mode: 'navigate', headers: new Headers() } as Request;
+        expect(await worker.dispatch('fetch', { request })).toBeUndefined();
+      }
+      const student = await worker.dispatch('fetch', { request: { url: 'https://school.test' + scope, method: 'GET', mode: 'navigate', headers: new Headers() } as Request });
+      expect(await student!.text()).toContain('守護隊');
+      expect((await worker.message('CHECK')).at(-1)!.state).toMatchObject({ ready: true });
+    }
+  });
   it('installs the shell without audio, then downloads and verifies the whole pack', async () => {
     const worker = workerHarness(source, assets);
     await worker.dispatch('install');

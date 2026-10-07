@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Download, FileCheck, Flag, HandHeart, Info, Lightbulb, Medal, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, Volume2, WifiOff } from 'lucide-react';
-import { chapters, levels, sourceLabels } from '../content/levels';
-import { presentQuestion, questionById, questions } from '../content';
+import { ArrowRight, BookOpen, ChevronRight, Download, Flag, Lightbulb, Medal, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, WifiOff } from 'lucide-react';
+import { chapters, levels } from '../content/levels';
+import { presentQuestion, questionById } from '../content';
 import type { CompletedRun, Level, Progress } from '../domain/types';
 import { scoreSession } from '../domain/scoring';
 import { exportBackup, parseBackup } from '../domain/storage';
@@ -130,27 +130,4 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return <button className={'toggle ' + (checked ? 'on' : '')} role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}><span /></button>;
-}
-
-export function ManualPanel({ onLevel }: { onLevel: (l: Level) => void }) {
-  const [sourceFilter, setSourceFilter] = useState(0);
-  const exportSources = () => {
-    const rows = questions.map(q => ({ id: q.id, level: q.levelId, slot: q.slot, objective: q.objective, units: q.source.units, printedPages: q.source.pages, label: sourceLabels[q.source.label], variantOf: q.variantOf ?? null }));
-    downloadFile('AI校園守護隊-教材對照.json', JSON.stringify(rows, null, 2), 'application/json');
-  };
-  return <>
-    <Heading eyebrow="A GUIDE FOR HUMAN GUIDES" title="陪孩子，把答案想清楚。">以《生活中的人工智慧》為知識主線，將生活應用重新編成校園任務。遊戲倫理延伸另作標示。</Heading>
-    <div className="manual-principles"><div className="surface"><BookOpen size={27} /><h3>教材是起點</h3><p>教材的辨識、分類與人機協作，結合 AI 倫理與正確使用方式，重組為六個生活主題。</p></div>
-      <div className="surface"><HandHeart size={27} /><h3>討論才有深度</h3><p>取捨題接受不同完整方案。先問「照顧到誰？」「還少哪個保障？」</p></div>
-      <div className="surface"><Lightbulb size={27} /><h3>修正也是能力</h3><p>答對攻擊並扣敵方 HP，學習紀錄另列是否獨立完成。示範後安排新題，再看看孩子是否學會。</p></div></div>
-    <section className="surface manual-section"><h2>一堂課，可以這樣進行</h2><div className="lesson-flow"><div><span>01</span><b>一起看情境</b><p>辨認任務、可用線索與受影響的人。</p></div><div><span>02</span><b>各自選擇</b><p>約 6–10 分鐘一關為試玩目標，不設倒數。</p></div><div><span>03</span><b>比較理由</b><p>討論兩種合理方案的效益、代價與保障。</p></div><div><span>04</span><b>試新情境</b><p>重玩變式，看看方法是否能用到不同案例。</p></div></div><p className="muted">時間為設計目標，尚需實際學生試玩確認。教師可從地圖自由選關，不必等全部解鎖。</p></section>
-    <section className="surface manual-section"><h2>分數與學習紀錄</h2><p>每關滿分 100 分，五題各 20 分；每答錯一次扣 4 分，自己答對至少得 4 分。使用提示的題目最高 16 分，伙伴示範的題目得 0 分。兩題重玩練習各 50 分、答錯扣 10 分、最低 10 分、提示最高 40 分。全部首次獨立答對且未使用提示或示範，才是首次全對。</p><p>結算會列出逐題分數與答錯次數。「我的成長」保存每次完整挑戰與重玩成績；地圖顯示主要挑戰的最高分及最近得分。分數反映這次回答的獨立程度，不計速度或血量；教師仍可透過討論及新情境觀察理解。舊紀錄若沒有完整題序，不推算分數；舊示範題的錯誤次數不明時會明確標示。</p></section>
-    <section className="surface manual-section"><h2>內容修訂與學習模擬</h2><ul className="plain-list"><li>性別刻板推薦作為需要反思的案例，不當成興趣判斷規則。</li><li>職業與年份預測是推想；辨識、自駕及健康裝置的能力採有條件敘述。</li><li>健康裝置是輔助資訊；身體不適時，尋求可信任成人與醫護協助。</li><li>外部網站、實際 App、影像資料與無人機活動，改為內建的學習模擬，不蒐集兒童私人資料。</li><li>深偽查證為倫理延伸。影像自然或奇怪都不能單獨證明真假；先找原始公告、可信來源，或用熟悉的方式聯絡當事人。</li><li>作業案例以幫助理解、查核、自己表達及遵守老師規則為目標，不把 AI 完成的內容假裝成自己的成果。</li><li>自由文字作為本機反思紀錄；初版以已審閱題目規則判題，不使用生成式 AI 判分。</li></ul></section>
-    <section className="surface manual-section"><h2>題庫與正確答案</h2><p>完整列出每關五道主題與兩道重玩練習，包含四個選項、正確答案、解說及教材對照。JSON 是唯一題庫來源，CSV 可用 Excel 編輯核對。</p><div className="backup-buttons"><a className="button primary" href={appAssetUrl('/teacher/question-list.csv')} download><Download size={17} />下載題目與答案 CSV</a><a className="button secondary" href={appAssetUrl('/teacher/question-list.html')} target="_blank" rel="noreferrer"><Printer size={17} />閱讀／列印完整題庫</a><a className="button secondary" href={appAssetUrl('/teacher/question-bank.json')} download><Download size={17} />下載原始題庫 JSON</a></div></section><div className="section-heading"><h2>初階六關與進階六關對照</h2><button className="text-button" onClick={exportSources}><Download size={17} />匯出全部題目來源</button></div>
-    <div className="surface curriculum-table-wrap"><table className="curriculum-table"><thead><tr><th>關卡</th><th>能力目標</th><th>教材依據（印刷頁碼）</th><th>內容標示</th></tr></thead><tbody>{levels.map(l => <tr key={l.id}><td><button onClick={() => onLevel(l)}>{String(l.id).padStart(2, '0')} · {l.title}<ChevronRight size={14} /></button></td><td>{l.objective}</td><td>單元 {l.source.units.join('、')}<br />p{l.source.pages}</td><td><span className="tag">{sourceLabels[l.source.label]}</span></td></tr>)}</tbody></table></div>
-    <section className="surface manual-section"><div className="panel-title"><FileCheck size={21} /><h2>每題來源與能力目標</h2><select aria-label="篩選來源關卡" value={sourceFilter} onChange={e => setSourceFilter(Number(e.target.value))}><option value={0}>全部 84 題（含重玩練習）</option>{levels.map(l => <option key={l.id} value={l.id}>第 {l.id} 關 · {l.title}</option>)}</select></div>
-      <div className="source-question-list">{questions.filter(q => !sourceFilter || q.levelId === sourceFilter).map(q => <details key={q.id}><summary><code>{q.id}</code><b>{q.objective}</b><ChevronRight size={15} /></summary><p>{q.prompt}</p><small>{sourceLabels[q.source.label]} · 單元 {q.source.units.join('、')} · p{q.source.pages}{q.variantOf ? ' · 對應變式 ' + q.variantOf : ''}</small></details>)}</div></section>
-    <section className="source-footer"><h3>來源與使用範圍</h3><p>《生活中的人工智慧》，臺北市國小人工智慧教材，2020 年出版。頁碼為印刷頁碼，PDF 閱讀器頁碼加一。本遊戲使用原創角色、場景、情境文字與中文合成朗讀，不內嵌教材 PDF 或參考影片。</p>
-      <p>隱私、公平與人類監督的倫理延伸參考 <a href="https://www.unesco.org/en/artificial-intelligence/recommendation-ethics" target="_blank" rel="noreferrer">UNESCO 人工智慧倫理建議書</a>。外部參考連結需網路；遊戲題目與回饋均可離線使用。</p></section>
-  </>;
 }

@@ -14,6 +14,7 @@ import './audio-controls.css';
 import './defeat.css';
 import './score.css';
 import './student-readability.css';
+import './magic-campus-theme.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>

@@ -5,6 +5,7 @@ import { resolve, relative, extname, sep, dirname } from 'node:path';
 const root = resolve(process.argv[2] ?? 'dist');
 const mount = 'https://pages.example.test/ai-campus-guardians/';
 const failures = [];
+const teacherAsset = (name) => name === 'teacher' || name.startsWith('teacher/');
 let references = 0;
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const checkURL = async (raw, parent, label, allowExternal = false) => {
@@ -20,8 +21,9 @@ const checkURL = async (raw, parent, label, allowExternal = false) => {
   }
   const name = decodeURIComponent(url.pathname.slice(new URL(mount).pathname.length));
   try {
-    const target = resolve(root, name || 'index.html');
-    const info = await stat(target);
+    let target = resolve(root, name || 'index.html');
+    let info = await stat(target);
+    if (info.isDirectory()) { target = resolve(target, 'index.html'); info = await stat(target); }
     if (!info.isFile()) throw new Error('not a file');
     references += 1;
   } catch { failures.push(label + ': 素材不存在 ' + raw); }
@@ -53,6 +55,19 @@ for (const match of html.matchAll(/<(?:link|script|img)\b[^>]*(?:src|href)=["'](
   await checkURL(match[1], 'index.html', 'index.html');
 }
 const paths = await walk(root);
+const teacherFiles = paths.filter((path) => teacherAsset(relative(root, path).split(sep).join('/')));
+for (const name of ['index.html', 'question-list.csv', 'question-list.html', 'question-list.md', 'question-bank.json']) {
+  if (!teacherFiles.includes(resolve(root, 'teacher', name))) failures.push('教師備課檔案缺漏 teacher/' + name);
+}
+try {
+  const teacherHTML = await readFile(resolve(root, 'teacher', 'index.html'), 'utf8');
+  for (const match of teacherHTML.matchAll(/<(?:link|script|img)\b[^>]*(?:src|href)=["']([^"']+)["'][^>]*>/gi)) {
+    await checkURL(match[1], 'teacher/index.html', '教師頁素材');
+  }
+  for (const match of teacherHTML.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi)) {
+    await checkURL(match[1], 'teacher/index.html', '教師頁連結', true);
+  }
+} catch { failures.push('教師入口 teacher/index.html 無法讀取。'); }
 for (const path of paths.filter((path) => extname(path) === '.css')) {
   const name = relative(root, path).split(sep).join('/');
   const css = await readFile(path, 'utf8');
@@ -68,12 +83,19 @@ for (const file of offline.files) {
   urls.add(file.url);
   if (!file.url.startsWith('/') || file.url.startsWith('//')) failures.push('離線檔案名稱無效 ' + file.url);
   const name = file.url.replace(/^\//, '').split('/').map(decodeURIComponent).join('/');
+  if (teacherAsset(name)) failures.push('學生離線清單不得收錄教師教材 ' + file.url);
   if (name.split('/').some((part) => part === '..' || part.includes('\\'))) { failures.push('離線檔案跳脫 ' + file.url); continue; }
   try {
     const bytes = await readFile(resolve(root, name));
     totalBytes += bytes.byteLength;
     if (file.size !== bytes.byteLength || file.hash !== hash(bytes)) failures.push('離線雜湊或大小不符合 ' + file.url);
   } catch { failures.push('離線檔案不存在 ' + file.url); }
+}
+for (const path of paths) {
+  const name = relative(root, path).split(sep).join('/');
+  if (teacherAsset(name) || ['sw.js', 'offline-manifest.json'].includes(name)) continue;
+  const url = '/' + name.split('/').map(encodeURIComponent).join('/');
+  if (!urls.has(url)) failures.push('學生離線清單遺漏遊戲素材 ' + url);
 }
 if (offline.totalBytes !== totalBytes) failures.push('離線總容量不符合。');
 const buildVersion = /<meta name="offline-build-version" content="([a-f0-9]{64})">/.exec(html)?.[1];
@@ -82,6 +104,7 @@ const worker = await readFile(resolve(root, 'sw.js'), 'utf8');
 if (!worker.includes('self.registration.scope')) failures.push('Service worker 未依註冊範圍讀取素材。');
 if (!worker.includes('fetch(scoped(file.url)')) failures.push('Service worker 素材下載未套用專案範圍。');
 if (!worker.includes("cache.match(scoped('/index.html'))")) failures.push('Service worker 離線首頁未套用專案範圍。');
+if (!worker.includes("if (relativePath === 'teacher' || relativePath.startsWith('teacher/')) return;")) failures.push('Service worker 未保留教師頁的獨立網路路徑。');
 let checkedJSFiles = 0;
 for (const path of paths.filter((path) => extname(path) === '.js' && path !== resolve(root, 'sw.js'))) {
   const source = await readFile(path, 'utf8');
@@ -90,6 +113,7 @@ for (const path of paths.filter((path) => extname(path) === '.js' && path !== re
 }
 const report = { status: failures.length ? 'FAIL' : 'PASS', version: offline.version,
   files: offline.files.length, totalBytes, verifiedHTMLCSSReferences: references, checkedJSFiles,
+  teacherFilesOnline: teacherFiles.length, teacherFilesOffline: offline.files.filter((file) => teacherAsset(decodeURIComponent(file.url.slice(1)))).length,
   manifestIdentity: manifest.id ?? 'default-to-start_url', mountedAt: mount, failures };
 if (process.argv[3]) {
   const reportPath = resolve(process.argv[3]); await mkdir(dirname(reportPath), { recursive: true });

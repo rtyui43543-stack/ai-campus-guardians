@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
 import type { Chapter, CompletedRun, Level, Mode, Progress } from './domain/types';
-import { chapters, levels, getChapter, getLevel, phaseLabels, sourceLabels } from './content/levels';
+import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
 import { loadProgress, saveProgress } from './domain/storage';
@@ -12,13 +12,13 @@ import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
 import { OfflineDownloadCard } from './components/OfflineDownloadCard';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
-import { GrowthPanel, ManualPanel, OfflinePanel, ProposalPanel } from './components/Panels';
+import { GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
 import { LevelScore, ScoreSummary } from './components/Scoring';
 
-type Screen = 'map' | 'battle' | 'results' | 'growth' | 'proposals' | 'manual' | 'settings';
+type Screen = 'map' | 'battle' | 'results' | 'growth' | 'proposals' | 'settings';
 const navItems = [
   { id: 'map', label: '冒險地圖', icon: Map }, { id: 'growth', label: '我的成長', icon: Medal },
-  { id: 'proposals', label: '守護提案', icon: BookOpen }, { id: 'manual', label: '教師手冊', icon: HandHeart },
+  { id: 'proposals', label: '守護提案', icon: BookOpen },
   { id: 'settings', label: '離線與設定', icon: Settings }
 ] as const;
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
@@ -34,7 +34,6 @@ export function App() {
   const [notice, setNotice] = useState('');
   const [cue, setCue] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [sourceOpen, setSourceOpen] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [animating, setAnimating] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
@@ -57,7 +56,7 @@ export function App() {
   useEffect(read, []);
   useEffect(() => {
     if (!progress) return;
-    stopAudio(); setSourceOpen(false); setHintOpen(false);
+    stopAudio(); setHintOpen(false);
     location.hash = screen;
     window.scrollTo({ top: 0, behavior: 'instant' });
     if (screen === 'battle') topRef.current?.focus({ preventScroll: true });
@@ -136,7 +135,7 @@ export function App() {
     stopAudio();
     if (attackTimer.current) clearTimeout(attackTimer.current);
     attackLock.current = false; setAnimating(false); setCue('');
-    setHintOpen(false); setSourceOpen(false); setResult(null);
+    setHintOpen(false); setResult(null);
     commit(restartBattle(progress));
     if (progress.settings.music) playMusicFromGesture();
     setScreen('battle');
@@ -145,7 +144,7 @@ export function App() {
     if (!progress?.active || attackLock.current) return;
     const active = progress.active;
     const next = advanceSession(active);
-    stopAudio(); setHintOpen(false); setSourceOpen(false);
+    stopAudio(); setHintOpen(false);
     if (next.finished) {
       let finished = finishSession(progress, active);
       if (active.levelId === 12 && !active.review) {
@@ -182,7 +181,7 @@ export function App() {
   const audioKey = question && active ? question.id + '.' + active.mode : '';
   const mastery = new Set(progress.completed.map(id => getLevel(id)!.chapterId).filter(id => levels.filter(l => l.chapterId === id).every(l => progress.completed.includes(l.id))));
   const title = screen === 'map' ? '冒險地圖' : navItems.find(n => n.id === screen)?.label ?? '守護挑戰';
-  return <div className={'app-shell ' + (screen === 'battle' ? 'battle-shell' : '')}>
+  return <div className={'app-shell ' + (screen === 'battle' ? 'battle-shell' : 'magic-campus')}>
     <a className="skip-link" href="#main-content">跳到主要內容</a>
     <aside className={'sidebar ' + (mobileMenu ? 'open' : '')}>
       <button className="brand" onClick={() => navigate('map')} aria-label="回到首頁">
@@ -227,7 +226,7 @@ export function App() {
             <DuelMeter label={battleChapter.guardian} hp={health.enemyHp} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
           </div>
           <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
-            <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button><button className="duel-tool" aria-label="查看教材來源" onClick={() => setSourceOpen(true)}><BookOpen size={18} /></button></div></div>
+            <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button></div></div>
             <h1 id="question-title" tabIndex={-1}>{presented.prompt}</h1>
             {active.step === 'action' && !hintOpen && presented.evidence.length > 0 && <div className="duel-evidence">{presented.evidence.map((e,i) => <p key={i}><b>{e.title}：</b>{e.body}</p>)}</div>}
             {hintOpen && active.step === 'action' && <div className="duel-hint"><Lightbulb size={17} /><p>{question.hint}</p><button className="duel-tool" aria-label="聽提示" onClick={() => narrate(audioKey + '.hint')}><Volume2 size={18} /></button></div>}
@@ -254,28 +253,19 @@ export function App() {
         {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'growth' && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={setIntro} onNotice={setNotice} />}
-        {screen === 'manual' && <ManualPanel onLevel={setIntro} />}
         {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={commit} onNotice={setNotice} onMap={() => navigate('map')} />}
       </main>
-      <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span><button onClick={() => navigate('manual')}>教材與倫理延伸</button></footer>
+      <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
     </div>
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
     {intro && <Dialog onClose={() => setIntro(null)} title={'第 ' + intro.id + ' 關 · ' + intro.title}>
       <div className="intro-visual"><GuardianPortrait chapter={intro.chapterId} /><div><span className="eyebrow">3D 答題對戰</span><h2>{intro.title}</h2><span className="tag">{modeNames[intro.mode]} · 第 {intro.mode === 'starter' ? intro.id : intro.id - 6} / 6 關</span></div></div>
       <p className="intro-story">{intro.intro}</p><div className="goal-box"><Flag size={20} /><div><b>這一關，我要學會</b><p>{intro.objective}</p></div></div>
       <div className="intro-meta"><span><BookOpen size={17} />5 個主要情境</span><span><Lightbulb size={17} />2 個變式練習</span><span><Pause size={17} />不限時</span></div>
-      <div className="source-note">教材：單元 {intro.source.units.join('、')} · 印刷 p{intro.source.pages} · {sourceLabels[intro.source.label]}</div>
       {progress.active && <div className="hint-box"><Pause size={18} /><p>目前第 {progress.active.levelId} 關已暫存。開始新任務會取代這份途中存檔，已完成紀錄會保留。</p></div>}
       <div className="dialog-actions"><button className="text-button" onClick={() => narrate('level.' + intro.id)}><Volume2 size={18} />聽任務說明</button>
         {progress.active && <button className="button secondary" onClick={() => { setIntro(null); if (isDefeated(progress.active!)) restart(); else navigate('battle'); }}>{isDefeated(progress.active) ? '重新挑戰原關卡' : '繼續暫存任務'}</button>}
         <button className="button primary" onClick={() => start(intro)}>開始對戰<ArrowRight size={18} /></button></div>
-    </Dialog>}
-    {sourceOpen && question && <Dialog onClose={() => setSourceOpen(false)} title="這個情境的教材來源">
-      <span className="tag">{sourceLabels[question.source.label]}</span><h2>{getLevel(question.levelId)!.title}</h2>
-      <p>《生活中的人工智慧》，臺北市國小人工智慧教材，2020 年。</p><p>單元 {question.source.units.join('、')}；印刷頁碼 p{question.source.pages}（PDF 頁碼加一）。</p>
-      <div className="goal-box"><Flag size={20} /><div><b>學習目標</b><p>{question.objective}</p></div></div>
-      <p>本題為重新編寫的校園學習模擬。隱私、公平、人類覆核與替代方式若超出原教材，另標示為倫理延伸。沒有蒐集真實學生影像、聲音、位置或健康資料。</p>
-      <p className="source-note">題目識別：{question.id} · 版本 2.0。深偽與作業誠信為倫理延伸案例。</p>
     </Dialog>}
   </div>;
 }
@@ -308,21 +298,28 @@ function DuelMeter({ label, hp, side, cue, reducedMotion }: { label: string; hp:
 function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, offline }: {
   progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; offline: ReturnType<typeof useOffline>;
 }) {
+  const mainRuns = (progress.runs ?? []).filter(run => !run.review);
+  const highestScore = mainRuns.length ? Math.max(...mainRuns.map(run => scoreSession(run).score)) : null;
   return <>
     <section className="welcome-banner">
       <div className="welcome-art" /><div className="welcome-shade" />
-      <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> 校園，需要你的好主意</span>
-        <h1>一起讓科技，<br /><em>更友善。</em></h1><p>跟伙伴探索 AI，用觀察和思考，<br className="desktop-break" />修復一個人人都能安心生活的校園。</p>
+      <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> AI 魔法校園 · 守護任務啟動</span>
+        <h1>答對出招，<br /><em>守護校園！</em></h1><p>化身小魔法師，破解生活中的 AI 難題。<br className="desktop-break" />用你的好判斷，施展六種守護魔法！</p>
         <button className="button primary" onClick={() => progress.active ? onResume() : onLevel(nextLevel)}><Play size={17} fill="currentColor" />{progress.active ? (isDefeated(progress.active) ? '重新挑戰第 ' : '繼續第 ') + (progress.active.mode === 'starter' ? progress.active.levelId : progress.active.levelId - 6) + ' 關' : progress.completed.length ? '繼續我的冒險' : '開始我的冒險'}<ArrowRight size={18} /></button>
         <span className="welcome-note"><ShieldCheck size={15} />你的進度會存在這台裝置</span>
       </div>
       <div className="welcome-model" aria-hidden="true"><Arena chapter={1} guardian="資料大胃王" enemyHp={100} playerHp={100} cue="" reducedMotion={progress.settings.reducedMotion} /></div>
-      <div className="floating-label"><Sparkles size={18} /><span>思考，就是你的超能力。</span></div>
+      <div className="floating-label"><Sparkles size={18} /><span>思考，就是你的魔法力量。</span></div>
+    </section>
+    <section className="adventure-metrics" aria-label="我的冒險總覽">
+      <div><span className="metric-icon"><Flag size={25} /></span><span><small>已完成任務</small><strong>{progress.completed.length}<b>／12 關</b></strong></span></div>
+      <div><span className="metric-icon"><Sparkles size={25} /></span><span><small>六種守護魔法</small><strong>{mastery.size}<b>／6 已掌握</b></strong></span></div>
+      <div><span className="metric-icon"><Medal size={25} /></span><span><small>最高闖關紀錄</small><strong>{highestScore === null ? '待挑戰' : highestScore}<b>{highestScore === null ? '' : '／100 分'}</b></strong></span></div>
     </section>
     <div className="journey-strip"><div><span className="journey-icon"><Compass size={21} /></span><span><b>初階六關，進階六關</b><small>從生活小事，練習怎麼安心使用 AI</small></span></div>
       <span className="journey-offline-note"><WifiOff size={16} />下載後，斷網也能玩</span></div>
     <OfflineDownloadCard offline={offline} />
-    <div className="section-heading"><div><span className="eyebrow">YOUR ADVENTURE</span><h2>選一站，出發吧。</h2></div><span className="section-note">建議依序探索，也能自由選關</span></div>
+    <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">六個生活主題，自由選關挑戰</span></div>
     <div className="chapter-grid">{chapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
     <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對就攻擊，答錯再試一次。</h3><p>每關五題，點選答案就能出招。初階從生活小事出發，進階多一個要照顧的狀況。沒有倒數，也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
   </>;

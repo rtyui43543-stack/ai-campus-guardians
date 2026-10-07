@@ -1,0 +1,1150 @@
+[
+  {
+    "id": "V2L01Q01",
+    "level": 1,
+    "slot": 1,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L01Q02",
+    "level": 1,
+    "slot": 2,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L01Q03",
+    "level": 1,
+    "slot": 3,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L01Q04",
+    "level": 1,
+    "slot": 4,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L01Q05",
+    "level": 1,
+    "slot": 5,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L01Q06",
+    "level": 1,
+    "slot": 6,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": "V2L01Q03"
+  },
+  {
+    "id": "V2L01Q07",
+    "level": 1,
+    "slot": 7,
+    "objective": "只給任務需要的資料，密碼不交出去。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": "V2L01Q05"
+  },
+  {
+    "id": "V2L02Q01",
+    "level": 2,
+    "slot": 1,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L02Q02",
+    "level": 2,
+    "slot": 2,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L02Q03",
+    "level": 2,
+    "slot": 3,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L02Q04",
+    "level": 2,
+    "slot": 4,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L02Q05",
+    "level": 2,
+    "slot": 5,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L02Q06",
+    "level": 2,
+    "slot": 6,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L02Q03"
+  },
+  {
+    "id": "V2L02Q07",
+    "level": 2,
+    "slot": 7,
+    "objective": "先查課本或原公告，再使用 AI 的答案。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L02Q05"
+  },
+  {
+    "id": "V2L03Q01",
+    "level": 3,
+    "slot": 1,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L03Q02",
+    "level": 3,
+    "slot": 2,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L03Q03",
+    "level": 3,
+    "slot": 3,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L03Q04",
+    "level": 3,
+    "slot": 4,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L03Q05",
+    "level": 3,
+    "slot": 5,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L03Q06",
+    "level": 3,
+    "slot": 6,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L03Q03"
+  },
+  {
+    "id": "V2L03Q07",
+    "level": 3,
+    "slot": 7,
+    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+    "units": [
+      1,
+      8,
+      13,
+      18
+    ],
+    "printedPages": "16–17、71–73、135–141、183",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L03Q05"
+  },
+  {
+    "id": "V2L04Q01",
+    "level": 4,
+    "slot": 1,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L04Q02",
+    "level": 4,
+    "slot": 2,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L04Q03",
+    "level": 4,
+    "slot": 3,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L04Q04",
+    "level": 4,
+    "slot": 4,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L04Q05",
+    "level": 4,
+    "slot": 5,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L04Q06",
+    "level": 4,
+    "slot": 6,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": "V2L04Q03"
+  },
+  {
+    "id": "V2L04Q07",
+    "level": 4,
+    "slot": 7,
+    "objective": "影像和聲音可能被合成，先用原管道查問。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": "V2L04Q05"
+  },
+  {
+    "id": "V2L05Q01",
+    "level": 5,
+    "slot": 1,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L05Q02",
+    "level": 5,
+    "slot": 2,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L05Q03",
+    "level": 5,
+    "slot": 3,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L05Q04",
+    "level": 5,
+    "slot": 4,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L05Q05",
+    "level": 5,
+    "slot": 5,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L05Q06",
+    "level": 5,
+    "slot": 6,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L05Q03"
+  },
+  {
+    "id": "V2L05Q07",
+    "level": 5,
+    "slot": 7,
+    "objective": "請 AI 解釋或出練習題，最後自己完成。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L05Q05"
+  },
+  {
+    "id": "V2L06Q01",
+    "level": 6,
+    "slot": 1,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L06Q02",
+    "level": 6,
+    "slot": 2,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L06Q03",
+    "level": 6,
+    "slot": 3,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L06Q04",
+    "level": 6,
+    "slot": 4,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L06Q05",
+    "level": 6,
+    "slot": 5,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L06Q06",
+    "level": 6,
+    "slot": 6,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L06Q03"
+  },
+  {
+    "id": "V2L06Q07",
+    "level": 6,
+    "slot": 7,
+    "objective": "使用 AI 前想需求，使用後自己檢查。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L06Q05"
+  },
+  {
+    "id": "V2L07Q01",
+    "level": 7,
+    "slot": 1,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L07Q02",
+    "level": 7,
+    "slot": 2,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L07Q03",
+    "level": 7,
+    "slot": 3,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L07Q04",
+    "level": 7,
+    "slot": 4,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L07Q05",
+    "level": 7,
+    "slot": 5,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L07Q06",
+    "level": 7,
+    "slot": 6,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": "V2L07Q03"
+  },
+  {
+    "id": "V2L07Q07",
+    "level": 7,
+    "slot": 7,
+    "objective": "分享資料前，確認用途、同意和查看對象。",
+    "units": [
+      7,
+      9,
+      14,
+      17
+    ],
+    "printedPages": "65、79–84、149、173",
+    "label": "倫理延伸",
+    "variantOf": "V2L07Q05"
+  },
+  {
+    "id": "V2L08Q01",
+    "level": 8,
+    "slot": 1,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L08Q02",
+    "level": 8,
+    "slot": 2,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L08Q03",
+    "level": 8,
+    "slot": 3,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L08Q04",
+    "level": 8,
+    "slot": 4,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L08Q05",
+    "level": 8,
+    "slot": 5,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L08Q06",
+    "level": 8,
+    "slot": 6,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L08Q03"
+  },
+  {
+    "id": "V2L08Q07",
+    "level": 8,
+    "slot": 7,
+    "objective": "比較日期和原來源，證據不夠就先保留。",
+    "units": [
+      2,
+      3,
+      4,
+      10
+    ],
+    "printedPages": "24–30、39、99",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L08Q05"
+  },
+  {
+    "id": "V2L09Q01",
+    "level": 9,
+    "slot": 1,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L09Q02",
+    "level": 9,
+    "slot": 2,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L09Q03",
+    "level": 9,
+    "slot": 3,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L09Q04",
+    "level": 9,
+    "slot": 4,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L09Q05",
+    "level": 9,
+    "slot": 5,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L09Q06",
+    "level": 9,
+    "slot": 6,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L09Q03"
+  },
+  {
+    "id": "V2L09Q07",
+    "level": 9,
+    "slot": 7,
+    "objective": "依任務看合適線索，認錯時修正資料和規則。",
+    "units": [
+      8,
+      13
+    ],
+    "printedPages": "71–73、136",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L09Q05"
+  },
+  {
+    "id": "V2L10Q01",
+    "level": 10,
+    "slot": 1,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L10Q02",
+    "level": 10,
+    "slot": 2,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L10Q03",
+    "level": 10,
+    "slot": 3,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L10Q04",
+    "level": 10,
+    "slot": 4,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L10Q05",
+    "level": 10,
+    "slot": 5,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L10Q06",
+    "level": 10,
+    "slot": 6,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": "V2L10Q03"
+  },
+  {
+    "id": "V2L10Q07",
+    "level": 10,
+    "slot": 7,
+    "objective": "查原始來源，尊重被合成影像的人。",
+    "units": [
+      3
+    ],
+    "printedPages": "27–30",
+    "label": "倫理延伸",
+    "variantOf": "V2L10Q05"
+  },
+  {
+    "id": "V2L11Q01",
+    "level": 11,
+    "slot": 1,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L11Q02",
+    "level": 11,
+    "slot": 2,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L11Q03",
+    "level": 11,
+    "slot": 3,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L11Q04",
+    "level": 11,
+    "slot": 4,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L11Q05",
+    "level": 11,
+    "slot": 5,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L11Q06",
+    "level": 11,
+    "slot": 6,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L11Q03"
+  },
+  {
+    "id": "V2L11Q07",
+    "level": 11,
+    "slot": 7,
+    "objective": "依老師規則用 AI，交出能自己說明的作業。",
+    "units": [
+      13
+    ],
+    "printedPages": "135–141",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L11Q05"
+  },
+  {
+    "id": "V2L12Q01",
+    "level": 12,
+    "slot": 1,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L12Q02",
+    "level": 12,
+    "slot": 2,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L12Q03",
+    "level": 12,
+    "slot": 3,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L12Q04",
+    "level": 12,
+    "slot": 4,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L12Q05",
+    "level": 12,
+    "slot": 5,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": null
+  },
+  {
+    "id": "V2L12Q06",
+    "level": 12,
+    "slot": 6,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L12Q03"
+  },
+  {
+    "id": "V2L12Q07",
+    "level": 12,
+    "slot": 7,
+    "objective": "有目的、有查證，保留自己的學習和替代方式。",
+    "units": [
+      13,
+      17,
+      18
+    ],
+    "printedPages": "135–141、172–177、181–185",
+    "label": "教材改編＋倫理延伸",
+    "variantOf": "V2L12Q05"
+  }
+]

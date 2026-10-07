@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const generated = new Set(['sw.js', 'offline-manifest.json']);
+// Teacher preparation files remain online; the student pack never downloads them.
+const teacherAsset = (name) => name === 'teacher' || name.startsWith('teacher/');
 const audioPattern = /\.(?:mp3|wav|ogg|m4a|aac|flac|opus|webm)$/i;
 const versionMeta = /<meta name="offline-build-version" content="[a-f0-9]+">\n?/g;
 
@@ -22,7 +24,10 @@ export async function buildOffline(outputDirectory = 'dist') {
   const indexPath = resolve(root, 'index.html');
   const originalIndex = (await readFile(indexPath, 'utf8')).replace(versionMeta, '');
   await writeFile(indexPath, originalIndex, 'utf8');
-  const paths = (await listFiles(root)).filter((path) => !generated.has(relative(root, path).split(sep).join('/')));
+  const paths = (await listFiles(root)).filter((path) => {
+    const name = relative(root, path).split(sep).join('/');
+    return !generated.has(name) && !teacherAsset(name);
+  });
   const collect = async () => Promise.all(paths.map(async (path) => {
     const name = relative(root, path).split(sep).join('/');
     const content = await readFile(path);
@@ -265,6 +270,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(SCOPE.pathname)) return;
   if (url.pathname === scoped('/sw.js') || url.pathname === scoped('/offline-manifest.json')) return;
+  // A teacher URL is an independent online page, never the student shell or an old cached answer file.
+  let relativePath;
+  try { relativePath = decodeURIComponent(url.pathname.slice(SCOPE.pathname.length)); }
+  catch { return; }
+  if (relativePath === 'teacher' || relativePath.startsWith('teacher/')) return;
   event.respondWith((async () => {
     const version = request.mode === 'navigate' ? await activeVersion()
       : await boundVersion(event.clientId) || await activeVersion();

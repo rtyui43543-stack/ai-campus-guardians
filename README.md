@@ -2,6 +2,8 @@
 
 直接遊玩：[AI 校園守護隊](https://rtyui43543-stack.github.io/ai-campus-guardians/)
 
+教師備課：[獨立教師手冊與題目答案](https://rtyui43543-stack.github.io/ai-campus-guardians/teacher/)。教師頁與學生遊戲分開，學生選單不顯示教師資料或答案下載。
+
 給國小三至六年級的原創 AI 倫理答題遊戲。**初階六關＋進階六關，共十二關**。每關五道主題與兩道重玩練習，共 **60 道主題＋24 道練習**。兩條路線都以四個生活選項直接作答，不需要另選理由。
 
 六個主題為個資守護、資訊查證、情境分類與合適使用、深偽查證、作業誠信，以及班級生活綜合應用。進階加入具體限制與另一位需要照顧的人，不增加艱深術語。
@@ -44,7 +46,7 @@ Windows 發佈包透過本機服務可直接在斷網環境使用。在手機／
 
 ## 題庫與答案
 
-「docs/題庫與答案」附完整 CSV、Markdown、可列印 HTML 與原始 JSON；遊戲「教師手冊」也提供下載。每題包含 A–D 選項、正確選項、解析、提示、難度、主題／練習標記與教材對照。
+「docs/題庫與答案」附完整 CSV、Markdown、可列印 HTML 與原始 JSON；獨立教師備課網址 /teacher/ 提供手冊、關卡對照及檔案下載。每題包含 A–D 選項、正確選項、解析、提示、難度、主題／練習標記與教材對照。教師網址是公開頁面，與學生遊戲分開呈現；teacher/ 目錄不加入學生離線包，教師可另行下載備課檔案。
 
 唯一題庫來源為 src/content/question-bank.json。correct 是從 0 起算的選項索引：0=A、1=B、2=C、3=D；多個合理答案可列在同一陣列。CSV 供檢視／核對，不會自動匯回遊戲。修改 JSON 後須重新匯出答案、生成朗讀與建置；具體方式見題庫資料夾的修改說明。學生端使用本機規則判題，不使用生成式 AI 判分。
 
@@ -54,6 +56,7 @@ Windows 發佈包透過本機服務可直接在斷網環境使用。在手機／
 
     npm ci
     npm run questions:export
+    npm run teacher:export
     npm run audio:manifest
     npm run audio:generate
     npm run content:check
@@ -61,6 +64,8 @@ Windows 發佈包透過本機服務可直接在斷網環境使用。在手機／
     npm run build
 
 只在題目文字或語音設定改動時重新生成朗讀。新版生成流程使用 Python、edge-tts 與 FFmpeg，製作時需連網；可用 AI_GAME_FFMPEG 指定 FFmpeg 路徑。語音設定與可重製步驟見 [docs/audio-notes.md](docs/audio-notes.md)。一般遊玩和 GitHub 建置直接使用已預錄的 MP3，不需要這些工具、語音帳號或線上 API。重新生成後再執行內容檢查。介面開發可用 npm run dev；PWA 驗收使用建置版。Windows 打包執行 scripts/package-windows.ps1；GitHub 原始碼與靜態網站打包執行 npm run package:github。
+
+npm run build 會先重新匯出教師手冊與答案，再建置學生遊戲。魔法校園主題以本機 CSS 製作星圖、法陣與任務色彩，不依賴外部圖片或 CDN；保留大字、高對比卡片與原有 3D 戰鬥。首頁冒險總覽顯示已完成關卡、掌握魔法及主要挑戰最高分。
 
 ## 來源與實作
 
