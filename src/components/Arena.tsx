@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { createArenaScene } from './arena3d';
+import { createArenaScene, type CinemaShot } from './arena3d';
 import '../styles/arena3d.css';
 
 interface ArenaProps {
@@ -9,6 +9,8 @@ interface ArenaProps {
   reducedMotion: boolean;
   cue: string;
   guardian: string;
+  cinemaShot?: CinemaShot;
+  cinemaPaused?: boolean;
 }
 
 export const abilityNames = ['個資守護光球', '查證掃描光束', '分類卡片旋風', '真相稜鏡光波', '思考魔法書', '合作星光陣'];
@@ -46,7 +48,7 @@ export function GuardianPortrait({ chapter, className = '' }: { chapter: number;
   </span>;
 }
 
-export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian }: ArenaProps) {
+export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian, cinemaShot, cinemaPaused = false }: ArenaProps) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<ReturnType<typeof createArenaScene> | null>(null);
   const lastCue = useRef('');
@@ -59,9 +61,10 @@ export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian
     try {
       const arena = createArenaScene(host.current, chapter, reducedMotion, nextPhase => {
         if (alive) setPhase(nextPhase);
-      });
+      }, cinemaShot);
       scene.current = arena;
       arena.health(enemyHp, playerHp);
+      arena.pauseCinema(cinemaPaused);
       return () => {
         alive = false;
         arena.dispose();
@@ -78,12 +81,13 @@ export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian
   useEffect(() => {
     scene.current?.health(enemyHp, playerHp);
   }, [enemyHp, playerHp]);
+  useEffect(() => { scene.current?.pauseCinema(cinemaPaused); scene.current?.shot(cinemaShot); }, [cinemaShot, cinemaPaused]);
   useEffect(() => {
     if (!cue || cue === lastCue.current) return;
     lastCue.current = cue;
     scene.current?.play(cue.startsWith('success'));
   }, [cue]);
-  return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase}
+  return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
     aria-label={'原創 3D 校園魔法師小羽與' + guardian + '的答題對戰'}>
     <div className="arena3d-canvas" ref={host} />
     {fallback && <div className="arena3d-fallback" role="status">

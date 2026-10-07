@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { questions, presentQuestion, questionBank } from '../src/content';
 import { chapters, levels } from '../src/content/levels';
+import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
 
 export interface AuditResult { errors: string[]; summary: Record<string, number> }
@@ -77,6 +78,9 @@ export function expectedAudio() {
     index[key] = '/audio/' + file;
     utterances.set(file, text);
   };
+  for (const beat of [...getOpeningStory(), ...levels.flatMap(level => getLevelStory(level.id))]) {
+    add('story.' + beat.id, beat.speaker + '：' + beat.text);
+  }
   for (const level of levels) add(`level.${level.id}`, level.title + '。' + level.intro + '。這一關，' + level.objective);
   for (const chapter of chapters) add(`chapter.${chapter.id}`, chapter.title + '。' + chapter.description);
   for (const q of questions) {

@@ -4,6 +4,7 @@ import { auditAudio, auditContent, expectedAudio } from '../../scripts/check-con
 import { buildQuestionCSV, buildQuestionHTML, buildQuestionMarkdown } from '../../scripts/export-questions';
 import { questionBank, questionById, questions, getQuestions } from './index';
 import { levels } from './levels';
+import { getOpeningStory, getLevelStory } from './stories';
 import { chooseAction, requiresReason, startSession, submitAction } from '../domain/engine';
 
 function csvRows(text: string) {
@@ -114,8 +115,24 @@ describe('12 everyday ethics missions and teacher answer exports', () => {
   it('has every current narration key linked to a matching offline MP3', () => {
     const result = auditAudio();
     expect(result.errors).toEqual([]);
-    expect(result.summary.keys).toBe(606);
-    expect(result.summary.clips).toBe(606);
+    expect(result.summary.keys).toBe(646);
+    expect(result.summary.clips).toBe(646);
+  });
+
+  it('adds 40 offline story narrations while preserving the 606 existing lesson narrations', () => {
+    const { index, utterances } = expectedAudio();
+    const offlineIndex = JSON.parse(readFileSync('public/audio/index.json', 'utf8')) as Record<string, string>;
+    const beats = [...getOpeningStory(), ...levels.flatMap(level => getLevelStory(level.id))];
+    const storyKeys = Object.keys(index).filter(key => key.startsWith('story.'));
+    expect(storyKeys).toHaveLength(40);
+    expect(storyKeys.sort()).toEqual(beats.map(beat => 'story.' + beat.id).sort());
+    expect(Object.keys(index).filter(key => !key.startsWith('story.'))).toHaveLength(606);
+    for (const beat of beats) {
+      const key = 'story.' + beat.id;
+      expect(offlineIndex[key], beat.id).toBe(index[key]);
+      const file = index[key].slice('/audio/'.length);
+      expect(utterances.get(file), beat.id).toBe(beat.speaker + '：' + beat.text.replace(/\bAI\b/g, '人工智慧'));
+    }
   });
 
   it('detects an existing MP3 attached to the wrong question text', () => {

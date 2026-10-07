@@ -1,6 +1,6 @@
 # 台灣華語朗讀的更新方式
 
-目前的 606 段預製朗讀採 Microsoft `zh-TW-HsiaoChenNeural` 台灣華語神經語音，語速 `-6%`、音高 `-2Hz`。採成年教師般平穩清楚的說話方向，沒有指定真人聲音。全部 MP3 已放在 `public/audio`，一般遊玩及 GitHub 建置不必連接語音服務。
+目前的 646 段預製朗讀（606 段學習內容＋40 段劇情）採 Microsoft `zh-TW-HsiaoChenNeural` 台灣華語神經語音，語速 `-6%`、音高 `-2Hz`。採成年教師般平穩清楚的說話方向，沒有指定真人聲音。全部 MP3 已放在 `public/audio`，一般遊玩及 GitHub 建置不必連接語音服務。
 
 修改題庫後，在專案根目錄執行：
 
@@ -16,6 +16,8 @@ npm run build
 腳本先產生新清單及待生成文字，再以四個工作同步製作新版 MP3。每段完成後使用 FFmpeg 完整解碼檢查；全部完成後才把新版音檔複製到 `public/audio`、核對 SHA-256、切換索引並移除沒有被索引使用的舊音檔。生成失敗時，先前可播放的索引會保留；重新執行可沿用已完成且通過解碼的片段。`.audio-work/neural-audio-audit.json` 保存完整生成檢查結果。
 
 `-Concurrency 1` 至 `6` 可調整同步工作數；預設 `4`。`-Force` 會重製全部片段。遊戲的音檔識別包含音色及語速版本，切換後瀏覽器會下載新音檔，不會把舊音色當成新版。
+
+劇情文字來源為 `src/content/stories.ts`。新增劇情時可加 `-SkipPrune` 保留舊音檔；雜湊相同的既有音檔不會重寫。劇情朗讀由學生手動點選，會暫停自動換幕，避免還沒聽完就切換字幕。
 
 如要更換音色或參數，須同步更新 `scripts/check-content.ts` 的檔名版本前綴及 `scripts/generate-audio.ps1` 的 `VOICE`、`RATE`、`PITCH`、`PROFILE`，再重製整包。不要只覆蓋索引或只更換部分音檔。
 

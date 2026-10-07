@@ -2,7 +2,8 @@ param(
   [int]$Concurrency=4,
   [string]$PythonPath='',
   [string]$FfmpegPath='',
-  [switch]$Force
+  [switch]$Force,
+  [switch]$SkipPrune
 )
 $ErrorActionPreference='Stop'
 $projectRoot=Split-Path -Parent $PSScriptRoot
@@ -115,7 +116,9 @@ async def main():
     audio_root.mkdir(exist_ok=True)
     for record in records:
         destination = audio_root / record['file']
-        destination.write_bytes((staging / record['file']).read_bytes())
+        # Preserve verified existing clips and their timestamps during incremental generation.
+        if not destination.is_file() or hashlib.sha256(destination.read_bytes()).hexdigest() != record['sha256']:
+            destination.write_bytes((staging / record['file']).read_bytes())
         if hashlib.sha256(destination.read_bytes()).hexdigest() != record['sha256']:
             raise RuntimeError('Promoted file did not match its staged hash.')
     temporary_index = audio_root / 'index.neural.tmp'
@@ -131,6 +134,8 @@ asyncio.run(main())
   $forceArgument=if ($Force) { 'force' } else { 'resume' }
   & $PythonPath $generatorPath $projectRoot $Concurrency $FfmpegPath $forceArgument
   if ($LASTEXITCODE -ne 0) { throw 'Neural narration generation failed; the earlier public pack was retained.' }
-  & node scripts/prune-audio.mjs
-  if ($LASTEXITCODE -ne 0) { throw 'Narration pruning failed.' }
+  if (-not $SkipPrune) {
+    & node scripts/prune-audio.mjs
+    if ($LASTEXITCODE -ne 0) { throw 'Narration pruning failed.' }
+  }
 } finally { Pop-Location }

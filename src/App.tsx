@@ -14,6 +14,8 @@ import { OfflineDownloadCard } from './components/OfflineDownloadCard';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
 import { GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
 import { LevelScore, ScoreSummary } from './components/Scoring';
+import { StoryCinematic } from './components/StoryCinematic';
+import { getOpeningStory, getLevelStory } from './content/stories';
 
 type Screen = 'map' | 'battle' | 'results' | 'growth' | 'proposals' | 'settings';
 const navItems = [
@@ -21,6 +23,9 @@ const navItems = [
   { id: 'proposals', label: '守護提案', icon: BookOpen },
   { id: 'settings', label: '離線與設定', icon: Settings }
 ] as const;
+const OPENING_SEEN_KEY = 'ai-campus-guardians:opening:v1';
+function hasSeenOpening() { try { return localStorage.getItem(OPENING_SEEN_KEY) === 'seen'; } catch { return false; } }
+function rememberOpening() { try { localStorage.setItem(OPENING_SEEN_KEY, 'seen'); } catch { /* The game remains playable without browser storage. */ } }
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
 export const statusNames = { first: '首次獨立答對', supported: '重試／提示後答對', practice: '看示範後完成' };
 export const chapterIcons = { scan: ScanLine, compass: Compass, search: Search, shield: ShieldCheck, hand: HandHeart, spark: Sparkles };
@@ -30,6 +35,7 @@ export function App() {
   const [loadError, setLoadError] = useState('');
   const [screen, setScreen] = useState<Screen>('map');
   const [intro, setIntro] = useState<Level | null>(null);
+  const [opening, setOpening] = useState(false);
   const [result, setResult] = useState<CompletedRun | null>(null);
   const [notice, setNotice] = useState('');
   const [cue, setCue] = useState('');
@@ -47,6 +53,7 @@ export function App() {
     const requested = location.hash;
     void loadProgress().then(p => {
       setProgress(p);
+      if ((!requested || requested === '#map') && !hasSeenOpening()) setOpening(true);
       if (requested === '#battle' && p.active) setScreen('battle');
       if (requested === '#results') { const previous = latestRun(p); if (previous) { setResult(previous); setScreen('results'); } }
       if (requested === '#growth') setScreen('growth');
@@ -90,6 +97,7 @@ export function App() {
   const playMusicFromGesture = () => { void startBattleMusic().catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
   const navigate = (next: Screen) => {
     stopAudio();
+    setIntro(null); setOpening(false);
     if (next === 'battle') { setCue(''); if (progress?.settings.music && progress.active && !isDefeated(progress.active)) playMusicFromGesture(); }
     else {
       stopBattleMusic();
@@ -105,6 +113,9 @@ export function App() {
     else { playMusicFromGesture(); commit({ ...progress, settings: { ...progress.settings, music: true } }); }
   };
   const narrate = (key: string) => { void playAudio(key).catch(error => setNotice(error.message)); };
+  const openLevelStory = (level: Level) => { stopAudio(); stopBattleMusic(); setOpening(false); setIntro(level); };
+  const openOpening = () => { stopAudio(); stopBattleMusic(); setIntro(null); setOpening(true); };
+  const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); setIntro(null); };
   const changeSession = (next: NonNullable<Progress['active']>) => {
     if (!progress) return;
     const prior = progress.active;
@@ -123,6 +134,7 @@ export function App() {
   const start = (level: Level, review = false) => {
     if (!progress) return;
     const session = startSession(level.id, level.mode, review);
+    stopAudio();
     attackLock.current = false; setAnimating(false);
     if (attackTimer.current) clearTimeout(attackTimer.current);
     setCue('');
@@ -216,7 +228,7 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
-          onLevel={setIntro} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} offline={offline} />}
+          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} showModel={!intro && !opening} offline={offline} />}
         {screen === 'battle' && active && battleLevel && battleChapter && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <Arena chapter={battleLevel.chapterId} guardian={battleChapter.guardian} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
           <div className="duel-hud">
@@ -249,24 +261,18 @@ export function App() {
           {isDefeated(active) && !animating && <DefeatDialog level={battleLevel} hint={question.hint} onRestart={restart} onHome={() => navigate('map')} />}
         </section>}
         {screen === 'battle' && !active && <div className="empty-state"><ShieldCheck size={40} /><h1>你的冒險，從這裡開始</h1><button className="button primary" onClick={() => navigate('map')}>前往冒險地圖<ArrowRight size={18} /></button></div>}
-        {screen === 'results' && result && <Results session={result} onLevel={setIntro} onMap={() => navigate('map')} onReview={() => start(getLevel(result.levelId)!, true)} onProposal={() => navigate('proposals')} />}
-        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
-        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
-        {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={setIntro} onNotice={setNotice} />}
+        {screen === 'results' && result && <Results session={result} onLevel={openLevelStory} onMap={() => navigate('map')} onReview={() => start(getLevel(result.levelId)!, true)} onProposal={() => navigate('proposals')} />}
+        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
+        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
+        {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={openLevelStory} onNotice={setNotice} />}
         {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={commit} onNotice={setNotice} onMap={() => navigate('map')} />}
       </main>
       <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
     </div>
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
-    {intro && <Dialog onClose={() => setIntro(null)} title={'第 ' + intro.id + ' 關 · ' + intro.title}>
-      <div className="intro-visual"><GuardianPortrait chapter={intro.chapterId} /><div><span className="eyebrow">3D 答題對戰</span><h2>{intro.title}</h2><span className="tag">{modeNames[intro.mode]} · 第 {intro.mode === 'starter' ? intro.id : intro.id - 6} / 6 關</span></div></div>
-      <p className="intro-story">{intro.intro}</p><div className="goal-box"><Flag size={20} /><div><b>這一關，我要學會</b><p>{intro.objective}</p></div></div>
-      <div className="intro-meta"><span><BookOpen size={17} />5 個主要情境</span><span><Lightbulb size={17} />2 個變式練習</span><span><Pause size={17} />不限時</span></div>
-      {progress.active && <div className="hint-box"><Pause size={18} /><p>目前第 {progress.active.levelId} 關已暫存。開始新任務會取代這份途中存檔，已完成紀錄會保留。</p></div>}
-      <div className="dialog-actions"><button className="text-button" onClick={() => narrate('level.' + intro.id)}><Volume2 size={18} />聽任務說明</button>
-        {progress.active && <button className="button secondary" onClick={() => { setIntro(null); if (isDefeated(progress.active!)) restart(); else navigate('battle'); }}>{isDefeated(progress.active) ? '重新挑戰原關卡' : '繼續暫存任務'}</button>}
-        <button className="button primary" onClick={() => start(intro)}>開始對戰<ArrowRight size={18} /></button></div>
-    </Dialog>}
+    {(opening || intro) && <StoryCinematic key={intro?.id ?? 'opening'} level={intro ?? undefined} beats={intro ? getLevelStory(intro.id) : getOpeningStory()} reducedMotion={progress.settings.reducedMotion}
+      onClose={closeStory} onStart={() => { if (intro) start(intro); else closeStory(); }} onNarrate={narrate} onStopNarration={stopAudio}
+      savedLevelTitle={intro && active ? getLevel(active.levelId).title : undefined} onResume={intro && active ? () => { closeStory(); if (isDefeated(active)) restart(); else navigate('battle'); } : undefined} />}
   </div>;
 }
 
@@ -295,8 +301,8 @@ function DuelMeter({ label, hp, side, cue, reducedMotion }: { label: string; hp:
   return <div className={'duel-meter ' + side}><div><span>{label}</span><b>{Math.round(displayHp)}<small> HP</small></b></div><progress value={displayHp} max={100} aria-label={side === 'hero' ? '我方血量' : '敵方血量'} /></div>;
 }
 
-function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, offline }: {
-  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; offline: ReturnType<typeof useOffline>;
+function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, showModel, offline }: {
+  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void; showModel: boolean; offline: ReturnType<typeof useOffline>;
 }) {
   const mainRuns = (progress.runs ?? []).filter(run => !run.review);
   const highestScore = mainRuns.length ? Math.max(...mainRuns.map(run => scoreSession(run).score)) : null;
@@ -306,9 +312,10 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, offline }:
       <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> 生活裡的 AI 挑戰</span>
         <h1>破解生活難題，<br /><em>學會正確用 AI！</em></h1><p>從聊天到寫作業，和伙伴一起保護個資、查證消息，練習讓 AI 成為學習好幫手。</p>
         <button className="button primary" onClick={() => progress.active ? onResume() : onLevel(nextLevel)}><Play size={17} fill="currentColor" />{progress.active ? (isDefeated(progress.active) ? '重新挑戰第 ' : '繼續第 ') + (progress.active.mode === 'starter' ? progress.active.levelId : progress.active.levelId - 6) + ' 關' : progress.completed.length ? '繼續我的冒險' : '開始我的冒險'}<ArrowRight size={18} /></button>
+        <button className="welcome-story-button" onClick={onStory}><Play size={17} />觀看開場故事</button>
         <span className="welcome-note"><ShieldCheck size={15} />你的進度會存在這台裝置</span>
       </div>
-      <div className="welcome-model" aria-hidden="true"><Arena chapter={1} guardian="資料大胃王" enemyHp={100} playerHp={100} cue="" reducedMotion={progress.settings.reducedMotion} /></div>
+      {showModel && <div className="welcome-model" aria-hidden="true"><Arena chapter={1} guardian="資料大胃王" enemyHp={100} playerHp={100} cue="" reducedMotion={progress.settings.reducedMotion} /></div>}
       <div className="floating-label"><Sparkles size={18} /><span>思考，就是你的魔法力量。</span></div>
     </section>
     <section className="adventure-metrics" aria-label="我的冒險總覽">

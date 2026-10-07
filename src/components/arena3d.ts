@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
 interface Rig {
@@ -409,7 +410,7 @@ function disposeScene(scene: THREE.Scene) {
 
 /** Entirely local procedural geometry. No model, font, texture or CDN fetch is required. */
 export function createArenaScene(host: HTMLDivElement, chapter: number, reducedMotion: boolean,
-  onPhase: (phase: string) => void) {
+  onPhase: (phase: string) => void, initialShot?: CinemaShot) {
   const theme = clamp(chapter, 1, 6);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xd9ebe8);
@@ -436,6 +437,13 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   const hero = createHero(), enemy = createEnemy(theme); scene.add(hero.root, enemy.root);
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
   const drone = createDrone(scene), effects = createEffects(scene, theme);
+  const cinemaMagic = new THREE.Group(); scene.add(cinemaMagic);
+  const cinemaHalo = ring(cinemaMagic, .95, .025, luminous(0x70f5dd, .65), 0, .05, 0);
+  cinemaHalo.rotation.x = Math.PI / 2;
+  const cinemaStars = Array.from({ length: 12 }, (_, i) => mesh(cinemaMagic, starGeometry(.075), luminous(i % 2 ? 0xffda79 : 0x70f5dd, .7), 0, 0, 0, false));
+  let cinemaShot = initialShot, cinemaPaused = false, cinemaTime = 0, cinemaStarted = 0;
+  let shotFromX = 0, shotFromZoom = 1, shotFromY = 1.55, shotLookX = 0, shotLookY = 1.55;
+  let framingY = 1.8, framingElevation = 4.7;
   let alive = true, raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
   let enemyHp = 100, playerHp = 100, requestedEnemyHp = 100, requestedPlayerHp = 100;
   let attack: { started: number; success: boolean } | null = null;
@@ -451,14 +459,14 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   };
   const resize = () => {
     const width = Math.max(1, host.clientWidth), height = Math.max(1, host.clientHeight);
-    const aspect = width / height, viewHeight = 8.8, viewWidth = viewHeight * aspect;
+    const aspect = width / height, viewHeight = cinemaShot ? 6 : 8.8, viewWidth = viewHeight * aspect;
     camera.left = -viewWidth / 2; camera.right = viewWidth / 2;
     camera.top = viewHeight / 2; camera.bottom = -viewHeight / 2;
     const portrait = aspect < .85;
     modelScale = portrait ? .8 : 1;
     let lookY = portrait ? 1.30 : 1.80;
     const elevation = portrait ? 3.9 : 4.7;
-    if (bubble && answers) {
+    if (!cinemaShot && bubble && answers) {
       // Frame the complete pointed hat and boots inside the playable gap.
       // Short phones and extra hint text change this gap without covering the answers.
       const bounds = host.getBoundingClientRect();
@@ -471,6 +479,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     }
     camera.position.set(0, lookY + elevation, 15);
     camera.lookAt(0, lookY, 0); camera.updateProjectionMatrix();
+    framingY = lookY; framingElevation = elevation;
+    if (cinemaShot) { modelScale = 1; framingY = 1.55; framingElevation = 3.8; }
+    else camera.zoom = 1;
     heroX = -Math.min(3.35, viewWidth * .235); enemyX = -heroX;
     hero.root.scale.setScalar(modelScale); enemy.root.scale.setScalar(modelScale);
     hero.root.position.x = heroX; enemy.root.position.x = enemyX;
@@ -494,7 +505,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     raf = requestAnimationFrame(frame);
     if (document.hidden || now - lastFrame < 1000 / 30) return;
     if (reducedMotion && !attack && !dirty) return;
+    if (cinemaShot && cinemaPaused && !attack && !dirty) return;
+    const frameDelta = lastFrame ? Math.min((now - lastFrame) / 1000, .10) : 0;
     lastFrame = now; dirty = false;
+    if (!cinemaPaused) cinemaTime += frameDelta;
     const effectClock = attack ? (now - attack.started) / 1000 * (reducedMotion ? 6 : 1) : Infinity;
     // Health restoration has no animation delay. A new hit takes effect at contact;
     // a restored save without an active cast shows its health on this first frame.
@@ -502,7 +516,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       enemyHp = requestedEnemyHp;
       playerHp = requestedPlayerHp;
     }
-    const idle = now / 1000;
+    const idle = cinemaShot ? cinemaTime : now / 1000;
     const idleBob = reducedMotion ? 0 : Math.sin(idle * 2.4) * .018;
     hero.root.position.set(heroX, idleBob, 0);
     enemy.root.position.set(enemyX, idleBob * .65 + (enemyHp === 0 ? -.10 : 0), 0);
@@ -518,6 +532,50 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     hero.glow.emissiveIntensity = .65;
     drone.position.set(heroX - modelScale * .75, modelScale * (2.68 + (reducedMotion ? 0 : Math.sin(idle * 3) * .08)), -.1);
     drone.rotation.y = reducedMotion ? 0 : Math.sin(idle * 1.5) * .12;
+    cinemaMagic.visible = Boolean(cinemaShot);
+    if (cinemaShot) {
+      const elapsed = cinemaTime - cinemaStarted;
+      const travel = reducedMotion ? 1 : ease(elapsed / 1.3);
+      const desiredX = cinemaShot === 'hero' ? heroX : cinemaShot === 'enemy' ? enemyX : 0;
+      const desiredY = cinemaShot === 'hero' ? 2.05 : cinemaShot === 'enemy' ? 1.75 : framingY;
+      const desiredZoom = cinemaShot === 'hero' || cinemaShot === 'enemy' ? 1.6 : 1;
+      shotLookX = THREE.MathUtils.lerp(shotFromX, desiredX, travel);
+      shotLookY = THREE.MathUtils.lerp(shotFromY, desiredY, travel);
+      camera.zoom = THREE.MathUtils.lerp(shotFromZoom, desiredZoom, travel);
+      camera.position.set(shotLookX, shotLookY + framingElevation, 15);
+      camera.lookAt(shotLookX, shotLookY, 0); camera.updateProjectionMatrix();
+      if (!reducedMotion) {
+        const arrival = 1 - ease(elapsed / 1.5);
+        if (cinemaShot === 'wide') {
+          hero.root.position.x -= arrival * .65;
+          hero.leftLeg.rotation.x = Math.sin(elapsed * 8) * .16 * arrival;
+          hero.rightLeg.rotation.x = -hero.leftLeg.rotation.x;
+          enemy.head.rotation.z = Math.sin(idle * 2) * .08;
+        }
+        if (cinemaShot === 'hero' || cinemaShot === 'resolve') {
+          hero.leftArm.rotation.z = -.18 + .85 * ease(elapsed / .8);
+          hero.leftArm.rotation.x = Math.sin(idle * 2) * .10;
+          hero.head.rotation.y = -.08;
+          hero.glow.emissiveIntensity = 1 + Math.sin(idle * 2) * .35;
+        }
+        if (cinemaShot === 'enemy') {
+          enemy.rightArm.rotation.z = .26 + .7 * ease(elapsed / .8);
+          enemy.rightArm.rotation.x = Math.sin(idle * 3) * .14;
+          drone.position.y += Math.sin(idle * 4) * .12;
+        }
+      }
+      cinemaMagic.position.x = cinemaShot === 'enemy' ? enemyX : heroX;
+      const magicStrength = cinemaShot === 'resolve' ? 1 : .45;
+      cinemaHalo.scale.setScalar(1 + (reducedMotion ? 0 : Math.sin(idle * 2) * .06));
+      (cinemaHalo.material as THREE.MeshBasicMaterial).opacity = magicStrength * .65;
+      for (let i = 0; i < cinemaStars.length; i++) {
+        const a = i * Math.PI / 6 + (reducedMotion ? 0 : idle * .35);
+        cinemaStars[i].position.set(Math.cos(a) * 1.05, .8 + (i % 4) * .54 + (reducedMotion ? 0 : Math.sin(idle * 1.5 + i) * .16), Math.sin(a) * .6);
+        cinemaStars[i].rotation.z = reducedMotion ? 0 : idle * .4 + i;
+        (cinemaStars[i].material as THREE.MeshBasicMaterial).opacity = magicStrength * .8;
+      }
+      emitPhase(cinemaPaused ? '劇情暫停' : '劇情演出');
+    }
     effects.root.visible = !!attack;
     if (attack) {
       // Reduced-motion mode completes its fixed flash before the UI unlocks at 450 ms.
@@ -666,11 +724,17 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         enemy.glow.emissive.setHex(0xffb64d); enemy.glow.emissiveIntensity = (1 - burst) * .65;
       }
       if (t > 1.67) { attack = null; effects.root.visible = false; emitPhase('待命'); resize(); }
-    } else emitPhase(enemyHp === 0 ? '敵方停機' : playerHp === 0 ? '伙伴守護中' : '待命');
+    } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方停機' : playerHp === 0 ? '伙伴守護中' : '待命');
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
   return {
+    shot(next?: CinemaShot) {
+      if (!alive || next === cinemaShot) return;
+      shotFromX = shotLookX; shotFromY = shotLookY; shotFromZoom = camera.zoom;
+      cinemaShot = next; cinemaStarted = cinemaTime - (cinemaPaused ? 1.3 : 0); resize();
+    },
+    pauseCinema(paused: boolean) { if (cinemaPaused !== paused) lastFrame = performance.now(); cinemaPaused = paused; dirty = true; },
     play(success: boolean) {
       if (!alive) return;
       attack = { started: performance.now(), success }; dirty = true;
