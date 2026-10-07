@@ -1,0 +1,107 @@
+/* The cover's teal, warm brass and sunlit campus continue into the adventure. */
+.app-shell.magic-campus {
+  background: radial-gradient(ellipse at 95% 0, #cde8fa, transparent 42%),
+    radial-gradient(ellipse at 5% 35%, #d5edc5, transparent 48%),
+    linear-gradient(155deg, #edf6dd, #e7f3e8 50%, #fff1cc);
+}
+.app-shell.magic-campus::before { opacity: .32; }
+.app-shell.magic-campus .sidebar {
+  background: radial-gradient(ellipse at 0 0, #34765a, transparent 65%),
+    linear-gradient(170deg, #183f3b, #102e32);
+  border-color: #a5b787;
+}
+.app-shell.magic-campus .sidebar .nav-item.active {
+  color: #183f3b; background: linear-gradient(115deg, #fff0ac, #f4cf76);
+  border-color: #ffedb0;
+}
+.app-shell.magic-campus .topbar {
+  background: linear-gradient(110deg, #fffdf1, #edf6e8 70%, #e7f3ee);
+  border-color: #b7cba5;
+}
+.app-shell.magic-campus .mode-toggle { background: #e2eedc; border-color: #a7c2a6; }
+.app-shell.magic-campus .mode-toggle button { color: #264d3e; }
+.app-shell.magic-campus .mode-toggle button.selected { background: linear-gradient(130deg, #2b7055, #173f3b); }
+.app-shell.magic-campus .welcome-banner {
+  background: #d4e9c7; border-color: #c8ac64;
+  box-shadow: 0 12px 30px #32523f2b, inset 0 0 0 2px #fff6d4;
+}
+.app-shell.magic-campus .welcome-art {
+  background-image: url('/art/title-cover-v1.webp');
+  background-position: center; opacity: 1; filter: none;
+}
+.app-shell.magic-campus .welcome-banner::before { display: none; }
+.app-shell.magic-campus .welcome-model { display: none; }
+.app-shell.magic-campus .welcome-shade {
+  background: linear-gradient(90deg, #193f39f5, #234d40e6 33%, #2b554378 49%, transparent 67%);
+}
+.app-shell.magic-campus .welcome-copy { max-width: 55%; }
+.app-shell.magic-campus .welcome-copy p { max-width: 470px; }
+.app-shell.magic-campus .welcome-copy h1 { text-shadow: 0 3px 0 #183e31; }
+.app-shell.magic-campus .welcome-copy .eyebrow { background: #164435; border-color: #e3c881; }
+.app-shell.magic-campus .welcome-copy .button.primary { color: #183f35; }
+.app-shell.magic-campus .welcome-story-button { background: #1c4d40; border-color: #a9d0b7; }
+.app-shell.magic-campus .journey-strip { background: #f7fbea; border-color: #b5c6a1; }
+.app-shell.magic-campus .map-trail-heading { border-left-color: #3a7959; border-color: #b7c6a0; }
+.app-shell.magic-campus :is(.surface, .adventure-metrics>div) { border-color: #b8c8a7; }
+.app-shell.magic-campus .adventure-metrics strong { color: #1f4c3c; }
+.app-shell.magic-campus .chapter-card {
+  background: linear-gradient(155deg, #fffef2, #f4f9eb);
+  border-color: color-mix(in srgb, var(--campus-accent) 40%, #c7d8b8);
+  box-shadow: 0 7px 0 #abc39526, 0 12px 24px #34583a16;
+}
+.app-shell.magic-campus .level-row { background: #eef5e9; border-color: #b8c9a6; color: #254a3b; }
+.app-shell.magic-campus .offline-pack { background: linear-gradient(135deg, #fffdf0, #e8f4e3); border-color: #aac6a0; }
+.app-shell.magic-campus .offline-pack::before { background: linear-gradient(90deg, #397454, #92c6aa, #e7bd65); }
+.app-shell.magic-campus .button.primary { background: linear-gradient(135deg, #2b7355, #194b3c); border-color: #4b8d65; }
+.app-shell.magic-campus .button.primary:hover:not(:disabled) { background: linear-gradient(135deg, #368464, #286343); }
+.app-shell.magic-campus .welcome-copy .button.primary { background: linear-gradient(135deg, #fff1b4, #f4c86d); border-color: #ffe7b2; }
+
+.arena3d { background: #c4e2da url('/art/courtyard-cover-v2.webp') center 55% / cover no-repeat; }
+.duel-stage :is(.duel-meter, .duel-round, .duel-back) {
+  background: linear-gradient(135deg, #164b43f2, #133a38f2);
+  border-color: #d4b971b3; box-shadow: inset 0 1px #eefcd526, 0 5px 15px #16362830;
+}
+.duel-stage .duel-round, .duel-stage .duel-round b { color: #fff6d7; }
+.duel-stage .duel-bubble {
+  background: linear-gradient(145deg, #163e36f5, #0d302df5);
+  border: 2px solid #d5bf7b; box-shadow: inset 0 1px #fff9d321, 0 10px 28px #13342844;
+}
+.duel-stage .duel-question-meta { color: #d1e8c5; }
+.duel-stage .duel-tool { color: #dbf1cf; }
+.duel-stage .duel-choice {
+  background: linear-gradient(140deg, #214f42f5, #173d35f5);
+  border: 2px solid #bdd4a9; color: #fff9e4;
+  box-shadow: inset 0 1px #f5ffd71a, 0 4px 0 #12372c40, 0 7px 16px #21453322;
+}
+.duel-stage .duel-choice:hover:not(:disabled) { background: #28604b; border-color: #ffe498; }
+.duel-stage .duel-letter { background: #567b50; color: #fff4c7; }
+.duel-stage .duel-choice.correct { background: linear-gradient(130deg, #28715b, #1b5446); color: #ecfff0; border-color: #8df1b0; }
+.duel-stage .duel-choice.incorrect { background: #784d35; color: #fff4db; border-color: #ffd4a2; }
+.duel-stage .duel-hint-button { background: #224d3eee; color: #fff8d9; border-color: #a8bf91; }
+.duel-stage .duel-next { color: #234b3a; background: linear-gradient(135deg, #fff0ae, #f4ca70); border-color: #fff4c3; box-shadow: 0 4px 0 #8e69293b; }
+.duel-stage .duel-select-note { color: #193f31; background: #fff9d4e8; border-radius: 9px; padding: 6px 10px; }
+.duel-stage .duel-score { background: #fff6da; border-color: #bea260; color: #224a37; }
+.duel-stage .duel-attack-name { background: #173f35ed; border-color: #ecd38c; }
+.story-cinematic { background: #13372f; }
+.story-cinematic .story-frame { background: radial-gradient(ellipse at 65% 20%, #386b48, transparent 60%), linear-gradient(135deg, #1d4b3d, #0d2e2b); }
+.story-cinematic .story-header { background: #143e34; border-color: #b6cf8c55; }
+.story-cinematic :is(.story-caption, .story-ready-card) { background: #103a30f5; border-color: #d9bd76; }
+.story-cinematic :is(.story-button, .story-read, .story-close) { background-color: #265846; border-color: #89b994; }
+.story-cinematic .story-button-primary { background: linear-gradient(135deg, #fff0ae, #f4ca70); color: #204c39; border-color: #fff0ad; }
+
+@media(max-width:760px) {
+  .app-shell.magic-campus .welcome-copy { max-width: 72%; }
+  .app-shell.magic-campus .welcome-art { background-position: 70% center; }
+  .app-shell.magic-campus .welcome-shade { background: linear-gradient(90deg, #193f39f5, #234d40e6 47%, #2b554380 70%, #2b55432b); }
+}
+@media(max-width:540px) {
+  .app-shell.magic-campus .welcome-copy { max-width: 100%; }
+  .app-shell.magic-campus .welcome-art { background-position: 82% center; }
+  .app-shell.magic-campus .welcome-shade { background: linear-gradient(90deg, #193f39f5, #234d40d6 70%, #2b554388); }
+}
+@media(max-width:600px) {
+  .duel-stage .duel-bubble { top: 114px; }
+}
+@media(max-width:600px) and (max-height:740px) {
+  .duel-stage .duel-bubble { top: 102px; }
+}

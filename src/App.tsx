@@ -251,7 +251,7 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
-          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} showModel={!intro && !opening} offline={offline} />}
+          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} offline={offline} />}
         {screen === 'battle' && active && battleLevel && battleChapter && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <Arena chapter={battleLevel.chapterId} guardian={battleChapter.guardian} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
           <div className="duel-hud">
@@ -324,8 +324,8 @@ function DuelMeter({ label, hp, side, cue, reducedMotion }: { label: string; hp:
   return <div className={'duel-meter ' + side}><div><span>{label}</span><b>{Math.round(displayHp)}<small> HP</small></b></div><progress value={displayHp} max={100} aria-label={side === 'hero' ? '我方血量' : '敵方血量'} /></div>;
 }
 
-function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, showModel, offline }: {
-  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void; showModel: boolean; offline: ReturnType<typeof useOffline>;
+function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, offline }: {
+  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void; offline: ReturnType<typeof useOffline>;
 }) {
   const mainRuns = (progress.runs ?? []).filter(run => !run.review);
   const highestScore = mainRuns.length ? Math.max(...mainRuns.map(run => scoreSession(run).score)) : null;
@@ -338,7 +338,6 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, s
         <button className="welcome-story-button" onClick={onStory}><Play size={17} />觀看開場故事</button>
         <span className="welcome-note"><ShieldCheck size={15} />你的進度會存在這台裝置</span>
       </div>
-      {showModel && <div className="welcome-model" aria-hidden="true"><Arena chapter={1} guardian="資料大胃王" enemyHp={100} playerHp={100} cue="" reducedMotion={progress.settings.reducedMotion} /></div>}
       <div className="floating-label"><Sparkles size={18} /><span>思考，就是你的魔法力量。</span></div>
     </section>
     <section className="adventure-metrics" aria-label="我的冒險總覽">

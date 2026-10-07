@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { createCoverHero } from './coverHero';
+import { createCoverGuardian } from './coverGuardian';
 import { poseMage, type MageArticulation } from './magePose';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
@@ -78,225 +81,23 @@ function starGeometry(radius: number) {
   return geometry;
 }
 
-function leg(parent: THREE.Group, x: number, pants: Surface, shoe: Surface) {
-  const pivot = new THREE.Group(); pivot.position.set(x, .84, 0); parent.add(pivot);
-  mesh(pivot, new THREE.CapsuleGeometry(.15, .34, 4, 10), pants, 0, -.23, 0);
-  const boot = roundBox(pivot, .35, .27, .46, shoe, 0, -.63, .08, .07);
-  boot.castShadow = true;
-  box(pivot, .36, .06, .47, solid(0xf5efdc), 0, -.74, .08);
-  return pivot;
-}
-function arm(parent: THREE.Group, x: number, sleeve: Surface, hand: Surface) {
-  const pivot = new THREE.Group(); pivot.position.set(x, 1.65, 0); parent.add(pivot);
-  mesh(pivot, new THREE.CapsuleGeometry(.15, .28, 4, 10), sleeve, 0, -.24, 0);
-  ball(pivot, .16, hand, 0, -.55, .02);
-  return pivot;
-}
-
-function mageArm(parent: THREE.Group, x: number, sleeve: Surface, skin: Surface, gold: Surface) {
-  const shoulder = new THREE.Group(); shoulder.position.set(x, 1.65, .12); parent.add(shoulder);
-  mesh(shoulder, new THREE.CapsuleGeometry(.14, .15, 4, 10), sleeve, 0, -.13, 0);
-  const elbow = new THREE.Group(); elbow.position.y = -.29; shoulder.add(elbow);
-  ball(elbow, .13, sleeve);
-  mesh(elbow, new THREE.CapsuleGeometry(.13, .13, 4, 10), sleeve, 0, -.12, 0);
-  mesh(elbow, new THREE.CylinderGeometry(.15, .17, .16, 10), sleeve, 0, -.23, 0);
-  ring(elbow, .155, .025, gold, 0, -.30, 0).rotation.x = Math.PI / 2;
-  const hand = new THREE.Group(); hand.name = x < 0 ? 'mage-left-hand' : 'mage-right-hand';
-  hand.position.set(0, -.385, .035); elbow.add(hand);
-  const palm = ball(hand, .145, skin); palm.scale.set(.94, 1, .85);
-  // A visible thumb also makes the staff grip readable in close-up shots.
-  ball(hand, .065, skin, x > 0 ? -.095 : .095, .035, .105);
-  return { shoulder, elbow, hand };
-}
-
 export function createHero(): Rig & MageArticulation {
-  const root = new THREE.Group(); root.name = 'original-campus-mage';
-  const robe = solid(0x176c77), skin = solid(0xf4bb91), navy = solid(0x26394c);
-  const gold = solid(0xf2bf60, .22), hair = solid(0x493838), white = solid(0xf9f5e4);
-  const capeMaterial = solid(0x36546d); capeMaterial.side = THREE.DoubleSide;
-  const glow = solid(0x83f6df, .3); glow.emissive.setHex(0x43c4b0); glow.emissiveIntensity = .65;
-  // A flared robe and open cape retain the school hero's original colours.
-  mesh(root, new THREE.CapsuleGeometry(.36, .35, 4, 14), robe, 0, 1.35, 0);
-  mesh(root, new THREE.CylinderGeometry(.32, .51, .80, 12), robe, 0, 1.04, 0);
-  mesh(root, new THREE.CylinderGeometry(.48, .59, .90, 12, 1, true,
-    Math.PI * .56, Math.PI * .88), capeMaterial, 0, 1.30, -.06);
-  ring(root, .50, .03, gold, 0, .65, 0).rotation.x = Math.PI / 2;
-  box(root, .045, .85, .035, gold, 0, 1.13, .385);
-  const collar = ring(root, .28, .075, gold, 0, 1.74, 0); collar.rotation.x = Math.PI / 2;
-  const clasp = mesh(root, starGeometry(.09), white, 0, 1.65, .34); clasp.rotation.z = .15;
-  roundBox(root, .67, .10, .06, navy, 0, 1.04, .35, .025);
-  roundBox(root, .15, .13, .08, gold, 0, 1.04, .40, .03);
-  const head = new THREE.Group(); head.position.y = 2.2; root.add(head);
-  const face = ball(head, .62, skin); face.scale.set(1, .94, .9);
-  const cap = ball(head, .635, hair, 0, .27, -.10); cap.scale.set(1, .65, .91);
-  for (let i = 0; i < 4; i++) {
-    const tuft = ball(head, .20, hair, -.39 + i * .21, .43 - Math.abs(i - 1.5) * .055, .36);
-    tuft.scale.set(1, .75, .6);
-  }
-  ball(head, .115, skin, -.59, -.01, 0); ball(head, .115, skin, .59, -.01, 0);
-  for (const x of [-.21, .21]) {
-    const eyeWhite = ball(head, .094, white, x, .07, .52); eyeWhite.scale.set(.82, 1.13, .45);
-    const pupil = ball(head, .052, navy, x + .018, .07, .572); pupil.scale.set(.72, 1.25, .45);
-    ball(head, .014, white, x + .028, .092, .60);
-    const brow = box(head, .13, .045, .03, hair, x, .24, .53); brow.rotation.z = x < 0 ? -.1 : .1;
-    const blush = ball(head, .058, solid(0xe99385), x * 1.65, -.08, .495); blush.scale.set(1.3, .48, .3);
-  }
-  ball(head, .065, skin, .018, -.07, .60);
-  const smile = mesh(head, new THREE.TorusGeometry(.105, .014, 5, 20, Math.PI), hair, 0, -.17, .55);
-  smile.rotation.z = Math.PI;
-  // A crooked pointed hat gives the mage an original silhouette.
-  const brim = mesh(head, new THREE.CylinderGeometry(.76, .76, .075, 24), robe, 0, .48, -.025);
-  brim.scale.z = .87; brim.rotation.z = -.06;
-  const crownGeometry = new THREE.ConeGeometry(.56, 1.04, 18);
-  const positions = crownGeometry.getAttribute('position');
-  for (let i = 0; i < positions.count; i++) {
-    const taper = clamp((positions.getY(i) + .52) / 1.04);
-    positions.setX(i, positions.getX(i) + taper * taper * .25);
-  }
-  crownGeometry.computeVertexNormals();
-  mesh(head, crownGeometry, robe, 0, 1.01, -.025);
-  mesh(head, new THREE.CylinderGeometry(.46, .52, .12, 18), gold, .015, .64, -.025);
-  mesh(head, starGeometry(.095), white, -.06, .66, .49);
-  const left = mageArm(root, -.47, robe, skin, gold), right = mageArm(root, .47, robe, skin, gold);
-  const leftArm = left.shoulder, rightArm = right.shoulder;
-  // The hand grips the shaft below its gem; the staff no longer hangs upside down.
-  const staff = new THREE.Group(); staff.name = 'mage-staff';
-  staff.position.set(0, 0, .065); right.hand.add(staff);
-  mesh(staff, new THREE.CylinderGeometry(.040, .053, 1.30, 10), navy, 0, .35, 0);
-  for (const y of [-.24, .12, .58]) {
-    mesh(staff, new THREE.CylinderGeometry(.064, .064, .09, 10), gold, 0, y, 0);
-  }
-  mesh(staff, new THREE.ConeGeometry(.11, .18, 10), gold, 0, .88, 0);
-  const gem = mesh(staff, new THREE.OctahedronGeometry(.21), glow, 0, 1.08, 0);
-  gem.rotation.z = .2;
-  ring(staff, .29, .036, gold, 0, 1.08, 0).rotation.y = .30;
-  const gemHalo = ring(staff, .235, .017, luminous(0x8df4e2, .45), 0, 1.08, .02);
-  gemHalo.rotation.x = .75;
-  const tip = new THREE.Object3D(); tip.position.set(0, 1.08, .06); staff.add(tip);
-  const rig = { root, head, leftArm, rightArm, leftElbow: left.elbow, rightElbow: right.elbow,
-    staff, leftLeg: leg(root, -.22, navy, gold), rightLeg: leg(root, .22, navy, gold), tip, glow };
-  poseMage(rig);
-  return rig;
+  return createCoverHero();
 }
 
 function createEnemy(theme: number): Rig {
-  const root = new THREE.Group(); root.name = 'original-theme-guardian-' + theme;
-  const primary = solid(palettes[theme - 1], .2), trim = solid(0x33485e, .3);
-  const white = solid(0xf8f3df), visor = solid(0x233d52, .45), gold = solid(0xffd57c, .15);
-  const glow = primary;
-  glow.emissive.setHex(0x000000);
-  if (theme === 5) {
-    roundBox(root, .87, .94, .61, primary, 0, 1.31, 0, .10);
-    for (const x of [-.24, .24]) {
-      const page = roundBox(root, .42, .63, .09, white, x, 1.35, .39, .035);
-      page.rotation.y = x < 0 ? -.3 : .3;
-      for (let i = 0; i < 3; i++) box(root, .22, .025, .015, trim, x, 1.22 + i * .11, .48);
-    }
-  } else if (theme === 3) {
-    roundBox(root, .92, .48, .64, primary, 0, 1.07, 0);
-    roundBox(root, .81, .36, .58, solid(0x72c8a8), 0, 1.50, 0);
-    for (const x of [-.23, 0, .23]) ball(root, .07, x === 0 ? gold : white, x, 1.06, .37);
-  } else {
-    roundBox(root, .89, .98, .67, primary, 0, 1.28, 0);
-    roundBox(root, .53, .45, .07, gold, 0, 1.32, .385, .08);
-    if (theme === 1) {
-      ring(root, .14, .035, trim, 0, 1.40, .45);
-      box(root, .07, .13, .05, trim, 0, 1.23, .45);
-    } else if (theme === 4) {
-      mesh(root, new THREE.OctahedronGeometry(.19), solid(0xded2fa, .35), 0, 1.34, .48);
-    } else {
-      mesh(root, starGeometry(.19), trim, 0, 1.32, .47);
-    }
-  }
-  const head = new THREE.Group(); head.position.y = 2.17; root.add(head);
-  const headShell = ball(head, theme === 6 ? .63 : .58, primary);
-  headShell.scale.set(1, .87, .79);
-  const face = roundBox(head, .78, .41, .16, visor, 0, -.02, .46, .12);
-  face.rotation.x = -.02;
-  for (const x of [-.19, .19]) {
-    const eye = ball(head, .075, gold, x, .015, .58); eye.scale.set(.6, 1.2, .35);
-    ball(head, .023, white, x - .007, .04, .605);
-  }
-  const smile = mesh(head, new THREE.TorusGeometry(.09, .014, 5, 20, Math.PI), gold, 0, -.12, .57);
-  smile.rotation.z = Math.PI;
-  for (const x of [-.55, .55]) {
-    const ear = mesh(head, new THREE.CylinderGeometry(.13, .13, .13, 10), trim, x, 0, .02);
-    ear.rotation.z = Math.PI / 2;
-    ball(head, .075, gold, x * 1.08, 0, .03);
-  }
-  if (theme === 4) {
-    const halo = ring(head, .76, .028, luminous(0xc5adff, .72), 0, .04, -.1);
-    halo.rotation.y = .28; halo.rotation.x = .12;
-    const mask = roundBox(head, .30, .20, .04, white, -.40, -.17, .51, .08); mask.rotation.z = -.3;
-  } else if (theme === 2) {
-    const cap = roundBox(head, .89, .13, .69, gold, 0, .48, 0, .06); cap.rotation.z = .08;
-    box(head, .08, .21, .06, gold, .35, .32, .28);
-  } else if (theme === 5) {
-    mesh(head, new THREE.CylinderGeometry(.046, .046, .45, 8), gold, .16, .55, 0).rotation.z = -.3;
-    mesh(head, new THREE.ConeGeometry(.047, .15, 8), trim, .23, .82, 0).rotation.z = -.3;
-  } else {
-    const antennaCount = theme === 6 ? 3 : 1;
-    for (let i = 0; i < antennaCount; i++) {
-      const x = (i - (antennaCount - 1) / 2) * .24;
-      mesh(head, new THREE.CylinderGeometry(.03, .03, .21, 8), trim, x, .55, 0);
-      ball(head, .095, gold, x, .69, 0);
-    }
-  }
-  const leftArm = arm(root, -.51, primary, trim), rightArm = arm(root, .51, primary, trim);
-  leftArm.rotation.z = -.26; rightArm.rotation.z = .26;
-  ring(leftArm, .14, .035, gold, 0, -.40, .07);
-  ring(rightArm, .14, .035, gold, 0, -.40, .07);
-  if (theme === 5) {
-    for (const side of [-1, 1]) {
-      const helperArm = arm(root, side * .48, trim, gold);
-      helperArm.position.y = 1.16; helperArm.rotation.z = side * .8;
-      helperArm.scale.setScalar(.67);
-    }
-  }
-  const tip = new THREE.Object3D(); tip.position.set(0, -.57, .08); leftArm.add(tip);
-  return { root, head, leftArm, rightArm, leftLeg: leg(root, -.22, trim, primary),
-    rightLeg: leg(root, .22, trim, primary), tip, glow };
+  return createCoverGuardian(theme);
 }
 
 function makeCourtyard(scene: THREE.Scene) {
-  const cream = solid(0xf2dec0), lightStone = solid(0xf6ecd7), darkStone = solid(0xcfc0a9);
-  const teal = solid(0x3e9492), orange = solid(0xdc9260), leaves = solid(0x82b6a0);
-  const floor = mesh(scene, new THREE.PlaneGeometry(45, 35), cream, 0, -.045, 0, false);
-  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
-  const tileGeometry = new THREE.BoxGeometry(1.10, .018, .71);
-  for (let row = 0; row < 6; row++) {
-    for (let col = -7; col <= 7; col++) {
-      const tile = mesh(scene, tileGeometry, (row + col) % 3 ? lightStone : cream,
-        col * 1.16 + (row % 2 ? .55 : 0), -.027, row * .79 - 1.5, false);
-      tile.receiveShadow = true;
-    }
-  }
-  roundBox(scene, 18, 4.9, .7, lightStone, 0, 2.37, -5.7, .2);
-  box(scene, 19, .38, 1.2, teal, 0, 4.78, -5.7);
-  box(scene, 18, .12, .92, darkStone, 0, .07, -5.27);
-  roundBox(scene, 2.45, 3.07, .18, darkStone, 0, 1.57, -5.25, .8);
-  roundBox(scene, 2.10, 2.80, .14, orange, 0, 1.39, -5.08, .75);
-  box(scene, .055, 2.35, .04, cream, 0, 1.25, -4.98);
-  for (const x of [-.38, .38]) ball(scene, .065, teal, x, 1.16, -4.93);
-  for (const x of [-6.5, -3.6, 3.6, 6.5]) {
-    box(scene, .48, 3.91, .88, cream, x, 2.03, -5.20);
-    roundBox(scene, .79, .32, 1.12, darkStone, x, .23, -5.16, .05);
-    roundBox(scene, .8, .25, 1.13, darkStone, x, 3.98, -5.16, .05);
-    const window = roundBox(scene, 1.0, 1.0, .08, solid(0x98cbd0), x + (x < 0 ? .9 : -.9), 2.66, -5.27, .15);
-    window.castShadow = false;
-    box(scene, .04, .91, .05, cream, window.position.x, 2.66, -5.18);
-  }
-  for (const x of [-7.5, 7.5]) {
-    mesh(scene, new THREE.CylinderGeometry(.18, .28, 1.6, 9), solid(0x957859), x, .78, -2.9);
-    const tree = ball(scene, 1.1, leaves, x, 2.40, -2.9); tree.scale.set(.83, 1.25, .9);
-    ball(scene, .82, solid(0xa2c7a3), x + .45, 2.5, -3.2);
-    roundBox(scene, 1.12, .52, 1.04, orange, x, .22, -2.9, .1);
-  }
-  for (const x of [-4.7, 4.7]) {
-    const banner = mesh(scene, new THREE.PlaneGeometry(.74, 1.26), solid(0x66bbb1), x, 3.65, -5.08);
-    banner.material.side = THREE.DoubleSide;
-    mesh(scene, starGeometry(.18), lightStone, x, 3.66, -5.01);
-  }
+  // The cover-matched campus artwork sits behind the transparent WebGL layer.
+  // A true 3D receiving plane keeps animated feet and shadows on that courtyard.
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(45, 35),
+    new THREE.ShadowMaterial({ color: 0x29453a, opacity: .22 }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -.045;
+  floor.receiveShadow = true;
+  scene.add(floor);
 }
 
 function createDrone(scene: THREE.Scene) {
@@ -411,43 +212,53 @@ function createEffects(scene: THREE.Scene, theme: number) {
 }
 
 function disposeScene(scene: THREE.Scene) {
-  const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
+  const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
   scene.traverse(object => {
     if (object instanceof THREE.Mesh) {
       geometries.add(object.geometry);
-      for (const material of Array.isArray(object.material) ? object.material : [object.material]) materials.add(material);
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        materials.add(material);
+        for (const value of Object.values(material)) if (value instanceof THREE.Texture) textures.add(value);
+      }
     }
   });
   geometries.forEach(geometry => geometry.dispose());
+  textures.forEach(texture => texture.dispose());
   materials.forEach(material => material.dispose());
   scene.clear();
 }
 
-/** Entirely local procedural geometry. No model, font, texture or CDN fetch is required. */
+/** Local articulated 3D models, physical lighting and bundled cover-matched campus art. */
 export function createArenaScene(host: HTMLDivElement, chapter: number, reducedMotion: boolean,
   onPhase: (phase: string) => void, initialShot?: CinemaShot) {
   const theme = clamp(chapter, 1, 6);
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xd9ebe8);
-  scene.fog = new THREE.Fog(0xd9ebe8, 18, 32);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  scene.background = null;
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'low-power' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.23;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.04;
+  renderer.setClearColor(0x000000, 0);
+  const room = new RoomEnvironment();
+  const environmentGenerator = new THREE.PMREMGenerator(renderer);
+  const environment = environmentGenerator.fromScene(room, .04);
+  scene.environment = environment.texture;
+  scene.environmentIntensity = .48;
+  room.dispose(); environmentGenerator.dispose();
   renderer.domElement.setAttribute('aria-hidden', 'true');
-  renderer.domElement.setAttribute('data-scene', 'procedural-3d-campus');
+  renderer.domElement.setAttribute('data-scene', 'cover-matched-3d-campus');
   host.appendChild(renderer.domElement);
   const camera = new THREE.OrthographicCamera(-6, 6, 4.4, -4.4, .1, 60);
   camera.position.set(0, 6.5, 15); camera.lookAt(0, 1.8, 0);
-  scene.add(new THREE.HemisphereLight(0xf4fbff, 0xa8b2a2, 2.5));
-  const sun = new THREE.DirectionalLight(0xffeed1, 3.3);
+  scene.add(new THREE.HemisphereLight(0xe7f6ff, 0x8eaa78, 1.55));
+  const sun = new THREE.DirectionalLight(0xffe6b2, 3.2);
   sun.position.set(-4.5, 10, 6); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -9; sun.shadow.camera.right = 9;
+  sun.shadow.mapSize.set(1536, 1536); sun.shadow.camera.left = -9; sun.shadow.camera.right = 9;
   sun.shadow.camera.top = 6; sun.shadow.camera.bottom = -6;
   sun.shadow.camera.near = 1; sun.shadow.camera.far = 24; sun.shadow.normalBias = .03;
-  sun.shadow.bias = -.00015; scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xb2e5eb, 1.0); fill.position.set(4, 3, -2); scene.add(fill);
+  sun.shadow.bias = -.00015; sun.shadow.radius = 3; scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xc9efff, 1.25); fill.position.set(4, 3, -2); scene.add(fill);
   makeCourtyard(scene);
   const hero = createHero(), enemy = createEnemy(theme); scene.add(hero.root, enemy.root);
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
@@ -762,7 +573,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       document.removeEventListener('visibilitychange', visibility);
       renderer.domElement.removeEventListener('webglcontextlost', contextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', contextRestored);
-      disposeScene(scene); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
+      disposeScene(scene); environment.dispose(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
   };
 }
