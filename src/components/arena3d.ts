@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createCoverHero } from './coverHero';
+import { createCoverHeroSprite } from './coverHeroSprite';
 import { createCoverGuardian } from './coverGuardian';
 import { createChapterBoss } from './chapterBoss';
 import { poseMage, type MageArticulation } from './magePose';
@@ -229,7 +230,7 @@ function disposeScene(scene: THREE.Scene) {
   scene.clear();
 }
 
-/** Local articulated 3D models, physical lighting and bundled cover-matched campus art. */
+/** Cover-derived actor art, articulated 3D bosses and local 3D spell effects. */
 export function createArenaScene(host: HTMLDivElement, chapter: number, reducedMotion: boolean,
   onPhase: (phase: string) => void, initialShot?: CinemaShot, companion = false) {
   const theme = clamp(chapter, 1, 6);
@@ -261,7 +262,14 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   sun.shadow.bias = -.00015; sun.shadow.radius = 3; scene.add(sun);
   const fill = new THREE.DirectionalLight(0xc9efff, 1.25); fill.position.set(4, 3, -2); scene.add(fill);
   makeCourtyard(scene);
-  const hero = createHero(), enemy = companion ? createCoverGuardian(1) : createEnemy(theme); scene.add(hero.root, enemy.root);
+  let alive = true, dirty = true;
+  renderer.domElement.setAttribute('data-hero', 'cover-poses-v3');
+  renderer.domElement.setAttribute('data-hero-status', 'loading');
+  const hero = createCoverHeroSprite({
+    onReady: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-hero-status', 'ready'); } },
+    onError: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-hero-status', 'unavailable'); } },
+  });
+  const enemy = companion ? createCoverGuardian(1) : createEnemy(theme); scene.add(hero.root, enemy.root);
   renderer.domElement.setAttribute('data-guardian', companion ? 'mimi-companion' : enemy.root.userData.character || enemy.root.userData.creature || 'sorting-robot');
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
   const drone = createDrone(scene), effects = createEffects(scene, theme);
@@ -272,10 +280,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   let cinemaShot = initialShot, cinemaPaused = false, cinemaTime = 0, cinemaStarted = 0;
   let shotFromX = 0, shotFromZoom = 1, shotFromY = 1.55, shotLookX = 0, shotLookY = 1.55;
   let framingY = 1.8, framingElevation = 4.7;
-  let alive = true, raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
+  let raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
   let enemyHp = 100, playerHp = 100, requestedEnemyHp = 100, requestedPlayerHp = 100;
-  let attack: { started: number; success: boolean } | null = null;
-  let reportedPhase = '', dirty = true;
+  let attack: { started: number; success: boolean; launchOrigin?: THREE.Vector3 } | null = null;
+  let reportedPhase = '';
   const start = new THREE.Vector3(), target = new THREE.Vector3(), moving = new THREE.Vector3();
   const direction = new THREE.Vector3(), midpoint = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
   const baseHeroRotation = .13, baseEnemyRotation = -.15;
@@ -302,7 +310,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const bottom = Math.min(height * .76, answers.getBoundingClientRect().top - bounds.top - 10);
       const cosPitch = 15 / Math.hypot(15, elevation);
       const available = Math.max(height * .16, bottom - top);
-      modelScale = clamp(available / height * viewHeight / (3.82 * cosPitch), .40, portrait ? .8 : 1);
+      // The hero's camera-facing art keeps its full projected height at any pitch.
+      modelScale = clamp(available / height * viewHeight / 3.82, .40, portrait ? .8 : 1);
       lookY = (bottom / height - .5) * viewHeight / cosPitch;
     }
     camera.position.set(0, lookY + elevation, 15);
@@ -358,7 +367,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     enemy.glow.emissive.setHex(enemyHp === 0 ? 0x1e614d : 0x000000);
     enemy.glow.emissiveIntensity = enemyHp === 0 ? .18 : 0;
     hero.glow.emissiveIntensity = .65;
-    drone.position.set(heroX - modelScale * .75, modelScale * (2.68 + (reducedMotion ? 0 : Math.sin(idle * 3) * .08)), -.1);
+    // Keep the helper clear of the cover actor's wider hat, hair and face.
+    drone.position.set(heroX - modelScale * 1.45, modelScale * (3.30 + (reducedMotion ? 0 : Math.sin(idle * 3) * .08)), -.1);
     drone.rotation.y = reducedMotion ? 0 : Math.sin(idle * 1.5) * .12;
     cinemaMagic.visible = Boolean(cinemaShot);
     if (cinemaShot) {
@@ -438,6 +448,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           poseMage(hero, { defense: cast });
         }
       }
+      // Select the cover-derived pose before sampling its visible crystal tip.
+      hero.updateVisual({ camera, attackTime: t, success, reducedMotion });
       scene.updateMatrixWorld(true);
       if (success) {
         hero.tip.getWorldPosition(start);
@@ -445,6 +457,11 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       } else {
         enemy.tip.getWorldPosition(start);
         target.set(heroX + .07 * modelScale, 1.40 * modelScale, .50);
+      }
+      // A launched projectile no longer follows later actor pose changes.
+      if (t >= .48) {
+        attack.launchOrigin ??= start.clone();
+        start.copy(attack.launchOrigin);
       }
       const fly = ease((t - .48) / .42);
       const burst = clamp((t - .9) / .55);
@@ -549,6 +566,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       }
       if (t > 1.67) { attack = null; effects.root.visible = false; emitPhase('待命'); resize(); }
     } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方停機' : playerHp === 0 ? '伙伴守護中' : '待命');
+    if (!attack) hero.updateVisual({ camera, reducedMotion, greeting: cinemaShot === 'hero' || cinemaShot === 'resolve' });
+    renderer.domElement.setAttribute('data-hero-pose', String(hero.root.userData.pose ?? 'idle'));
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(frame);
@@ -575,6 +594,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       document.removeEventListener('visibilitychange', visibility);
       renderer.domElement.removeEventListener('webglcontextlost', contextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', contextRestored);
+      hero.disposeVisual();
       disposeScene(scene); environment.dispose(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
   };

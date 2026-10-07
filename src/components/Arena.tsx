@@ -67,7 +67,7 @@ export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian
     scene.current?.play(cue.startsWith('success'));
   }, [cue]);
   return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
-    aria-label={'原創 3D 校園魔法師小羽與' + guardian + '的答題對戰'}>
+    aria-label={'原創 3D 風格校園魔法師小羽與' + guardian + '的答題對戰'}>
     <div className="arena3d-canvas" ref={host} />
     {fallback && <div className="arena3d-fallback" role="status">
       <span aria-hidden="true">🪄</span>
