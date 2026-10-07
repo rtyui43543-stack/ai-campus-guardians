@@ -303,8 +303,8 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, offline }:
   return <>
     <section className="welcome-banner">
       <div className="welcome-art" /><div className="welcome-shade" />
-      <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> AI 魔法校園 · 守護任務啟動</span>
-        <h1>答對出招，<br /><em>守護校園！</em></h1><p>化身小魔法師，破解生活中的 AI 難題。<br className="desktop-break" />用你的好判斷，施展六種守護魔法！</p>
+      <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> 生活裡的 AI 挑戰</span>
+        <h1>破解生活難題，<br /><em>學會正確用 AI！</em></h1><p>從聊天到寫作業，和伙伴一起保護個資、查證消息，練習讓 AI 成為學習好幫手。</p>
         <button className="button primary" onClick={() => progress.active ? onResume() : onLevel(nextLevel)}><Play size={17} fill="currentColor" />{progress.active ? (isDefeated(progress.active) ? '重新挑戰第 ' : '繼續第 ') + (progress.active.mode === 'starter' ? progress.active.levelId : progress.active.levelId - 6) + ' 關' : progress.completed.length ? '繼續我的冒險' : '開始我的冒險'}<ArrowRight size={18} /></button>
         <span className="welcome-note"><ShieldCheck size={15} />你的進度會存在這台裝置</span>
       </div>
