@@ -63,7 +63,7 @@ export interface Progress {
   attempts: AttemptRecord[];
   active: Session | null;
   proposals: Proposal[];
-  settings: { mode: Mode; sound: boolean; narration: boolean; reducedMotion: boolean };
+  settings: { mode: Mode; sound: boolean; music: boolean; narration: boolean; reducedMotion: boolean };
   updatedAt: string;
   finishedSessionIds?: string[];
 }

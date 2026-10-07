@@ -114,7 +114,8 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
       </section></div>
     <section className="surface settings-section preferences"><div className="panel-title"><Settings size={21} /><h2>我的冒險偏好</h2></div>
       <div className="preference-row"><div><b>音效回饋</b><p>確認答案時，播放出招與提示音效。</p></div><Toggle label="音效回饋" checked={progress.settings.sound} onChange={sound => onUpdate({ ...progress, settings: { ...progress.settings, sound } })} /></div>
-      <div className="preference-row"><div><b>自動朗讀新題目</b><p>進入任務時播放題目；仍可隨時停止或重播。</p></div><Toggle label="自動朗讀新題目" checked={progress.settings.narration} onChange={narration => onUpdate({ ...progress, settings: { ...progress.settings, narration } })} /></div>
+      <div className="preference-row"><div><b>戰鬥背景音樂</b><p>對戰時播放緊湊的冒險配樂；也能在題目旁隨時關閉。</p></div><Toggle label="戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
+      <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
       <div className="preference-row"><div><b>挑戰模式</b><p>初階從生活小事開始；進階多一個需要思考的狀況。兩種路線各六關，都能直接選答案。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
     </section>

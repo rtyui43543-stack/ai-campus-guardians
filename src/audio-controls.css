@@ -1,0 +1,4 @@
+.duel-question-meta>span{min-width:0}
+.duel-music{gap:5px;padding:4px 8px;border:1px solid #b8e7ed45;background:#ffffff0a;white-space:nowrap;font-size:12px}
+.duel-music[aria-pressed=true]{color:#b4f4d6;background:#27594b80;border-color:#97e2c670}
+@media(max-width:600px){.duel-question-meta>div{gap:4px}.duel-music{gap:3px;padding:3px 5px;font-size:10px}}

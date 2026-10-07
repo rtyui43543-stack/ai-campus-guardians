@@ -8,7 +8,7 @@ const uniqueId = () => globalThis.crypto?.randomUUID?.() ?? `session-${Date.now(
 export function createProgress(): Progress {
   return {
     schemaVersion: 2, completed: [], attempts: [], active: null, proposals: [],
-    settings: { mode: 'starter', sound: true, narration: true, reducedMotion: false },
+    settings: { mode: 'starter', sound: true, music: true, narration: false, reducedMotion: false },
     finishedSessionIds: [], updatedAt: now(),
   };
 }

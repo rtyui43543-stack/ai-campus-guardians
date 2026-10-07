@@ -1,9 +1,11 @@
 import { appAssetUrl } from './urls';
+import { setBattleMusicDucked } from './music';
 
 let audioIndex: Record<string, string> = {};
 let loaded: Promise<void> | null = null;
 let player: HTMLAudioElement | null = null;
 let context: AudioContext | null = null;
+let narrationRequest = 0;
 export function loadAudio() {
   loaded ??= fetch(appAssetUrl('/audio/index.json')).then(async r => {
     if (!r.ok) throw new Error('朗讀索引尚未下載。');
@@ -11,23 +13,33 @@ export function loadAudio() {
   }).catch(() => { loaded = null; });
   return loaded;
 }
-export function stopAudio() { player?.pause(); if (player) player.currentTime = 0; }
+function pauseNarration() { player?.pause(); if (player) player.currentTime = 0; setBattleMusicDucked(false); }
+export function stopAudio() { narrationRequest++; pauseNarration(); }
 export async function playAudio(key: string): Promise<void> {
+  const request = ++narrationRequest;
   await loadAudio();
+  if (request !== narrationRequest) return;
   const asset = audioIndex[key];
   if (!asset) throw new Error('這段朗讀尚未準備好，請確認已完成離線下載。');
   const url = appAssetUrl(asset);
   if (player && !player.paused && player.src === url) { stopAudio(); return; }
-  stopAudio();
+  pauseNarration();
   if (!player) {
     player = new Audio();
     player.hidden = true; player.preload = 'auto';
     player.setAttribute('aria-hidden','true');
     player.setAttribute('data-testid','offline-narration');
+    player.addEventListener('ended', () => setBattleMusicDucked(false));
+    player.addEventListener('pause', () => { if (player?.paused) setBattleMusicDucked(false); });
+    player.addEventListener('error', () => setBattleMusicDucked(false));
     document.body.appendChild(player);
   }
   player.src = url;
-  await player.play();
+  setBattleMusicDucked(true);
+  try { await player.play(); } catch (error) {
+    if (request !== narrationRequest) return;
+    setBattleMusicDucked(false); throw error;
+  }
 }
 export function tone(success: boolean) {
   try {

@@ -11,7 +11,7 @@ interface ArenaProps {
   guardian: string;
 }
 
-export const abilityNames = ['守護盾衝擊', '查證掃描光', '分類卡片旋風', '真相稜鏡', '思考書本光波', '合作星光陣'];
+export const abilityNames = ['個資守護光球', '查證掃描光束', '分類卡片旋風', '真相稜鏡光波', '思考魔法書', '合作星光陣'];
 export const ATTACK_IMPACT_MS = 900;
 
 export function GuardianPortrait({ chapter, className = '' }: { chapter: number; className?: string }) {
@@ -83,11 +83,11 @@ export function Arena({ chapter, enemyHp, playerHp, reducedMotion, cue, guardian
     lastCue.current = cue;
     scene.current?.play(cue.startsWith('success'));
   }, [cue]);
-  return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-animation={phase}
-    aria-label={'原創 3D 校園守護隊員與' + guardian + '的答題對戰'}>
+  return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase}
+    aria-label={'原創 3D 校園魔法師小羽與' + guardian + '的答題對戰'}>
     <div className="arena3d-canvas" ref={host} />
     {fallback && <div className="arena3d-fallback" role="status">
-      <span aria-hidden="true">🛡️</span>
+      <span aria-hidden="true">🪄</span>
       <strong>這台裝置無法顯示 3D 對戰場景</strong>
       <p>題目仍可正常作答。請開啟瀏覽器的硬體加速，或改用支援 WebGL 的裝置。</p>
     </div>}

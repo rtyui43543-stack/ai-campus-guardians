@@ -135,6 +135,19 @@ describe('new campaign storage and backups', () => {
     expect(JSON.parse(localStorage.getItem(V2_KEY)!).schemaVersion).toBe(2);
   });
 
+  it('migrates auto narration saves to manual reading without losing the active challenge', async () => {
+    const storage = await import('./storage');
+    const oldProgress = applySession(createProgress(), solve(startSession(2, 'starter')));
+    const old = JSON.parse(JSON.stringify(oldProgress));
+    delete old.settings.music;
+    old.settings.narration = true;
+    const migrated = storage.parseBackup(JSON.stringify(old));
+    expect(migrated.active).toEqual(oldProgress.active);
+    expect(migrated.settings).toMatchObject({ narration: false, music: true });
+    expect(storage.parseBackup(storage.exportBackup({ ...migrated, settings: { ...migrated.settings, music: false } })).settings.music).toBe(false);
+    expect(() => storage.parseBackup(JSON.stringify({ ...old, settings: { ...old.settings, music: 'on' } }))).toThrow(storage.MalformedBackupError);
+  });
+
   it('does not read or overwrite the old IndexedDB database or record key', async () => {
     const simulated = delayedIndexedDb();
     vi.stubGlobal('indexedDB', simulated.factory);

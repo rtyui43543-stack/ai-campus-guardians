@@ -142,6 +142,8 @@ export function validateProgress(value: unknown): Progress {
   const completed = list(raw.completed, 'completed', 12).map((id, i) => integer(id, `completed[${i}]`, 1, 12));
   if (new Set(completed).size !== completed.length) reject('completed包含重複關卡');
   const settings = object(raw.settings, 'settings');
+  // Existing saves keep their progress, but narration now always requires a tap.
+  boolean(settings.narration, 'settings.narration');
   const finishedSessionIds = raw.finishedSessionIds === undefined ? [] : list(raw.finishedSessionIds, 'finishedSessionIds').map((id, i) => text(id, `finishedSessionIds[${i}]`, 256));
   if (new Set(finishedSessionIds).size !== finishedSessionIds.length) reject('finishedSessionIds包含重複挑戰');
   const active = activeSession(raw.active);
@@ -153,7 +155,8 @@ export function validateProgress(value: unknown): Progress {
     proposals: list(raw.proposals, 'proposals', 10000).map((value, i) => proposal(value, `proposals[${i}]`)),
     settings: {
       mode: mode(settings.mode, 'settings.mode'), sound: boolean(settings.sound, 'settings.sound'),
-      narration: boolean(settings.narration, 'settings.narration'), reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
+      music: settings.music === undefined ? true : boolean(settings.music, 'settings.music'),
+      narration: false, reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
     }, finishedSessionIds, updatedAt: timestamp(raw.updatedAt, 'updatedAt'),
   };
 }
