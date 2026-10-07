@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.audio-work/
+test-results/
+*.log
+runtime/
+release/
+*.zip
+.build-log.txt
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example

@@ -1,0 +1,7 @@
+.arena3d{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;background:#dcecea;isolation:isolate}
+.arena3d-canvas{position:absolute;inset:0;width:100%;height:100%}
+.arena3d-canvas canvas{display:block;width:100%;height:100%;outline:none}
+.guardian-avatar{display:block;width:100%;height:100%;overflow:visible}
+.arena3d-fallback{position:absolute;top:36%;left:15%;width:70%;padding:20px;border-radius:20px;background:rgba(255,255,255,.94);text-align:center;color:#164e49;box-shadow:0 8px 30px #153d4920}
+.arena3d-fallback>span{display:block;font-size:48px}.arena3d-fallback strong{display:block;font-size:18px}.arena3d-fallback p{font-size:14px;line-height:1.6;margin:8px 0 0}
+@media(max-width:640px){.arena3d-fallback{left:8%;width:84%;padding:12px}.arena3d-fallback>span{font-size:32px}.arena3d-fallback strong{font-size:15px}.arena3d-fallback p{font-size:12px}}

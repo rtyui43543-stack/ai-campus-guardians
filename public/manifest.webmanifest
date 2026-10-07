@@ -1,0 +1,16 @@
+{
+  "name": "AI 校園守護隊",
+  "short_name": "校園守護隊",
+  "description": "十二關生活 AI 倫理 3D 對戰。下載完整離線內容後，沒有網路也能答題、出招與朗讀。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#164e49",
+  "background_color": "#f6f3eb",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

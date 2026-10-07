@@ -1,0 +1,19 @@
+@media(max-width:760px){
+  .battle-grid{grid-template-columns:minmax(0,1fr)}
+  .battle-grid .battle-world{display:contents}
+  .battle-world .arena,.battle-world .mission-track,.battle-world-title,.battle-grid .question-panel{grid-column:1;grid-row:auto}
+  .battle-world .partner-note{display:none}
+  .battle-world .mission-track{margin:0 0 2px}
+  .battle-world .arena{position:sticky;top:64px;z-index:12;height:220px;align-self:start;box-shadow:0 5px 14px #263a291a;border:1px solid #e0e3d3}
+  .battle-world .arena-canvas{inset:30px 0 35px}
+  .battle-world .arena-hud{top:11px}
+  .battle-world .arena-name{bottom:28px;font-size:11px}
+  .battle-world .arena-name span{display:none}
+  .battle-world .arena-caption{bottom:8px;font-size:8px}
+  .battle-world .enemy-defeated{font-size:17px;padding:10px 20px}
+  .battle-main #question-title{scroll-margin-top:305px}
+}
+@media(max-width:760px) and (max-height:600px){
+  .battle-world .arena{position:relative;top:auto;height:200px}
+  .battle-main #question-title{scroll-margin-top:80px}
+}

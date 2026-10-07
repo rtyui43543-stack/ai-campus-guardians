@@ -1,0 +1,39 @@
+{
+  "name": "ai-campus-guardians",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && node scripts/notices.mjs && vite build && node scripts/build-offline.mjs && node scripts/check-pages.mjs",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run src && node --test scripts/preview-pages.test.mjs",
+    "pages:check": "node scripts/check-pages.mjs",
+    "pages:preview": "node scripts/preview-pages.mjs",
+    "content:check": "tsx scripts/check-content.ts",
+    "audio:manifest": "tsx scripts/audio-manifest.ts",
+    "audio:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-audio.ps1",
+    "questions:export": "tsx scripts/export-questions.ts",
+    "content:export": "tsx scripts/export-questions.ts",
+    "audio:prune": "node scripts/prune-audio.mjs",
+    "package:github": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-github-pages.ps1"
+  },
+  "dependencies": {
+    "@fontsource-variable/noto-sans-tc": "^5.2.9",
+    "lucide-react": "^0.468.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0",
+    "vitest": "^5.0.3"
+  }
+}

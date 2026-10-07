@@ -1,0 +1,2 @@
+.question-header h2{scroll-margin-top:90px}.question-header h2:focus{outline:none}.text-button{min-height:44px}.source-button{min-height:44px}.read-button{width:44px;height:44px}.icon-button.tiny{width:36px;height:36px}.toggle::after{content:'';position:absolute;inset:-10px;min-height:44px}.sidebar nav .nav-item{min-height:48px}
+@media(max-width:760px){.icon-button.tiny{width:40px;height:40px}.source-button{min-width:44px;justify-content:flex-end}.read-button{width:44px;height:44px}.question-header h2{scroll-margin-top:82px}}
