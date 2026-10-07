@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { poseMage, type MageArticulation } from './magePose';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -92,7 +93,23 @@ function arm(parent: THREE.Group, x: number, sleeve: Surface, hand: Surface) {
   return pivot;
 }
 
-function createHero(): Rig {
+function mageArm(parent: THREE.Group, x: number, sleeve: Surface, skin: Surface, gold: Surface) {
+  const shoulder = new THREE.Group(); shoulder.position.set(x, 1.65, .12); parent.add(shoulder);
+  mesh(shoulder, new THREE.CapsuleGeometry(.14, .15, 4, 10), sleeve, 0, -.13, 0);
+  const elbow = new THREE.Group(); elbow.position.y = -.29; shoulder.add(elbow);
+  ball(elbow, .13, sleeve);
+  mesh(elbow, new THREE.CapsuleGeometry(.13, .13, 4, 10), sleeve, 0, -.12, 0);
+  mesh(elbow, new THREE.CylinderGeometry(.15, .17, .16, 10), sleeve, 0, -.23, 0);
+  ring(elbow, .155, .025, gold, 0, -.30, 0).rotation.x = Math.PI / 2;
+  const hand = new THREE.Group(); hand.name = x < 0 ? 'mage-left-hand' : 'mage-right-hand';
+  hand.position.set(0, -.385, .035); elbow.add(hand);
+  const palm = ball(hand, .145, skin); palm.scale.set(.94, 1, .85);
+  // A visible thumb also makes the staff grip readable in close-up shots.
+  ball(hand, .065, skin, x > 0 ? -.095 : .095, .035, .105);
+  return { shoulder, elbow, hand };
+}
+
+export function createHero(): Rig & MageArticulation {
   const root = new THREE.Group(); root.name = 'original-campus-mage';
   const robe = solid(0x176c77), skin = solid(0xf4bb91), navy = solid(0x26394c);
   const gold = solid(0xf2bf60, .22), hair = solid(0x493838), white = solid(0xf9f5e4);
@@ -140,17 +157,13 @@ function createHero(): Rig {
   mesh(head, crownGeometry, robe, 0, 1.01, -.025);
   mesh(head, new THREE.CylinderGeometry(.46, .52, .12, 18), gold, .015, .64, -.025);
   mesh(head, starGeometry(.095), white, -.06, .66, .49);
-  const leftArm = arm(root, -.47, robe, skin), rightArm = arm(root, .47, robe, skin);
-  leftArm.rotation.z = -.18; rightArm.rotation.z = -.10;
-  for (const sleeve of [leftArm, rightArm]) {
-    mesh(sleeve, new THREE.CylinderGeometry(.16, .19, .18, 10), robe, 0, -.39, 0);
-    ring(sleeve, .17, .027, gold, 0, -.47, 0).rotation.x = Math.PI / 2;
-  }
+  const left = mageArm(root, -.47, robe, skin, gold), right = mageArm(root, .47, robe, skin, gold);
+  const leftArm = left.shoulder, rightArm = right.shoulder;
   // The hand grips the shaft below its gem; the staff no longer hangs upside down.
   const staff = new THREE.Group(); staff.name = 'mage-staff';
-  staff.position.set(0, -.55, .10); staff.rotation.z = -.38; rightArm.add(staff);
-  mesh(staff, new THREE.CylinderGeometry(.040, .053, 1.67, 10), navy, 0, .08, 0);
-  for (const y of [-.70, -.10, .58]) {
+  staff.position.set(0, 0, .065); right.hand.add(staff);
+  mesh(staff, new THREE.CylinderGeometry(.040, .053, 1.30, 10), navy, 0, .35, 0);
+  for (const y of [-.24, .12, .58]) {
     mesh(staff, new THREE.CylinderGeometry(.064, .064, .09, 10), gold, 0, y, 0);
   }
   mesh(staff, new THREE.ConeGeometry(.11, .18, 10), gold, 0, .88, 0);
@@ -160,8 +173,10 @@ function createHero(): Rig {
   const gemHalo = ring(staff, .235, .017, luminous(0x8df4e2, .45), 0, 1.08, .02);
   gemHalo.rotation.x = .75;
   const tip = new THREE.Object3D(); tip.position.set(0, 1.08, .06); staff.add(tip);
-  return { root, head, leftArm, rightArm, leftLeg: leg(root, -.22, navy, gold),
-    rightLeg: leg(root, .22, navy, gold), tip, glow };
+  const rig = { root, head, leftArm, rightArm, leftElbow: left.elbow, rightElbow: right.elbow,
+    staff, leftLeg: leg(root, -.22, navy, gold), rightLeg: leg(root, .22, navy, gold), tip, glow };
+  poseMage(rig);
+  return rig;
 }
 
 function createEnemy(theme: number): Rig {
@@ -522,9 +537,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     enemy.root.position.set(enemyX, idleBob * .65 + (enemyHp === 0 ? -.10 : 0), 0);
     hero.root.rotation.set(0, baseHeroRotation, 0);
     enemy.root.rotation.set(0, baseEnemyRotation, enemyHp === 0 ? .055 : 0);
-    hero.head.rotation.z = reducedMotion ? 0 : Math.sin(idle * 1.5) * .017;
+    hero.head.rotation.set(0, 0, reducedMotion ? 0 : Math.sin(idle * 1.5) * .017);
     enemy.head.rotation.z = reducedMotion ? 0 : Math.sin(idle * 1.7 + 1) * .025;
-    hero.leftArm.rotation.set(0, 0, -.18); hero.rightArm.rotation.set(0, 0, -.10);
+    poseMage(hero);
     enemy.leftArm.rotation.set(0, 0, -.26); enemy.rightArm.rotation.set(0, 0, .26);
     for (const part of [hero.leftLeg, hero.rightLeg, enemy.leftLeg, enemy.rightLeg]) part.rotation.set(0, 0, 0);
     enemy.glow.emissive.setHex(enemyHp === 0 ? 0x1e614d : 0x000000);
@@ -553,8 +568,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           enemy.head.rotation.z = Math.sin(idle * 2) * .08;
         }
         if (cinemaShot === 'hero' || cinemaShot === 'resolve') {
-          hero.leftArm.rotation.z = -.18 + .85 * ease(elapsed / .8);
-          hero.leftArm.rotation.x = Math.sin(idle * 2) * .10;
+          poseMage(hero, { greeting: ease(elapsed / .8), sway: Math.sin(idle * 2) });
           hero.head.rotation.y = -.08;
           hero.glow.emissiveIntensity = 1 + Math.sin(idle * 2) * .35;
         }
@@ -593,10 +607,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           hero.root.rotation.z = -.055 * windup * (1 - cast);
           hero.root.rotation.y += .30 * cast;
           // Draw the staff back, then aim the gem toward the enemy; the free hand casts.
-          hero.rightArm.rotation.z = -.10 - 1.12 * cast;
-          hero.rightArm.rotation.x = -.42 * windup * (1 - cast) - .10 * cast;
-          hero.leftArm.rotation.z = -.18 + 1.48 * cast;
-          hero.leftArm.rotation.x = -.32 * cast;
+          poseMage(hero, { cast, windup });
           hero.root.position.x += .20 * cast;
           hero.leftLeg.rotation.z = .16 * cast;
           hero.rightLeg.rotation.z = -.18 * cast;
@@ -611,7 +622,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           enemy.root.rotation.y -= .14 * cast;
           hero.root.position.x -= recoil * .19 * modelScale;
           hero.root.rotation.z += recoil * .10;
-          hero.leftArm.rotation.z = -.18 + .55 * cast;
+          poseMage(hero, { defense: cast });
         }
       }
       scene.updateMatrixWorld(true);
