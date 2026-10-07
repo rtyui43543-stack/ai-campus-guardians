@@ -66,7 +66,7 @@ if ($Kind -in @('all','source')) {
     if (-not (Test-Path -LiteralPath $taskSourceDirectory -PathType Container)) { throw ('Missing source directory: '+$taskDirectory) }
     $taskSourceFiles+=Get-ChildItem -LiteralPath $taskSourceDirectory -Recurse -File -Force
   }
-  foreach($taskRootFile in @('README.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','index.html','.gitignore')) {
+  foreach($taskRootFile in @('README.md','package.json','package-lock.json','tsconfig.json','vite.config.ts','index.html','.gitignore','.gitattributes')) {
     $taskFilePath=Assert-Within $taskProjectRoot (Join-Path $taskProjectRoot $taskRootFile)
     if (-not (Test-Path -LiteralPath $taskFilePath -PathType Leaf)) { throw ('Missing source file: '+$taskRootFile) }
     $taskSourceFiles+=Get-Item -LiteralPath $taskFilePath -Force
