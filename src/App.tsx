@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
-import type { Chapter, Level, Mode, Progress, Session } from './domain/types';
+import type { Chapter, CompletedRun, Level, Mode, Progress } from './domain/types';
 import { chapters, levels, getChapter, getLevel, phaseLabels, sourceLabels } from './content/levels';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
 import { loadProgress, saveProgress } from './domain/storage';
+import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
 import { battleSound, loadAudio, playAudio, stopAudio } from './platform/audio';
 import { startBattleMusic, stopBattleMusic } from './platform/music';
 import { useOffline } from './platform/offline';
@@ -12,6 +13,7 @@ import { appAssetUrl } from './platform/urls';
 import { OfflineDownloadCard } from './components/OfflineDownloadCard';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
 import { GrowthPanel, ManualPanel, OfflinePanel, ProposalPanel } from './components/Panels';
+import { LevelScore, ScoreSummary } from './components/Scoring';
 
 type Screen = 'map' | 'battle' | 'results' | 'growth' | 'proposals' | 'manual' | 'settings';
 const navItems = [
@@ -20,7 +22,7 @@ const navItems = [
   { id: 'settings', label: '離線與設定', icon: Settings }
 ] as const;
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
-export const statusNames = { first: '首次理解', supported: '提示後完成', practice: '需要再練習' };
+export const statusNames = { first: '首次獨立答對', supported: '重試／提示後答對', practice: '看示範後完成' };
 export const chapterIcons = { scan: ScanLine, compass: Compass, search: Search, shield: ShieldCheck, hand: HandHeart, spark: Sparkles };
 
 export function App() {
@@ -28,7 +30,7 @@ export function App() {
   const [loadError, setLoadError] = useState('');
   const [screen, setScreen] = useState<Screen>('map');
   const [intro, setIntro] = useState<Level | null>(null);
-  const [result, setResult] = useState<Session | null>(null);
+  const [result, setResult] = useState<CompletedRun | null>(null);
   const [notice, setNotice] = useState('');
   const [cue, setCue] = useState('');
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -47,6 +49,8 @@ export function App() {
     void loadProgress().then(p => {
       setProgress(p);
       if (requested === '#battle' && p.active) setScreen('battle');
+      if (requested === '#results') { const previous = latestRun(p); if (previous) { setResult(previous); setScreen('results'); } }
+      if (requested === '#growth') setScreen('growth');
       void loadAudio();
     }).catch(error => setLoadError(error instanceof Error ? error.message : '存檔無法讀取'));
   };
@@ -102,7 +106,7 @@ export function App() {
     else { playMusicFromGesture(); commit({ ...progress, settings: { ...progress.settings, music: true } }); }
   };
   const narrate = (key: string) => { void playAudio(key).catch(error => setNotice(error.message)); };
-  const changeSession = (next: Session) => {
+  const changeSession = (next: NonNullable<Progress['active']>) => {
     if (!progress) return;
     const prior = progress.active;
     commit(applySession(progress, next));
@@ -156,7 +160,7 @@ export function App() {
         };
         finished = { ...finished, proposals: [...finished.proposals, proposal] };
       }
-      setResult({ ...active, records: [...active.records, next.record], repaired: 100 });
+      setResult(latestRun(finished));
       commit(finished); setScreen('results');
     } else if (next.session) {
       changeSession(next.session);
@@ -239,7 +243,7 @@ export function App() {
               changeSession(submitAction(chooseAction(active,i)));
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
             <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(active)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
-              <span className="duel-rule">答對出招 · 沒有倒數 · 自動存檔</span>
+              <span className="duel-score" aria-label="目前闖關得分">得分 {scoreSession(active).score}／100</span>
               {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { attackLock.current = false; changeSession(retryQuestion(active)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => changeSession(demonstrate(active))}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
             </div>
           </div>
@@ -247,8 +251,8 @@ export function App() {
         </section>}
         {screen === 'battle' && !active && <div className="empty-state"><ShieldCheck size={40} /><h1>你的冒險，從這裡開始</h1><button className="button primary" onClick={() => navigate('map')}>前往冒險地圖<ArrowRight size={18} /></button></div>}
         {screen === 'results' && result && <Results session={result} onLevel={setIntro} onMap={() => navigate('map')} onReview={() => start(getLevel(result.levelId)!, true)} onProposal={() => navigate('proposals')} />}
-        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={setIntro} />}
-        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={setIntro} />}
+        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
+        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={setIntro} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={setIntro} onNotice={setNotice} />}
         {screen === 'manual' && <ManualPanel onLevel={setIntro} />}
         {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={commit} onNotice={setNotice} onMap={() => navigate('map')} />}
@@ -333,26 +337,29 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
     <div className="chapter-card-header"><div className="chapter-icon"><Icon size={23} /></div><span className="chapter-number">{modeNames[progress.settings.mode]} 0{chapter.id}</span>
       <span className={'chapter-status ' + (missions.every(l => progress.completed.includes(l.id)) ? 'complete' : '')}>{missions.every(l => progress.completed.includes(l.id)) ? <><Check size={13} />已完成</> : '尚未挑戰'}</span></div>
     <div className="chapter-card-body"><div><h3>{chapter.title}</h3><p>{chapter.subtitle}</p><span className="skill-label"><Sparkles size={13} />解鎖能力：{chapter.skill}</span></div><GuardianPortrait chapter={chapter.id} /></div>
-    <div className="level-list">{missions.map(level => <button key={level.id} className={'level-row ' + (progress.completed.includes(level.id) ? 'completed' : '') + (nextLevel === level.id ? ' recommended' : '')} onClick={() => onLevel(level)}>
+    <div className="level-list">{missions.map(level => <div className="level-entry" key={level.id}><button className={'level-row ' + (progress.completed.includes(level.id) ? 'completed' : '') + (nextLevel === level.id ? ' recommended' : '')} onClick={() => onLevel(level)}>
       <span className="level-number">{progress.completed.includes(level.id) ? <Check size={15} /> : String(level.id).padStart(2, '0')}</span>
       <span>{level.title}</span>{nextLevel === level.id ? <span className="next-tag">下一站</span> : null}<ChevronRight size={16} />
-    </button>)}</div>
+    </button><LevelScore progress={progress} levelId={level.id} /></div>)}</div>
   </article>;
 }
 
 function Results({ session, onLevel, onMap, onReview, onProposal }: {
-  session: Session; onLevel: (level: Level) => void; onMap: () => void; onReview: () => void; onProposal: () => void;
+  session: CompletedRun; onLevel: (level: Level) => void; onMap: () => void; onReview: () => void; onProposal: () => void;
 }) {
   const level = getLevel(session.levelId)!;
   const chapter = getChapter(level.chapterId)!;
   const summary = sessionSummary(session.records);
+  const score = scoreSession(session);
   return <div className="results-page"><section className="results-hero"><span className="results-medal"><ShieldCheck size={42} /></span>
-    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.review ? '練習成功！又學會一個好方法。' : '挑戰成功！敵人被擊敗了！'}</h1><p>第 {level.id} 關 · {level.title}，敵方 HP 歸零。</p>
+    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.review ? '練習成功！又學會一個好方法。' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · 第 {level.mode === 'starter' ? level.id : level.id - 6} 關 · {level.title}</p>
     <div className="result-skill"><Sparkles size={18} />{chapter.skill}<span>學會的事，比勝率更重要</span></div></section>
-    <div className="summary-grid">{(['first', 'supported', 'practice'] as const).map(status => <div className={'summary-card ' + status} key={status}><span>{statusNames[status]}</span><strong>{summary[status]}<small> 題</small></strong><p>{status === 'first' ? '獨立完成的思考' : status === 'supported' ? '運用提示後的理解' : '看過示範，安排再練習'}</p></div>)}</div>
-    <section className="surface result-reflection"><h2>這一站，帶走的守護能力</h2><p>{level.objective}</p><div className="record-list">{session.records.map((r, i) => {
+    <ScoreSummary run={session} />
+    <div className="summary-grid">{(['first', 'supported', 'practice'] as const).map(status => <div className={'summary-card ' + status} key={status}><span>{statusNames[status]}</span><strong>{summary[status]}<small> 題</small></strong><p>{status === 'first' ? '獨立完成的思考' : status === 'supported' ? '再次思考或使用提示後答對' : '看過示範，安排再練習'}</p></div>)}</div>
+    <section className="surface result-reflection"><h2>逐題得分與回答紀錄</h2><p>{level.objective}</p><div className="record-list">{session.records.map((r, i) => {
       const q = questionById.get(r.questionId)!;
-      return <details key={q.id}><summary><span>{i + 1}</span><b>{q.objective}</b><em className={'status-badge ' + r.status}>{statusNames[r.status]}</em><ChevronRight size={16} /></summary><p>{presentQuestion(q, r.mode).explanation}</p></details>;
+      const text = presentQuestion(q, r.mode);
+      return <details key={q.id}><summary><div className="result-question"><strong>第 {i + 1} 題</strong><b>{text.prompt}</b><small>{describeAttempt(r)}</small></div><span className="result-question-score">{score.rows[i].points}／{score.rows[i].maxPoints} 分</span><ChevronRight size={18} /></summary><p><b>你的答案：</b>{text.choices[r.action].text}<br />{text.explanation}</p></details>;
     })}</div></section>
     <div className="results-actions"><button className="button secondary" onClick={onMap}><Home size={18} />回冒險地圖</button><button className="button secondary" onClick={onReview}><RotateCcw size={18} />試試兩題新情境</button>
       {level.id === 12 && !session.review ? <button className="button primary" onClick={onProposal}>我的 AI 使用約定<ArrowRight size={18} /></button>

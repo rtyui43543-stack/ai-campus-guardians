@@ -1,5 +1,7 @@
 # 3D 十二關版本驗收
 
+最新版文字閱讀與闖關評分的驗收見 [score-readability-acceptance.md](score-readability-acceptance.md)。
+
 最新版血量歸零、首頁與台灣華語朗讀的驗收見 [defeat-voice-acceptance.md](defeat-voice-acceptance.md)。
 
 GitHub Pages與首頁暫停／續傳功能的最新驗收見[github-pages-acceptance.md](github-pages-acceptance.md)。下列保留前一次Windows版的驗證紀錄。

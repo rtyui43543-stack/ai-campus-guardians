@@ -1,0 +1,267 @@
+/* Student-facing text stays readable without enlarging the fullscreen battle grid. */
+:root {
+  --student-ink: #183b35;
+  --student-secondary: #40594e;
+  --student-green: #245431;
+  --student-orange: #80501e;
+  --student-purple: #653a7f;
+  --muted: var(--student-secondary);
+}
+body { font-size: 18px; }
+.battle-shell { font-size: 16px; line-height: 1.65; }
+.app-shell:not(.battle-shell) { color: var(--student-ink); line-height: 1.75; }
+.app-shell:not(.battle-shell) .main-content { font-size: 18px; }
+.app-shell:not(.battle-shell) :is(.button, .text-button, .nav-item, .segmented button, .mode-toggle button) {
+  font-size: 16px;
+  font-weight: 650;
+  min-height: 44px;
+  line-height: 1.55;
+}
+.app-shell:not(.battle-shell) :is(.button.secondary, .text-button) { color: var(--student-green); }
+.app-shell:not(.battle-shell) .button { white-space: normal; text-align: center; }
+.app-shell:not(.battle-shell) .button:disabled {
+  opacity: 1;
+  background: #e4eae0;
+  color: var(--student-secondary);
+  border-color: #b9c8b6;
+  box-shadow: none;
+}
+.app-shell:not(.battle-shell) .icon-button, .dialog .icon-button { width: 44px; height: 44px; }
+.app-shell:not(.battle-shell) :is(.eyebrow, .section-note, .tag, .chapter-number, .chapter-status, .next-tag, .boss-tag) {
+  font-size: 16px;
+  color: var(--student-secondary);
+  opacity: 1;
+  line-height: 1.65;
+}
+.app-shell:not(.battle-shell) .eyebrow { font-size: 15px; letter-spacing: .06em; font-weight: 700; }
+.app-shell:not(.battle-shell) :is(.section-heading h2, .panel-title h2, .manual-section h2, .result-reflection h2, .empty-state h2) {
+  font-size: 28px;
+  color: var(--student-ink);
+  font-weight: 750;
+  line-height: 1.45;
+}
+.app-shell:not(.battle-shell) .page-heading h1 { font-size: 36px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .page-heading > p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .section-heading { flex-wrap: wrap; gap: 8px 16px; }
+.app-shell:not(.battle-shell) .section-note { max-width: none; text-align: left; }
+
+/* Navigation keeps its existing widths; long labels can wrap instead of shrinking. */
+.app-shell:not(.battle-shell) .sidebar { overflow-y: auto; }
+.app-shell:not(.battle-shell) .brand { white-space: normal; }
+.app-shell:not(.battle-shell) .brand span { font-size: 18px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .brand small { font-size: 15px; letter-spacing: .025em; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .sidebar-label { font-size: 16px; letter-spacing: .04em; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .nav-item { font-size: 17px; min-height: 50px; }
+.app-shell:not(.battle-shell) .nav-item.active { color: #fffdf7; }
+.app-shell:not(.battle-shell) .sidebar-progress > div { font-size: 16px; color: var(--student-secondary); flex-wrap: wrap; gap: 6px; }
+.app-shell:not(.battle-shell) .sidebar-progress b { font-size: 28px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .sidebar-progress :is(p, b small) { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .sidebar-progress p { line-height: 1.75; }
+.app-shell:not(.battle-shell) .offline-chip { font-size: 16px; min-height: 48px; line-height: 1.65; color: var(--student-green); }
+.app-shell:not(.battle-shell) .offline-chip svg:last-child { display: none; }
+.app-shell:not(.battle-shell) .sidebar-bottom > small { font-size: 15px; line-height: 1.8; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .topbar-title { font-size: 16px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .breadcrumb { color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .mode-toggle button { color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .mode-toggle button span { font-size: 15px; opacity: 1; }
+.app-shell:not(.battle-shell) .mode-toggle button.selected { color: var(--student-green); font-weight: 750; }
+.app-shell:not(.battle-shell) .app-footer { flex-wrap: wrap; gap: 8px 16px; color: var(--student-secondary); font-size: 16px; line-height: 1.7; }
+.app-shell:not(.battle-shell) .app-footer :is(span, button) { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .app-footer button { min-height: 44px; }
+
+/* Let the illustrated welcome panel grow with its text. */
+.app-shell:not(.battle-shell) .welcome-banner { height: auto; min-height: 420px; }
+.app-shell:not(.battle-shell) .welcome-copy { padding: 30px 36px; }
+.app-shell:not(.battle-shell) .welcome-copy .eyebrow { font-size: 16px; color: var(--student-green); margin-bottom: 12px; }
+.app-shell:not(.battle-shell) .welcome-copy h1 { font-size: 42px; line-height: 1.35; }
+.app-shell:not(.battle-shell) .welcome-copy p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; max-width: 350px; margin: 16px 0 22px; }
+.app-shell:not(.battle-shell) .welcome-note { font-size: 16px; color: var(--student-secondary); line-height: 1.75; margin-top: 12px; }
+.app-shell:not(.battle-shell) .floating-label { font-size: 16px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .journey-strip { flex-wrap: wrap; gap: 12px; }
+.app-shell:not(.battle-shell) .journey-strip b { font-size: 20px; color: var(--student-ink); font-weight: 750; }
+.app-shell:not(.battle-shell) :is(.journey-strip small, .journey-offline-note) { font-size: 16px; color: var(--student-secondary); line-height: 1.75; }
+.app-shell:not(.battle-shell) .chapter-card-body h3 { font-size: 28px; color: var(--student-ink); font-weight: 750; }
+.app-shell:not(.battle-shell) .chapter-card-body p { font-size: 16px; color: var(--student-secondary); line-height: 1.8; max-width: none; }
+.app-shell:not(.battle-shell) .skill-label { font-size: 16px; color: var(--student-green); font-weight: 650; line-height: 1.75; align-items: flex-start; }
+.app-shell:not(.battle-shell) .skill-label svg { margin-top: 5px; }
+.app-shell:not(.battle-shell) .chapter-number { font-size: 15px; letter-spacing: .045em; font-weight: 700; }
+.app-shell:not(.battle-shell) .chapter-status { font-size: 15px; background: #ecf0e6; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .chapter-status.complete { background: #e6f1df; color: var(--student-green); font-weight: 750; }
+.app-shell:not(.battle-shell) .level-row { font-size: 18px; min-height: 56px; line-height: 1.65; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .level-row:hover { color: var(--student-green); }
+.app-shell:not(.battle-shell) .level-row > span:nth-child(2) { min-width: 0; }
+.app-shell:not(.battle-shell) .level-number { min-width: 32px; height: 32px; font-size: 16px; color: var(--student-green); font-weight: 700; }
+.app-shell:not(.battle-shell) .next-tag { font-size: 15px; padding: 4px 8px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .learning-promise h3 { font-size: 26px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .learning-promise p { font-size: 18px; line-height: 1.85; color: var(--student-secondary); }
+
+/* Offline downloads and preferences use readable supporting text throughout. */
+.app-shell:not(.battle-shell) .offline-pack-heading h2 { font-size: 28px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .offline-pack-status { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .offline-pack-status.ready { color: var(--student-green); }
+.app-shell:not(.battle-shell) .offline-pack > p { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) :is(.offline-pack-count, .offline-install-guide, .offline-pack-footer, .offline-pack .offline-pack-note) { font-size: 16px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .offline-install-guide li { color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .offline-pack-buttons .button { font-size: 16px; min-height: 50px; }
+.app-shell:not(.battle-shell) :is(.settings-section > p, .install-steps, .install-steps b, .preference-row p) { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .settings-section > small { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .panel-title { color: var(--student-green); }
+.app-shell:not(.battle-shell) .preference-row > div { min-width: 0; }
+.app-shell:not(.battle-shell) .preference-row b { font-size: 20px; color: var(--student-ink); font-weight: 750; }
+.app-shell:not(.battle-shell) select, .dialog select { min-height: 44px; font-size: 16px; color: var(--student-ink); line-height: 1.6; }
+.app-shell:not(.battle-shell) .preference-row select { max-width: 100%; }
+.app-shell:not(.battle-shell) .hint-box, .app-shell:not(.battle-shell) .hint-box p { font-size: 16px; line-height: 1.85; color: var(--student-orange); }
+.app-shell:not(.battle-shell) .import-confirm { font-size: 18px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .toggle, .app-shell:not(.battle-shell) .toggle.on { width: 60px; height: 44px; background: transparent; box-shadow: none; margin-top: 0; }
+.app-shell:not(.battle-shell) .toggle::before { content: ''; position: absolute; width: 46px; height: 26px; left: 7px; top: 9px; border-radius: 99px; background: #b9c8b6; }
+.app-shell:not(.battle-shell) .toggle.on::before { background: #245431; }
+.app-shell:not(.battle-shell) .toggle span { width: 20px; height: 20px; left: 10px; top: 12px; }
+.app-shell:not(.battle-shell) .toggle.on span { transform: translateX(20px); }
+
+/* Results describe learning in strong green, amber and purple, without faded opacity. */
+.app-shell:not(.battle-shell) .results-hero h1 { font-size: 34px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .results-hero > p { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .result-skill { font-size: 18px; color: var(--student-green); flex-wrap: wrap; justify-content: center; line-height: 1.8; }
+.app-shell:not(.battle-shell) .result-skill span { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .summary-card { background: #edf4e6; color: var(--student-green); border-color: #b6cfae; }
+.app-shell:not(.battle-shell) .summary-card.supported { background: #fff1dc; color: var(--student-orange); border-color: #d5b483; }
+.app-shell:not(.battle-shell) .summary-card.practice { background: #f1eaf7; color: var(--student-purple); border-color: #c4add7; }
+.app-shell:not(.battle-shell) .summary-card > span { font-size: 18px; font-weight: 750; line-height: 1.65; }
+.app-shell:not(.battle-shell) .summary-card strong { font-size: 42px; font-weight: 800; line-height: 1.35; }
+.app-shell:not(.battle-shell) .summary-card strong small { font-size: 16px; }
+.app-shell:not(.battle-shell) .summary-card p { font-size: 16px; opacity: 1; color: inherit; line-height: 1.8; }
+.app-shell:not(.battle-shell) .result-reflection > p { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .record-list summary { font-size: 18px; line-height: 1.75; display: grid; grid-template-columns: 32px minmax(0, 1fr) 20px; gap: 6px 12px; }
+.app-shell:not(.battle-shell) .record-list summary > span { width: 32px; height: 32px; font-size: 16px; color: var(--student-green); grid-column: 1; grid-row: 1; }
+.app-shell:not(.battle-shell) .record-list summary b { min-width: 0; font-weight: 650; grid-column: 2; grid-row: 1; }
+.app-shell:not(.battle-shell) .record-list summary .status-badge { grid-column: 2; grid-row: 2; justify-self: start; }
+.app-shell:not(.battle-shell) .record-list summary > svg { grid-column: 3; grid-row: 1 / span 2; width: 18px; }
+.app-shell:not(.battle-shell) .record-list details > p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .status-badge { font-size: 16px; line-height: 1.65; padding: 4px 8px; color: var(--student-secondary); background: #edf0e6; white-space: normal; font-weight: 650; }
+.app-shell:not(.battle-shell) .status-badge.first { color: var(--student-green); background: #e6f1df; }
+.app-shell:not(.battle-shell) .status-badge.supported { color: var(--student-orange); background: #fff1dc; }
+.app-shell:not(.battle-shell) .status-badge.practice { color: var(--student-purple); background: #f1eaf7; }
+
+/* Progress, proposals and the teacher guide share the same ink and supporting scale. */
+.app-shell:not(.battle-shell) .growth-overview > .surface { color: var(--student-green); }
+.app-shell:not(.battle-shell) .growth-overview strong { font-size: 42px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .growth-overview strong small { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .growth-overview span { font-size: 16px; color: var(--student-secondary); line-height: 1.8; }
+.app-shell:not(.battle-shell) .skill-card, .app-shell:not(.battle-shell) .skill-card.unlocked { color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .skill-card.unlocked { color: var(--student-green); background: #f7fbf2; }
+.app-shell:not(.battle-shell) .skill-card h3 { font-size: 20px; line-height: 1.6; }
+.app-shell:not(.battle-shell) .skill-card :is(p, span) { font-size: 16px; line-height: 1.75; }
+.app-shell:not(.battle-shell) .growth-levels summary { font-size: 18px; min-height: 56px; line-height: 1.7; }
+.app-shell:not(.battle-shell) .growth-level-content { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .growth-level-content > p, .app-shell:not(.battle-shell) .growth-records > span { font-size: 18px; line-height: 1.85; }
+.app-shell:not(.battle-shell) .growth-records > span { flex-wrap: wrap; }
+.app-shell:not(.battle-shell) .empty-state p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .proposal-toolbar label { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .proposal-card-head h2 { font-size: 30px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .proposal-card-head p { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .proposal-stamp { font-size: 16px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .proposal-decisions h3 { font-size: 26px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .proposal-decisions p { font-size: 18px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .proposal-decisions small { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .proposal-decisions > section > span { font-size: 16px; color: var(--student-green); }
+.app-shell:not(.battle-shell) .proposal-reflection label { font-size: 18px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .proposal-reflection textarea { font-size: 18px; color: var(--student-ink); line-height: 1.8; }
+.app-shell:not(.battle-shell) .proposal-reflection textarea::placeholder { color: #506556; opacity: 1; }
+.app-shell:not(.battle-shell) :is(.reflection-note, .proposal-card > footer) { font-size: 16px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .manual-principles h3 { font-size: 26px; color: var(--student-ink); }
+.app-shell:not(.battle-shell) .manual-principles p { font-size: 18px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .manual-section > p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .lesson-flow span { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .lesson-flow b { font-size: 20px; color: var(--student-green); font-weight: 750; }
+.app-shell:not(.battle-shell) .lesson-flow p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .plain-list { font-size: 18px; color: var(--student-secondary); line-height: 1.95; }
+.app-shell:not(.battle-shell) .curriculum-table { font-size: 16px; }
+.app-shell:not(.battle-shell) .curriculum-table :is(th, td, td:first-child, .tag) { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .curriculum-table td:first-child button { font-size: 16px; color: var(--student-green); min-height: 44px; }
+.app-shell:not(.battle-shell) .source-question-list summary { font-size: 18px; color: var(--student-ink); line-height: 1.7; flex-wrap: wrap; }
+.app-shell:not(.battle-shell) .source-question-list summary code { font-size: 15px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .source-question-list details p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
+.app-shell:not(.battle-shell) .source-question-list details small { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .source-footer { font-size: 16px; color: var(--student-secondary); }
+.app-shell:not(.battle-shell) .source-footer h3 { font-size: 26px; color: var(--student-ink); }
+
+.dialog { font-size: 18px; color: var(--student-ink); line-height: 1.8; }
+.dialog-topline strong { font-size: 18px; color: var(--student-ink); font-weight: 750; }
+.dialog-content > h2, .intro-visual h2 { font-size: 28px; color: var(--student-ink); }
+.dialog-content > p { font-size: 18px; color: var(--student-secondary); }
+.dialog .intro-story { font-size: 18px !important; line-height: 1.85 !important; color: var(--student-secondary); }
+.dialog .goal-box p { font-size: 18px; line-height: 1.85; color: var(--student-ink); }
+.dialog .goal-box b { font-size: 16px; color: var(--student-green); }
+.dialog :is(.eyebrow, .intro-meta, .source-note) { font-size: 16px; color: var(--student-secondary); line-height: 1.8; }
+.dialog .intro-meta { flex-wrap: wrap; gap: 10px 20px; }
+.dialog-actions :is(.button, .text-button) { font-size: 16px; min-height: 44px; line-height: 1.6; white-space: normal; }
+.toast { font-size: 16px; line-height: 1.75; color: #fffdf7; }
+.toast button { min-width: 44px; min-height: 44px; flex-shrink: 0; color: #fffdf7; justify-content: center; align-items: center; }
+
+/* Root owns score card geometry; these only reinforce its readable text palette. */
+.app-shell:not(.battle-shell) :is(.score-summary, .score-heading, .score-stats, .score-rule) { color: var(--student-ink); }
+.app-shell:not(.battle-shell) :is(.score-rule, .score-legacy-note, .level-score-summary, .level-score-empty) { font-size: 16px; line-height: 1.8; color: var(--student-secondary); }
+
+/* Contrast-only battle adjustments preserve every existing question/answer dimension. */
+.duel-question-meta { color: #c9eaf0; }
+.duel-tool { color: #d1f4f8; }
+.duel-rule { color: #294f5d; }
+.duel-select-note { color: #183f50; }
+
+@media (max-width: 760px) {
+  .app-shell:not(.battle-shell) .welcome-copy { padding: 28px 24px; }
+  .app-shell:not(.battle-shell) .welcome-copy h1 { font-size: 38px; }
+  .app-shell:not(.battle-shell) .welcome-copy p { max-width: 310px; }
+  .app-shell:not(.battle-shell) .chapter-card-body h3 { font-size: 26px; }
+  .app-shell:not(.battle-shell) .preference-row { flex-wrap: wrap; gap: 12px; }
+  .app-shell:not(.battle-shell) .preference-row > div { flex-basis: calc(100% - 80px); }
+  .app-shell:not(.battle-shell) .preference-row select { max-width: 100%; }
+}
+@media (max-width: 540px) {
+  body { font-size: 16px; }
+  .app-shell:not(.battle-shell) .main-content { font-size: 16px; }
+  .app-shell:not(.battle-shell) .page-heading h1 { font-size: 30px; }
+  .app-shell:not(.battle-shell) :is(.section-heading h2, .panel-title h2, .manual-section h2, .result-reflection h2, .empty-state h2) { font-size: 26px; }
+  .app-shell:not(.battle-shell) .welcome-copy { padding: 26px 22px; }
+  .app-shell:not(.battle-shell) .welcome-copy h1 { font-size: 36px; }
+  .app-shell:not(.battle-shell) .welcome-copy p { max-width: 280px; font-size: 16px; }
+  .app-shell:not(.battle-shell) .welcome-banner { min-height: 410px; }
+  .app-shell:not(.battle-shell) .welcome-note { align-items: flex-start; }
+  .app-shell:not(.battle-shell) .welcome-note svg { margin-top: 5px; }
+  .app-shell:not(.battle-shell) .chapter-card-body > .guardian-portrait { width: 96px; height: 96px; }
+  .app-shell:not(.battle-shell) .chapter-card { padding: 20px 18px 14px; }
+  .app-shell:not(.battle-shell) .chapter-card-body { min-height: 165px; }
+  .app-shell:not(.battle-shell) .learning-promise { flex-wrap: wrap; }
+  .app-shell:not(.battle-shell) .learning-promise > div { flex: 1; min-width: 190px; }
+  .app-shell:not(.battle-shell) .offline-pack-heading h2 { font-size: 26px; }
+  .app-shell:not(.battle-shell) .offline-pack-heading { gap: 10px; }
+  .app-shell:not(.battle-shell) .offline-pack-buttons { flex-wrap: wrap; }
+  .app-shell:not(.battle-shell) .offline-pack-buttons .button { flex: 1 1 130px; padding: 10px 9px; }
+  .app-shell:not(.battle-shell) .summary-grid { grid-template-columns: 1fr; gap: 12px; }
+  .app-shell:not(.battle-shell) .summary-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 16px 18px; }
+  .app-shell:not(.battle-shell) .summary-card > span { grid-column: 1; font-size: 18px; }
+  .app-shell:not(.battle-shell) .summary-card p { grid-column: 1; }
+  .app-shell:not(.battle-shell) .summary-card strong { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; font-size: 38px; }
+  .app-shell:not(.battle-shell) .results-hero h1 { font-size: 30px; }
+  .app-shell:not(.battle-shell) .results-actions .button { font-size: 16px; }
+  .app-shell:not(.battle-shell) .growth-overview { grid-template-columns: 1fr; gap: 12px; }
+  .app-shell:not(.battle-shell) .growth-overview > .surface { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 16px; }
+  .app-shell:not(.battle-shell) .growth-overview svg { grid-column: 1; grid-row: 1; }
+  .app-shell:not(.battle-shell) .growth-overview span { grid-column: 2; grid-row: 1; }
+  .app-shell:not(.battle-shell) .growth-overview strong { grid-column: 3; grid-row: 1; font-size: 32px; margin: 0; }
+  .app-shell:not(.battle-shell) .growth-overview strong small { font-size: 16px; }
+  .app-shell:not(.battle-shell) .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell:not(.battle-shell) .growth-levels summary { flex-wrap: wrap; gap: 8px; }
+  .app-shell:not(.battle-shell) .growth-levels summary b { flex-basis: calc(100% - 58px); }
+  .app-shell:not(.battle-shell) .growth-levels summary > .status-badge { margin-left: 40px; }
+  .app-shell:not(.battle-shell) .growth-levels summary > svg { margin-left: auto; }
+  .app-shell:not(.battle-shell) .proposal-card-head h2 { font-size: 28px; }
+  .app-shell:not(.battle-shell) .proposal-card-head .eyebrow { font-size: 15px; }
+  .app-shell:not(.battle-shell) .manual-section > .panel-title h2 { font-size: 26px; }
+  .app-shell:not(.battle-shell) .source-question-list summary b { flex-basis: calc(100% - 28px); }
+  .dialog-content > p, .dialog .intro-story { font-size: 16px !important; }
+  .dialog .goal-box p { font-size: 16px; }
+  .dialog-content > h2, .intro-visual h2 { font-size: 26px; }
+  .dialog .intro-visual { align-items: flex-start; }
+  .dialog-actions .button { min-height: 48px; }
+}

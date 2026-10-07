@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, CheckCircle2, ChevronRight, Download, FileCheck, Flag, HandHeart, Info, Lightbulb, Medal, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, Volume2, WifiOff } from 'lucide-react';
 import { chapters, levels, sourceLabels } from '../content/levels';
 import { presentQuestion, questionById, questions } from '../content';
-import type { Level, Progress } from '../domain/types';
+import type { CompletedRun, Level, Progress } from '../domain/types';
+import { scoreSession } from '../domain/scoring';
 import { exportBackup, parseBackup } from '../domain/storage';
 import { useOffline } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
@@ -21,16 +22,21 @@ function Heading({ eyebrow, title, children }: { eyebrow: string; title: string;
   return <div className="page-heading"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{children}</p></div>;
 }
 
-export function GrowthPanel({ progress, onLevel }: { progress: Progress; onLevel: (level: Level) => void }) {
+export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; onLevel: (level: Level) => void; onRun: (run: CompletedRun) => void }) {
   const [filter, setFilter] = useState<'all' | 'practice'>('all');
   const latest = new Map<string, (typeof progress.attempts)[number]>();
   progress.attempts.forEach(attempt => latest.set(attempt.questionId + ':' + attempt.mode, attempt));
   const needsPractice = [...latest.values()].filter(a => a.status === 'practice');
+  const runs = [...(progress.runs ?? [])].reverse();
   return <>
     <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看哪些題目自己答對，哪些用過提示。下次再試一次，學會的好方法就更多了。</Heading>
     <div className="growth-overview"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / 12</small></strong><span>已完成的修復任務</span></div>
       <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>留下思考紀錄的情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>值得再練習的情境</span></div></div>
+    <section className="surface run-history" aria-label="我的闖關成績"><h2>我的闖關成績</h2><p>每次挑戰的分數與回答方式都會保留。點一筆成績，就能查看逐題得分。</p>
+      {runs.length ? <div className="run-history-list">{runs.map(run => { const level = levels.find(item => item.id === run.levelId)!; const score = scoreSession(run); return <button key={run.sessionId} onClick={() => onRun(run)}>
+        <span><b>{modeNames[run.mode]} · 第 {run.mode === 'starter' ? run.levelId : run.levelId - 6} 關 · {level.title}{run.review ? '（重玩練習）' : ''}</b><small>{new Date(run.at).toLocaleString('zh-TW')} · {score.perfect ? '首次全對' : '點開查看回答紀錄'}</small></span><strong>{score.score} 分</strong><ChevronRight size={19} /></button>; })}</div> : <p className="empty-score-history">完成一次關卡挑戰後，這裡會顯示分數。舊版的完整回答紀錄也會換算；沒有完整紀錄的關卡可重新挑戰。</p>}
+    </section>
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
       const Icon = chapterIcons[chapter.icon];
@@ -138,6 +144,7 @@ export function ManualPanel({ onLevel }: { onLevel: (l: Level) => void }) {
       <div className="surface"><HandHeart size={27} /><h3>討論才有深度</h3><p>取捨題接受不同完整方案。先問「照顧到誰？」「還少哪個保障？」</p></div>
       <div className="surface"><Lightbulb size={27} /><h3>修正也是能力</h3><p>答對攻擊並扣敵方 HP，學習紀錄另列是否獨立完成。示範後安排新題，再看看孩子是否學會。</p></div></div>
     <section className="surface manual-section"><h2>一堂課，可以這樣進行</h2><div className="lesson-flow"><div><span>01</span><b>一起看情境</b><p>辨認任務、可用線索與受影響的人。</p></div><div><span>02</span><b>各自選擇</b><p>約 6–10 分鐘一關為試玩目標，不設倒數。</p></div><div><span>03</span><b>比較理由</b><p>討論兩種合理方案的效益、代價與保障。</p></div><div><span>04</span><b>試新情境</b><p>重玩變式，看看方法是否能用到不同案例。</p></div></div><p className="muted">時間為設計目標，尚需實際學生試玩確認。教師可從地圖自由選關，不必等全部解鎖。</p></section>
+    <section className="surface manual-section"><h2>分數與學習紀錄</h2><p>每關滿分 100 分，五題各 20 分；每答錯一次扣 4 分，自己答對至少得 4 分。使用提示的題目最高 16 分，伙伴示範的題目得 0 分。兩題重玩練習各 50 分、答錯扣 10 分、最低 10 分、提示最高 40 分。全部首次獨立答對且未使用提示或示範，才是首次全對。</p><p>結算會列出逐題分數與答錯次數。「我的成長」保存每次完整挑戰與重玩成績；地圖顯示主要挑戰的最高分及最近得分。分數反映這次回答的獨立程度，不計速度或血量；教師仍可透過討論及新情境觀察理解。舊紀錄若沒有完整題序，不推算分數；舊示範題的錯誤次數不明時會明確標示。</p></section>
     <section className="surface manual-section"><h2>內容修訂與學習模擬</h2><ul className="plain-list"><li>性別刻板推薦作為需要反思的案例，不當成興趣判斷規則。</li><li>職業與年份預測是推想；辨識、自駕及健康裝置的能力採有條件敘述。</li><li>健康裝置是輔助資訊；身體不適時，尋求可信任成人與醫護協助。</li><li>外部網站、實際 App、影像資料與無人機活動，改為內建的學習模擬，不蒐集兒童私人資料。</li><li>深偽查證為倫理延伸。影像自然或奇怪都不能單獨證明真假；先找原始公告、可信來源，或用熟悉的方式聯絡當事人。</li><li>作業案例以幫助理解、查核、自己表達及遵守老師規則為目標，不把 AI 完成的內容假裝成自己的成果。</li><li>自由文字作為本機反思紀錄；初版以已審閱題目規則判題，不使用生成式 AI 判分。</li></ul></section>
     <section className="surface manual-section"><h2>題庫與正確答案</h2><p>完整列出每關五道主題與兩道重玩練習，包含四個選項、正確答案、解說及教材對照。JSON 是唯一題庫來源，CSV 可用 Excel 編輯核對。</p><div className="backup-buttons"><a className="button primary" href={appAssetUrl('/teacher/question-list.csv')} download><Download size={17} />下載題目與答案 CSV</a><a className="button secondary" href={appAssetUrl('/teacher/question-list.html')} target="_blank" rel="noreferrer"><Printer size={17} />閱讀／列印完整題庫</a><a className="button secondary" href={appAssetUrl('/teacher/question-bank.json')} download><Download size={17} />下載原始題庫 JSON</a></div></section><div className="section-heading"><h2>初階六關與進階六關對照</h2><button className="text-button" onClick={exportSources}><Download size={17} />匯出全部題目來源</button></div>
     <div className="surface curriculum-table-wrap"><table className="curriculum-table"><thead><tr><th>關卡</th><th>能力目標</th><th>教材依據（印刷頁碼）</th><th>內容標示</th></tr></thead><tbody>{levels.map(l => <tr key={l.id}><td><button onClick={() => onLevel(l)}>{String(l.id).padStart(2, '0')} · {l.title}<ChevronRight size={14} /></button></td><td>{l.objective}</td><td>單元 {l.source.units.join('、')}<br />p{l.source.pages}</td><td><span className="tag">{sourceLabels[l.source.label]}</span></td></tr>)}</tbody></table></div>

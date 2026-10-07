@@ -1,7 +1,8 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
 import { createProgress } from './engine';
-import type { AttemptRecord, Mode, Progress, Proposal, Session } from './types';
+import { reconstructRuns } from './scoring';
+import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session } from './types';
 
 // Level numbers now describe a different curriculum. Preserve v1 without mapping it into v2.
 const DB_NAME = 'ai-campus-guardians-v2';
@@ -74,8 +75,10 @@ function attempt(value: unknown, path: string): AttemptRecord {
   if (raw.status !== 'first' && raw.status !== 'supported' && raw.status !== 'practice') reject(`${path}.status不是有效學習紀錄`);
   if (raw.status === 'first' && (retries !== 0 || hintUsed)) reject(`${path}首次理解與提示紀錄不一致`);
   if (raw.status === 'supported' && retries === 0 && !hintUsed) reject(`${path}提示完成缺少提示紀錄`);
-  if (raw.status === 'practice' && (!hintUsed || retries < 2)) reject(`${path}示範紀錄不一致`);
-  return { questionId: q.id, mode: selectedMode, action, reason, status: raw.status, retries, hintUsed, at: timestamp(raw.at, `${path}.at`) };
+  const demoUsed = raw.demoUsed === undefined ? undefined : boolean(raw.demoUsed, `${path}.demoUsed`);
+  if ((demoUsed === true && raw.status !== 'practice') || (raw.status === 'practice' && (!hintUsed || demoUsed === false || (demoUsed !== true && retries < 2)))) reject(`${path}示範紀錄不一致`);
+  return { questionId: q.id, mode: selectedMode, action, reason, status: raw.status, retries, hintUsed, at: timestamp(raw.at, `${path}.at`),
+    ...(demoUsed === undefined ? {} : { demoUsed }) };
 }
 
 function activeSession(value: unknown): Session | null {
@@ -105,7 +108,9 @@ function activeSession(value: unknown): Session | null {
   const retries = integer(raw.retries, 'active.retries', 0, 1000000);
   const hintUsed = boolean(raw.hintUsed, 'active.hintUsed');
   const demoUsed = raw.demoUsed === undefined ? false : boolean(raw.demoUsed, 'active.demoUsed');
-  if (demoUsed && (!success || !hintUsed || retries < 2)) reject('active示範狀態不一致');
+  const demoRetriesKnown = raw.demoRetriesKnown === undefined ? undefined : boolean(raw.demoRetriesKnown, 'active.demoRetriesKnown');
+  if (demoRetriesKnown && !demoUsed) reject('active示範次數標記不一致');
+  if (demoUsed && (!success || !hintUsed || (!demoRetriesKnown && retries < 2))) reject('active示範狀態不一致');
   if ((step === 'feedback' || step === 'defeat') && !success && retries === 0) reject('active錯誤回饋缺少重試紀錄');
   const records = list(raw.records, 'active.records', 7).map((record, i) => attempt(record, `active.records[${i}]`));
   if (records.length !== index || records.some((record, i) => record.questionId !== questionIds[i] || record.mode !== selectedMode)) reject('active已完成紀錄與題目順序不一致');
@@ -116,7 +121,33 @@ function activeSession(value: unknown): Session | null {
     id: text(raw.id, 'active.id', 256), levelId, mode: selectedMode, review, questionIds, index,
     step, selected, reason, success, retries, hintUsed, demoUsed, feedback,
     shield, repaired, records,
+    ...(demoRetriesKnown === undefined ? {} : { demoRetriesKnown }),
   };
+}
+
+function completedRun(value: unknown, path: string): CompletedRun {
+  const raw = object(value, path);
+  const levelId = integer(raw.levelId, `${path}.levelId`, 1, 12);
+  const selectedMode = mode(raw.mode, `${path}.mode`);
+  if (levels.find(level => level.id === levelId)?.mode !== selectedMode) reject(`${path}模式與關卡不符`);
+  const review = boolean(raw.review, `${path}.review`);
+  const records = list(raw.records, `${path}.records`, 7).map((record, i) => attempt(record, `${path}.records[${i}]`));
+  const expected = getQuestions(levelId, review).map(question => question.id);
+  if (records.length !== expected.length || records.some((record, i) => record.questionId !== expected[i] || record.mode !== selectedMode)) reject(`${path}需要完整且依序的本關作答紀錄`);
+  // Never accept a caller's numeric score; scoring is derived from these records.
+  return { sessionId: text(raw.sessionId, `${path}.sessionId`, 256), levelId, mode: selectedMode,
+    review, records, at: timestamp(raw.at, `${path}.at`) };
+}
+
+function validateRunHistory(runs: CompletedRun[], attempts: AttemptRecord[]): void {
+  const history = attempts.map(record => JSON.stringify(record));
+  let cursor = 0;
+  for (const run of runs) {
+    const expected = run.records.map(record => JSON.stringify(record));
+    while (cursor < history.length && !expected.every((record, index) => history[cursor + index] === record)) cursor++;
+    if (cursor >= history.length) reject('runs與歷次作答紀錄不一致');
+    cursor += expected.length;
+  }
 }
 
 function proposal(value: unknown, path: string): Proposal {
@@ -148,11 +179,15 @@ export function validateProgress(value: unknown): Progress {
   boolean(settings.narration, 'settings.narration');
   const finishedSessionIds = raw.finishedSessionIds === undefined ? [] : list(raw.finishedSessionIds, 'finishedSessionIds').map((id, i) => text(id, `finishedSessionIds[${i}]`, 256));
   if (new Set(finishedSessionIds).size !== finishedSessionIds.length) reject('finishedSessionIds包含重複挑戰');
+  const attempts = list(raw.attempts, 'attempts').map((value, i) => attempt(value, `attempts[${i}]`));
+  const runs = raw.runs === undefined ? reconstructRuns(attempts) : list(raw.runs, 'runs', 25000).map((value, i) => completedRun(value, `runs[${i}]`));
+  if (new Set(runs.map(run => run.sessionId)).size !== runs.length) reject('runs包含重複挑戰');
+  validateRunHistory(runs, attempts);
   const active = activeSession(raw.active);
-  if (active && finishedSessionIds.includes(active.id)) reject('active挑戰已經完成');
+  if (active && (finishedSessionIds.includes(active.id) || runs.some(run => run.sessionId === active.id))) reject('active挑戰已經完成');
   return {
     schemaVersion: 2, completed,
-    attempts: list(raw.attempts, 'attempts').map((value, i) => attempt(value, `attempts[${i}]`)),
+    attempts, runs,
     active,
     proposals: list(raw.proposals, 'proposals', 10000).map((value, i) => proposal(value, `proposals[${i}]`)),
     settings: {

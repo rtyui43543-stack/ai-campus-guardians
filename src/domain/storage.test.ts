@@ -5,6 +5,7 @@ import {
   demonstrate, finishSession, restartBattle, retryQuestion, startSession, submitAction,
 } from './engine';
 import type { Progress, Session } from './types';
+import { describeAttempt, getLevelRuns, latestRun, scoreSession } from './scoring';
 
 const V1_KEY = 'ai-campus-guardians:progress:v1';
 const V2_KEY = 'ai-campus-guardians:progress:v2';
@@ -20,6 +21,11 @@ function reachSlot(levelId: number, slot: number): Session {
   let session = startSession(levelId, 'starter');
   while (currentQuestion(session).slot < slot) session = advanceSession(solve(session)).session!;
   return session;
+}
+function complete(progress: Progress, levelId: number, review = false): Progress {
+  let session = startSession(levelId, 'starter', review);
+  for (let i = 0; i < session.questionIds.length - 1; i++) session = advanceSession(solve(session)).session!;
+  return finishSession(progress, solve(session));
 }
 function finalProposal(): Progress {
   let session = startSession(12, 'advanced');
@@ -122,6 +128,107 @@ describe('new campaign storage and backups', () => {
     expect(storage.parseBackup(storage.exportBackup(progress))).toEqual(progress);
     expect(progress.active?.records[0].status).toBe('practice');
     expect(retryQuestion(checkpoints[0]).step).toBe('action');
+  });
+
+  it.each([0, 1])('preserves %i actual errors for new demonstration feedback and its saved record', async retries => {
+    const storage = await import('./storage');
+    const demo = demonstrate({ ...startSession(1, 'starter'), retries });
+    const restored = storage.parseBackup(storage.exportBackup(applySession(createProgress(), demo)));
+    expect(restored.active).toMatchObject({ demoUsed: true, demoRetriesKnown: true, retries });
+    expect(scoreSession(restored.active!)).toMatchObject({ wrongAnswers: retries, unknownWrongAnswers: 0 });
+    const next = advanceSession(restored.active!).session!;
+    expect(next.records[0]).toMatchObject({ demoUsed: true, retries });
+    expect(storage.parseBackup(storage.exportBackup(applySession(restored, next))).active!.records).toEqual(next.records);
+  });
+
+  it('keeps an old resumed demonstration counter unknown instead of relabelling it as exact', async () => {
+    const storage = await import('./storage');
+    const demo = { ...demonstrate(startSession(1, 'starter')), retries: 2 };
+    delete demo.demoRetriesKnown;
+    const restored = storage.parseBackup(storage.exportBackup(applySession(createProgress(), demo)));
+    expect(scoreSession(restored.active!)).toMatchObject({ wrongAnswers: 0, unknownWrongAnswers: 1 });
+    const record = advanceSession(restored.active!).record;
+    expect(record).not.toHaveProperty('demoUsed');
+    expect(describeAttempt(record)).toContain('答錯次數不明');
+  });
+
+  it('saves full run reports and derives score from records after backup import or reload', async () => {
+    const storage = await import('./storage');
+    let session = advanceSession(demonstrate(startSession(1, 'starter'))).session!;
+    session = advanceSession(solve(retryQuestion(wrong(session)))).session!;
+    while (session.index < 4) session = advanceSession(solve(session)).session!;
+    const finished = finishSession(createProgress(), solve(session));
+    const raw = JSON.parse(storage.exportBackup(finished));
+    raw.runs[0].score = 100;
+    const restored = storage.parseBackup(JSON.stringify(raw));
+    expect(restored).toEqual(finished);
+    expect(restored.runs![0]).not.toHaveProperty('score');
+    expect(scoreSession(restored.runs![0])).toMatchObject({ score: 76, firstTryCorrect: 3, wrongAnswers: 1, demos: 1, unknownWrongAnswers: 0 });
+    await storage.saveProgress(restored);
+    expect((await storage.loadProgress()).runs).toEqual(finished.runs);
+    expect(latestRun(await storage.loadProgress())!.sessionId).toBe(session.id);
+  });
+
+  it('migrates complete old main and review histories once using stable report IDs', async () => {
+    const storage = await import('./storage');
+    const completed = complete(complete(createProgress(), 1), 7, true);
+    const raw = JSON.parse(storage.exportBackup(completed));
+    delete raw.runs;
+    const migrated = storage.parseBackup(JSON.stringify(raw));
+    expect(migrated.runs!.map(run => [run.levelId, run.review, run.records.length])).toEqual([[1, false, 5], [7, true, 2]]);
+    expect(migrated.runs![0].sessionId).toMatch(/^legacy-v2-/);
+    expect(scoreSession(migrated.runs![0]).score).toBe(100);
+    expect(storage.parseBackup(storage.exportBackup(migrated)).runs).toEqual(migrated.runs);
+    expect(storage.parseBackup(JSON.stringify(raw)).runs).toEqual(migrated.runs);
+    expect(migrated.completed).toEqual(completed.completed);
+    expect(migrated.finishedSessionIds).toEqual(completed.finishedSessionIds);
+  });
+
+  it('leaves incomplete old histories unscored instead of inventing a perfect or zero score', async () => {
+    const storage = await import('./storage');
+    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1)));
+    delete old.runs;
+    old.attempts.pop();
+    const migrated = storage.parseBackup(JSON.stringify(old));
+    expect(migrated.completed).toEqual([1]);
+    expect(migrated.attempts).toHaveLength(4);
+    expect(migrated.runs).toEqual([]);
+    expect(getLevelRuns(migrated, 1)).toEqual([]);
+    expect(latestRun(migrated)).toBeNull();
+  });
+
+  it('rejects partial, shuffled, duplicated and mismatched run reports', async () => {
+    const storage = await import('./storage');
+    const finished = complete(createProgress(), 1);
+    const partial = structuredClone(finished);
+    partial.runs![0].records.pop();
+    expect(() => storage.validateProgress(partial)).toThrow('完整且依序');
+    const shuffled = structuredClone(finished);
+    shuffled.runs![0].records.reverse();
+    expect(() => storage.validateProgress(shuffled)).toThrow('完整且依序');
+    const duplicated = structuredClone(finished);
+    duplicated.runs!.push(duplicated.runs![0]);
+    expect(() => storage.validateProgress(duplicated)).toThrow('runs包含重複');
+    const wrongReview = structuredClone(finished);
+    wrongReview.runs![0].review = true;
+    expect(() => storage.validateProgress(wrongReview)).toThrow('完整且依序');
+    const wrongMode = structuredClone(finished);
+    wrongMode.runs![0].mode = 'advanced';
+    expect(() => storage.validateProgress(wrongMode)).toThrow('模式與關卡');
+    const altered = structuredClone(finished);
+    altered.runs![0].records[0] = { ...altered.runs![0].records[0], status: 'supported', retries: 1 };
+    expect(() => storage.validateProgress(altered)).toThrow('runs與歷次作答');
+  });
+
+  it('migrates old proxy demonstration counts without inventing actual wrong answers', async () => {
+    const storage = await import('./storage');
+    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1)));
+    delete old.runs;
+    old.attempts[0] = { ...old.attempts[0], status: 'practice', retries: 2, hintUsed: true };
+    const migrated = storage.parseBackup(JSON.stringify(old));
+    expect(scoreSession(migrated.runs![0])).toMatchObject({ score: 80, wrongAnswers: 0, unknownWrongAnswers: 1 });
+    expect(describeAttempt(migrated.runs![0].records[0])).toContain('舊紀錄');
+    expect(storage.parseBackup(storage.exportBackup(migrated))).toEqual(migrated);
   });
 
   it('saves and imports zero-HP defeat with earlier answers intact, then restarts that same level', async () => {

@@ -1,5 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
+import { reconstructRuns } from './scoring';
 import type { AttemptRecord, LearningStatus, Mode, Progress, Session } from './types';
 
 const now = () => new Date().toISOString();
@@ -9,7 +10,7 @@ export function createProgress(): Progress {
   return {
     schemaVersion: 2, completed: [], attempts: [], active: null, proposals: [],
     settings: { mode: 'starter', sound: true, music: true, narration: false, reducedMotion: false },
-    finishedSessionIds: [], updatedAt: now(),
+    finishedSessionIds: [], runs: [], updatedAt: now(),
   };
 }
 
@@ -112,7 +113,7 @@ export function demonstrate(session: Session): Session {
   return {
     ...session, selected, reason: null,
     step: 'feedback', success: true, hintUsed: true, demoUsed: true,
-    retries: Math.max(2, session.retries),
+    demoRetriesKnown: true,
     feedback: `伙伴幫你想一想：\n${question.choices[selected].text}\n${question.explanation}\n這題記為「需要再練習」。等一下再試新題。`,
   };
 }
@@ -125,6 +126,7 @@ function makeRecord(session: Session): AttemptRecord {
     questionId: session.questionIds[session.index], mode: session.mode,
     action: session.selected, reason: session.reason, status,
     retries: session.retries, hintUsed: session.hintUsed, at: now(),
+    ...(session.demoUsed && session.demoRetriesKnown ? { demoUsed: true } : {}),
   };
 }
 
@@ -134,12 +136,14 @@ export function advanceSession(session: Session): { session: Session | null; rec
   const record = makeRecord(session);
   const nextIndex = session.index + 1;
   if (nextIndex >= session.questionIds.length) return { session: null, record, finished: true };
+  const nextSession: Session = {
+    ...session, index: nextIndex, step: 'action', selected: null, reason: null,
+    success: false, retries: 0, hintUsed: false, demoUsed: false, feedback: '',
+    records: [...session.records, record], repaired: Math.round(nextIndex / session.questionIds.length * 100),
+  };
+  delete nextSession.demoRetriesKnown;
   return {
-    session: {
-      ...session, index: nextIndex, step: 'action', selected: null, reason: null,
-      success: false, retries: 0, hintUsed: false, demoUsed: false, feedback: '',
-      records: [...session.records, record], repaired: Math.round(nextIndex / session.questionIds.length * 100),
-    }, record, finished: false,
+    session: nextSession, record, finished: false,
   };
 }
 
@@ -149,14 +153,18 @@ export function applySession(progress: Progress, session: Session): Progress {
 
 export function finishSession(progress: Progress, session: Session): Progress {
   if (isDefeated(session)) throw new Error('這場挑戰已結束，請重新挑戰同一關。');
-  if (progress.finishedSessionIds?.includes(session.id)) return progress;
+  if (progress.finishedSessionIds?.includes(session.id) || progress.runs?.some(run => run.sessionId === session.id)) return progress;
   if (session.index !== session.questionIds.length - 1 || session.records.length !== session.index) throw new Error('挑戰尚未完成，進度仍可繼續保存。');
   const record = makeRecord(session);
   const records = [...session.records, record];
   const completed = session.review ? [...progress.completed] : [...new Set([...progress.completed, session.levelId])].sort((a, b) => a - b);
+  const at = now();
   return {
     ...progress, active: null, completed, attempts: [...progress.attempts, ...records],
-    finishedSessionIds: [...(progress.finishedSessionIds ?? []), session.id], updatedAt: now(),
+    runs: [...(progress.runs ?? reconstructRuns(progress.attempts)), {
+      sessionId: session.id, levelId: session.levelId, mode: session.mode, review: session.review, records, at,
+    }],
+    finishedSessionIds: [...(progress.finishedSessionIds ?? []), session.id], updatedAt: at,
   };
 }
 

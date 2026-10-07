@@ -45,6 +45,8 @@ export type LearningStatus = 'first' | 'supported' | 'practice';
 export interface AttemptRecord {
   questionId: string; mode: Mode; action: number; reason: number | null;
   status: LearningStatus; retries: number; hintUsed: boolean; at: string;
+  /** Present on new demo records whose retry count was recorded accurately. */
+  demoUsed?: boolean;
 }
 export interface Session {
   id: string; levelId: number; mode: Mode; questionIds: string[]; index: number;
@@ -52,6 +54,12 @@ export interface Session {
   retries: number; hintUsed: boolean; feedback: string; success: boolean;
   shield: number; repaired: number; records: AttemptRecord[]; review: boolean;
   demoUsed?: boolean;
+  /** Older demonstrations raised retries to two; this marks the new exact counter. */
+  demoRetriesKnown?: boolean;
+}
+export interface CompletedRun {
+  sessionId: string; levelId: number; mode: Mode; review: boolean;
+  records: AttemptRecord[]; at: string;
 }
 export interface Proposal {
   at: string; mode: Mode; decisions: { questionId: string; action: string; reason: string }[];
@@ -66,4 +74,5 @@ export interface Progress {
   settings: { mode: Mode; sound: boolean; music: boolean; narration: boolean; reducedMotion: boolean };
   updatedAt: string;
   finishedSessionIds?: string[];
+  runs?: CompletedRun[];
 }

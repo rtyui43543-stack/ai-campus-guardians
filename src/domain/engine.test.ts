@@ -168,9 +168,15 @@ describe('direct-answer battle engine', () => {
     expect(battleHealth(demo).enemyHp).toBe(80);
     expect(demonstrate(demo)).toBe(demo);
     const next = advanceSession(demo);
-    expect(next.record).toMatchObject({ status: 'practice', hintUsed: true });
-    expect(next.record.retries).toBeGreaterThanOrEqual(2);
+    expect(next.record).toMatchObject({ status: 'practice', hintUsed: true, demoUsed: true, retries: 0 });
     expect(next.session).toMatchObject({ hintUsed: false, retries: 0, demoUsed: false });
+    expect(next.session).not.toHaveProperty('demoRetriesKnown');
+  });
+
+  it.each([0, 1, 3])('keeps the actual %i wrong answers when demonstration is used', retries => {
+    const demo = demonstrate({ ...startSession(1, 'starter'), retries });
+    expect(demo).toMatchObject({ demoUsed: true, demoRetriesKnown: true, retries });
+    expect(advanceSession(demo).record).toMatchObject({ status: 'practice', demoUsed: true, retries });
   });
 
   it('retains a successful action for restoration until the learner continues', () => {
@@ -189,8 +195,12 @@ describe('direct-answer battle engine', () => {
     const progress = finishSession(createProgress(), session);
     expect(progress.completed).toEqual([1]);
     expect(progress.attempts).toHaveLength(5);
+    expect(progress.runs).toHaveLength(1);
+    expect(progress.runs![0]).toMatchObject({ sessionId: session.id, levelId: 1, mode: 'starter', review: false });
+    expect(progress.runs![0].records).toEqual(progress.attempts);
     expect(progress.active).toBeNull();
     expect(finishSession(progress, session)).toBe(progress);
+    expect(finishSession({ ...progress, finishedSessionIds: [] }, session).runs).toHaveLength(1);
     expect(sessionSummary(progress.attempts)).toEqual({ first: 5, supported: 0, practice: 0, total: 5 });
     expect(startSession(1, 'starter').id).not.toBe(session.id);
   });
@@ -205,6 +215,7 @@ describe('direct-answer battle engine', () => {
     const progress = finishSession(createProgress(), session);
     expect(progress.completed).toEqual([]);
     expect(progress.attempts).toHaveLength(2);
+    expect(progress.runs![0]).toMatchObject({ levelId: 3, review: true });
   });
 
   it('preserves health between questions and reaches zero enemy health at the last success', () => {
