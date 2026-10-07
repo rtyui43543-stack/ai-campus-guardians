@@ -1,0 +1,2 @@
+# Keep exported Excel CSV bytes intact, including their BOM and CRLF rows.
+*.csv -text
