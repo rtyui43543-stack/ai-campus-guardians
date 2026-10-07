@@ -9,7 +9,7 @@
 3. **執行並取得網址。**開啟 Actions → Deploy AI Campus Guardians to GitHub Pages，按 Run workflow，選 main 或 master。流程會安裝依賴、檢查題庫、跑測試、建置並發布。成功後在 Settings → Pages 查看網址，例如 https://你的帳號.github.io/你的儲存庫名稱/ 。之後推送 main／master 會自動更新。
 4. **先試一次離線。**在實際手機／平板開啟該 HTTPS 網址，按下一節完成安裝與下載，關閉網路後再開啟測試。確認全部下載完畢後，再把網址分享給學生。
 
-這個包可修改遊戲與題庫。public/audio 已有預錄中文音檔；GitHub 的建置流程直接使用它們，不需要在 Linux 重新生成 Windows 語音。不要把 node_modules、runtime、release、dist 或測試快取放進原始碼儲存庫。
+這個包可修改遊戲與題庫。public/audio 已有預錄台灣華語神經語音；GitHub 的建置流程直接使用音檔，不需要在 Linux 重新連接語音服務生成。不要把 node_modules、runtime、release、dist 或測試快取放進原始碼儲存庫。
 
 ## 只想直接上傳成品：靜態網站包
 

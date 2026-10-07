@@ -3,7 +3,7 @@ import { questions } from '../content';
 import { levels } from '../content/levels';
 import {
   advanceSession, applySession, battleHealth, chooseAction, chooseReason, createProgress, currentQuestion,
-  demonstrate, finishSession, requiresReason, retryQuestion, sessionSummary, startSession,
+  demonstrate, finishSession, isDefeated, requiresReason, restartBattle, retryQuestion, sessionSummary, startSession,
   submitAction, submitReason, useHint,
 } from './engine';
 import type { Mode, Session } from './types';
@@ -69,18 +69,86 @@ describe('direct-answer battle engine', () => {
     expect(battleHealth(wrong).enemyHp).toBe(100);
   });
 
-  it('keeps the player alive after repeated errors and records correction as supported', () => {
+  it('permits correction below 8 HP and records it as supported before a lethal hit', () => {
     let session = startSession(1, 'starter');
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 8; i++) {
       session = submitAction(chooseAction(session, wrongIndex(session)));
       expect(battleHealth(session).enemyHp).toBe(100);
+      expect(session.step).toBe('feedback');
       session = retryQuestion(session);
     }
-    expect(session.shield).toBe(8);
-    expect(session.retries).toBe(12);
+    expect(session.shield).toBe(4);
+    expect(session.retries).toBe(8);
+    expect(isDefeated(session)).toBe(false);
     const next = advanceSession(solve(useHint(session)));
-    expect(next.record).toMatchObject({ status: 'supported', hintUsed: true, retries: 12 });
-    expect(next.session).toMatchObject({ shield: 8, repaired: 20, retries: 0, hintUsed: false });
+    expect(next.record).toMatchObject({ status: 'supported', hintUsed: true, retries: 8 });
+    expect(next.session).toMatchObject({ shield: 4, repaired: 20, retries: 0, hintUsed: false });
+  });
+
+  it.each([[100, 88], [20, 8], [16, 4], [13, 1]])('subtracts 12 HP from %i without defeating a surviving player', (before, after) => {
+    const session = { ...startSession(1, 'starter'), shield: before };
+    const answered = submitAction(chooseAction(session, wrongIndex(session)));
+    expect(answered).toMatchObject({ step: 'feedback', success: false, shield: after, retries: 1 });
+    expect(isDefeated(answered)).toBe(false);
+    expect(retryQuestion(answered).step).toBe('action');
+  });
+
+  it.each([12, 8, 4, 1])('clamps a lethal hit from %i HP to zero and keeps the wrong answer', before => {
+    const session = { ...reachSlot(8, 3), shield: before };
+    const selected = wrongIndex(session);
+    const answered = submitAction(chooseAction(session, selected));
+    expect(answered).toMatchObject({ step: 'defeat', success: false, shield: 0, selected, index: 2, retries: 1 });
+    expect(answered.records).toEqual(session.records);
+    expect(answered.questionIds).toEqual(session.questionIds);
+    expect(answered.feedback).toBe(currentQuestion(session).choices[selected].feedback);
+    expect(battleHealth(answered)).toEqual({ playerHp: 0, enemyHp: 60 });
+    expect(isDefeated(answered)).toBe(true);
+    expect(submitAction(answered)).toBe(answered);
+    expect(chooseAction(answered, 0)).toBe(answered);
+    expect(chooseReason(answered, 0)).toBe(answered);
+    expect(submitReason(answered)).toBe(answered);
+    expect(useHint(answered)).toBe(answered);
+    expect(retryQuestion(answered)).toBe(answered);
+    expect(demonstrate(answered)).toBe(answered);
+    expect(() => advanceSession(answered)).toThrow('挑戰已結束');
+    expect(() => finishSession(createProgress(), answered)).toThrow('挑戰已結束');
+  });
+
+  it('ends the ninth consecutive wrong answer instead of keeping the player at 8 HP', () => {
+    let session = startSession(1, 'starter');
+    for (let i = 0; i < 9; i++) {
+      session = submitAction(chooseAction(session, wrongIndex(session)));
+      if (i < 8) session = retryQuestion(session);
+    }
+    expect(session).toMatchObject({ step: 'defeat', shield: 0, retries: 9 });
+  });
+
+  it('restarts the same advanced review challenge at full health without erasing existing progress', () => {
+    let completedSession = startSession(1, 'starter');
+    for (let i = 0; i < 4; i++) completedSession = advanceSession(solve(completedSession)).session!;
+    const completed = finishSession(createProgress(), solve(completedSession));
+    const prior = advanceSession(solve(startSession(8, 'advanced', true))).session!;
+    const depleted = { ...prior, shield: 8 };
+    const defeated = submitAction(chooseAction(depleted, wrongIndex(depleted)));
+    const original = applySession({ ...completed, settings: { ...completed.settings, music: false } }, defeated);
+    const restarted = restartBattle(original);
+    expect(restarted.active).toMatchObject({
+      levelId: 8, mode: 'advanced', review: true, step: 'action', shield: 100,
+      index: 0, repaired: 0, selected: null, feedback: '', retries: 0,
+      hintUsed: false, demoUsed: false, records: [], success: false,
+    });
+    expect(battleHealth(restarted.active!)).toEqual({ playerHp: 100, enemyHp: 100 });
+    expect(restarted.active!.id).not.toBe(defeated.id);
+    expect(restarted.active!.questionIds).toEqual(defeated.questionIds);
+    expect(restarted.completed).toEqual([1]);
+    expect(restarted.attempts).toEqual(completed.attempts);
+    expect(restarted.settings).toEqual(original.settings);
+    expect(restarted.proposals).toEqual(original.proposals);
+    expect(restarted.finishedSessionIds).toEqual(original.finishedSessionIds);
+    expect(original.active).toBe(defeated);
+    expect(original.active!.records).toHaveLength(1);
+    expect(original.active!.shield).toBe(0);
+    expect(() => restartBattle(createProgress())).toThrow('沒有可重新挑戰');
   });
 
   it('preserves specific wrong-answer feedback when help is requested and clears only on retry', () => {

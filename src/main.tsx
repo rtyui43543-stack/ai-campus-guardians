@@ -11,6 +11,7 @@ import './mobile-battle.css';
 import './duel.css';
 import './offline-download.css';
 import './audio-controls.css';
+import './defeat.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>

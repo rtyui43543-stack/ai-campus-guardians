@@ -48,7 +48,7 @@ export interface AttemptRecord {
 }
 export interface Session {
   id: string; levelId: number; mode: Mode; questionIds: string[]; index: number;
-  step: 'action' | 'reason' | 'feedback'; selected: number | null; reason: number | null;
+  step: 'action' | 'reason' | 'feedback' | 'defeat'; selected: number | null; reason: number | null;
   retries: number; hintUsed: boolean; feedback: string; success: boolean;
   shield: number; repaired: number; records: AttemptRecord[]; review: boolean;
   demoUsed?: boolean;

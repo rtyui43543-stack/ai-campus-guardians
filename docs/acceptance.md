@@ -1,5 +1,7 @@
 # 3D 十二關版本驗收
 
+最新版血量歸零、首頁與台灣華語朗讀的驗收見 [defeat-voice-acceptance.md](defeat-voice-acceptance.md)。
+
 GitHub Pages與首頁暫停／續傳功能的最新驗收見[github-pages-acceptance.md](github-pages-acceptance.md)。下列保留前一次Windows版的驗證紀錄。
 
 版本 2.0；2026-10-07。初階六關、進階六關，60 道主要題與24 道重玩練習。下列為實際檢查，未將模擬視窗尺寸視為手機實機測試。

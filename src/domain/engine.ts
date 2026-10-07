@@ -44,23 +44,36 @@ export function battleHealth(session: Session): { playerHp: number; enemyHp: num
   return { playerHp: session.shield, enemyHp: 100 - Math.min(100, session.repaired + currentDamage) };
 }
 
+export function isDefeated(session: Session): boolean {
+  return session.step === 'defeat' || session.shield <= 0;
+}
+
+/** Start the same challenge again without erasing completed campaign progress. */
+export function restartBattle(progress: Progress): Progress {
+  if (!progress.active) throw new Error('沒有可重新挑戰的關卡。');
+  const { levelId, mode, review } = progress.active;
+  return applySession(progress, startSession(levelId, mode, review));
+}
+
 function validAction(session: Session, index: number | null): boolean {
   return index !== null && (currentQuestion(session).valid[index]?.length ?? 0) > 0;
 }
 
 export function chooseAction(session: Session, index: number): Session {
-  if (session.step !== 'action') return session;
+  if (isDefeated(session) || session.step !== 'action') return session;
   const question = currentQuestion(session);
   if (!Number.isInteger(index) || !question.choices[index]) return session;
   return { ...session, selected: index, reason: null, feedback: '', success: false };
 }
 
 function unsuccessful(session: Session, feedback: string): Session {
-  return { ...session, step: 'feedback', success: false, feedback, retries: session.retries + 1, shield: Math.max(8, session.shield - 12) };
+  const shield = Math.max(0, session.shield - 12);
+  return { ...session, step: shield === 0 ? 'defeat' : 'feedback', success: false,
+    feedback, retries: session.retries + 1, shield };
 }
 
 export function submitAction(session: Session): Session {
-  if (session.step !== 'action') return session;
+  if (isDefeated(session) || session.step !== 'action') return session;
   const question = currentQuestion(session);
   if (session.selected === null || !question.choices[session.selected]) return { ...session, feedback: '請直接點選一個答案。' };
   if (!validAction(session, session.selected)) return unsuccessful(session, question.choices[session.selected].feedback);
@@ -76,13 +89,14 @@ export function submitReason(session: Session): Session {
 }
 
 export function useHint(session: Session): Session {
+  if (isDefeated(session)) return session;
   if (session.step === 'feedback' && session.success) return session;
   if (session.step === 'feedback') return { ...session, hintUsed: true };
   return { ...session, hintUsed: true, feedback: `伙伴提示：${currentQuestion(session).hint}` };
 }
 
 export function retryQuestion(session: Session): Session {
-  if (session.step !== 'feedback' || session.success) return session;
+  if (isDefeated(session) || session.step !== 'feedback' || session.success) return session;
   return {
     ...session, step: 'action', selected: null, reason: null,
     success: false, feedback: '',
@@ -90,6 +104,7 @@ export function retryQuestion(session: Session): Session {
 }
 
 export function demonstrate(session: Session): Session {
+  if (isDefeated(session)) return session;
   if (session.step === 'feedback' && session.success) return session;
   const question = currentQuestion(session);
   const selected = Number(Object.keys(question.valid)[0]);
@@ -103,6 +118,7 @@ export function demonstrate(session: Session): Session {
 }
 
 function makeRecord(session: Session): AttemptRecord {
+  if (isDefeated(session)) throw new Error('這場挑戰已結束，請重新挑戰同一關。');
   if (session.step !== 'feedback' || !session.success || session.selected === null || !validAction(session, session.selected) || session.reason !== null) throw new Error('請完成目前題目後再繼續。');
   const status: LearningStatus = session.demoUsed ? 'practice' : session.hintUsed || session.retries > 0 ? 'supported' : 'first';
   return {
@@ -113,6 +129,7 @@ function makeRecord(session: Session): AttemptRecord {
 }
 
 export function advanceSession(session: Session): { session: Session | null; record: AttemptRecord; finished: boolean } {
+  if (isDefeated(session)) throw new Error('這場挑戰已結束，請重新挑戰同一關。');
   if (session.records.length !== session.index) throw new Error('目前紀錄與題目順序不同，請重新載入存檔。');
   const record = makeRecord(session);
   const nextIndex = session.index + 1;
@@ -131,6 +148,7 @@ export function applySession(progress: Progress, session: Session): Progress {
 }
 
 export function finishSession(progress: Progress, session: Session): Progress {
+  if (isDefeated(session)) throw new Error('這場挑戰已結束，請重新挑戰同一關。');
   if (progress.finishedSessionIds?.includes(session.id)) return progress;
   if (session.index !== session.questionIds.length - 1 || session.records.length !== session.index) throw new Error('挑戰尚未完成，進度仍可繼續保存。');
   const record = makeRecord(session);

@@ -65,7 +65,7 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
 }
 
 function speechText(raw: string) { return raw.replace(/\bAI\b/g, '人工智慧').replace(/★/g, '').replace(/／/g, '，'); }
-function speechFile(text: string) { return createHash('sha256').update('zh-TW-Hanhan-rate0-v1:' + text).digest('hex').slice(0, 20) + '.mp3'; }
+function speechFile(text: string) { return createHash('sha256').update('zh-TW-HsiaoChenNeural-rate-6-pitch-2-v2:' + text).digest('hex').slice(0, 20) + '.mp3'; }
 
 /** One narration per actual mission difficulty, generated from the same editable bank. */
 export function expectedAudio() {

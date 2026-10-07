@@ -94,17 +94,19 @@ function activeSession(value: unknown): Session | null {
   if (raw.reason !== null) reject('active新版題目採直接選答，不能有第二次理由作答');
   const reason = null;
   const step = raw.step;
-  if (step !== 'action' && step !== 'feedback') reject('active.step不是有效的直接作答階段');
+  if (step !== 'action' && step !== 'feedback' && step !== 'defeat') reject('active.step不是有效的直接作答階段');
   const success = boolean(raw.success, 'active.success');
   const validAction = selected !== null && !!q.valid[selected]?.length;
   if (success && (step !== 'feedback' || !validAction)) reject('active成功狀態與作答不一致');
-  if (step === 'feedback' && selected === null) reject('active回饋階段缺少行動');
-  if (step === 'feedback' && !success && validAction) reject('active錯誤回饋與有效答案不一致');
+  if ((step === 'feedback' || step === 'defeat') && selected === null) reject('active回饋階段缺少行動');
+  if ((step === 'feedback' || step === 'defeat') && !success && validAction) reject('active錯誤回饋與有效答案不一致');
+  const shield = integer(raw.shield, 'active.shield', 0, 100);
+  if ((shield === 0) !== (step === 'defeat')) reject('active零血量與挑戰結束狀態不一致');
   const retries = integer(raw.retries, 'active.retries', 0, 1000000);
   const hintUsed = boolean(raw.hintUsed, 'active.hintUsed');
   const demoUsed = raw.demoUsed === undefined ? false : boolean(raw.demoUsed, 'active.demoUsed');
   if (demoUsed && (!success || !hintUsed || retries < 2)) reject('active示範狀態不一致');
-  if (step === 'feedback' && !success && retries === 0) reject('active錯誤回饋缺少重試紀錄');
+  if ((step === 'feedback' || step === 'defeat') && !success && retries === 0) reject('active錯誤回饋缺少重試紀錄');
   const records = list(raw.records, 'active.records', 7).map((record, i) => attempt(record, `active.records[${i}]`));
   if (records.length !== index || records.some((record, i) => record.questionId !== questionIds[i] || record.mode !== selectedMode)) reject('active已完成紀錄與題目順序不一致');
   const repaired = integer(raw.repaired, 'active.repaired', 0, 100);
@@ -113,7 +115,7 @@ function activeSession(value: unknown): Session | null {
   return {
     id: text(raw.id, 'active.id', 256), levelId, mode: selectedMode, review, questionIds, index,
     step, selected, reason, success, retries, hintUsed, demoUsed, feedback,
-    shield: integer(raw.shield, 'active.shield', 8, 100), repaired, records,
+    shield, repaired, records,
   };
 }
 

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getQuestions } from '../content';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
-  demonstrate, finishSession, retryQuestion, startSession, submitAction,
+  demonstrate, finishSession, restartBattle, retryQuestion, startSession, submitAction,
 } from './engine';
 import type { Progress, Session } from './types';
 
@@ -124,6 +124,66 @@ describe('new campaign storage and backups', () => {
     expect(retryQuestion(checkpoints[0]).step).toBe('action');
   });
 
+  it('saves and imports zero-HP defeat with earlier answers intact, then restarts that same level', async () => {
+    const storage = await import('./storage');
+    const prior = { ...reachSlot(8, 4), shield: 4 };
+    const defeated = wrong(prior);
+    expect(defeated).toMatchObject({ step: 'defeat', shield: 0, index: 3 });
+    const original = applySession(createProgress(), defeated);
+    const restored = storage.parseBackup(storage.exportBackup(original));
+    expect(restored).toEqual(original);
+    expect(restored.active!.records).toEqual(prior.records);
+    expect(restored.active!.selected).toBe(defeated.selected);
+    expect(restored.active!.feedback).toBe(defeated.feedback);
+    await storage.saveProgress(original);
+    expect(await storage.loadProgress()).toEqual(original);
+    expect(battleHealth((await storage.loadProgress()).active!)).toEqual({ playerHp: 0, enemyHp: 40 });
+    const restarted = restartBattle(restored);
+    expect(restarted.active).toMatchObject({ levelId: 8, mode: 'advanced', shield: 100, index: 0, step: 'action' });
+    expect(storage.parseBackup(storage.exportBackup(restarted))).toEqual(restarted);
+  });
+
+  it('accepts previous 8-HP saves and new surviving HP below 8 without changing their answers', async () => {
+    const storage = await import('./storage');
+    for (const shield of [8, 4, 1]) {
+      const session = { ...wrong(startSession(1, 'starter')), shield };
+      const original = applySession(createProgress(), session);
+      expect(storage.parseBackup(storage.exportBackup(original))).toEqual(original);
+      expect(retryQuestion(storage.validateProgress(original).active!)).toMatchObject({ step: 'action', shield });
+    }
+  });
+
+  it('rejects zero HP outside defeat and rejects defeat with surviving HP', async () => {
+    const storage = await import('./storage');
+    const zeroAction = applySession(createProgress(), { ...startSession(1, 'starter'), shield: 0 });
+    const zeroFeedback = applySession(createProgress(), { ...wrong(startSession(1, 'starter')), shield: 0 });
+    const survivingDefeat = applySession(createProgress(), { ...wrong(startSession(1, 'starter')), step: 'defeat', shield: 8 });
+    for (const value of [zeroAction, zeroFeedback, survivingDefeat]) {
+      expect(() => storage.validateProgress(value)).toThrow('零血量與挑戰結束');
+    }
+  });
+
+  it('rejects forged defeat answers, missing choices and missing wrong-answer history', async () => {
+    const storage = await import('./storage');
+    const depleted = { ...startSession(1, 'starter'), shield: 4 };
+    const base = applySession(createProgress(), wrong(depleted));
+    const success = structuredClone(base);
+    success.active!.success = true;
+    expect(() => storage.validateProgress(success)).toThrow('成功狀態');
+    const validChoice = structuredClone(base);
+    validChoice.active!.selected = Number(Object.keys(currentQuestion(depleted).valid)[0]);
+    expect(() => storage.validateProgress(validChoice)).toThrow('錯誤回饋');
+    const missingChoice = structuredClone(base);
+    missingChoice.active!.selected = null;
+    expect(() => storage.validateProgress(missingChoice)).toThrow('缺少行動');
+    const missingRetries = structuredClone(base);
+    missingRetries.active!.retries = 0;
+    expect(() => storage.validateProgress(missingRetries)).toThrow('缺少重試');
+    const demo = structuredClone(base);
+    demo.active!.demoUsed = true;
+    expect(() => storage.validateProgress(demo)).toThrow('示範狀態');
+  });
+
   it('isolates new progress from old saved data and rejects old backups explicitly', async () => {
     const storage = await import('./storage');
     const legacy = JSON.stringify({ ...createProgress(), schemaVersion: 1, completed: [1, 18] });
@@ -227,7 +287,7 @@ describe('new campaign storage and backups', () => {
     reason.active!.reason = 0;
     expect(() => storage.validateProgress(reason)).toThrow('第二次理由');
     const shield = structuredClone(base);
-    shield.active!.shield = 0;
+    shield.active!.shield = -1;
     expect(() => storage.validateProgress(shield)).toThrow('超出有效範圍');
   });
 

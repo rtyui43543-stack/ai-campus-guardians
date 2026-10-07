@@ -3,7 +3,7 @@ import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, Han
 import type { Chapter, Level, Mode, Progress, Session } from './domain/types';
 import { chapters, levels, getChapter, getLevel, phaseLabels, sourceLabels } from './content/levels';
 import { questionById, presentQuestion } from './content';
-import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
+import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
 import { loadProgress, saveProgress } from './domain/storage';
 import { battleSound, loadAudio, playAudio, stopAudio } from './platform/audio';
 import { startBattleMusic, stopBattleMusic } from './platform/music';
@@ -60,21 +60,21 @@ export function App() {
   }, [screen, progress !== null]);
   useEffect(() => {
     const active = progress?.active;
-    if (screen === 'battle' && active && active.index > 0) {
+    if (screen === 'battle' && active && !isDefeated(active)) {
       document.getElementById('question-title')?.focus();
     }
-  }, [screen, progress?.active?.index, progress?.active?.step]);
+  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step]);
   useEffect(() => {
     const updateMusic = (event: Event) => setMusicPlaying((event as CustomEvent<{ playing: boolean }>).detail.playing);
     window.addEventListener('battle-music-status', updateMusic);
     return () => { window.removeEventListener('battle-music-status', updateMusic); stopBattleMusic(); stopAudio(); };
   }, []);
   useEffect(() => {
-    if (screen === 'battle' && progress?.active && progress.settings.music) {
+    if (screen === 'battle' && progress?.active && (!isDefeated(progress.active) || animating) && progress.settings.music) {
       // A restored page can require a user gesture. The music button remains available.
       void startBattleMusic().catch(() => setMusicPlaying(false));
     } else { stopBattleMusic(); setMusicPlaying(false); }
-  }, [screen, progress?.settings.music, Boolean(progress?.active)]);
+  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating]);
   useEffect(() => {
     if (!notice) return;
     const timeout = setTimeout(() => setNotice(''), 6500);
@@ -86,8 +86,14 @@ export function App() {
   };
   const playMusicFromGesture = () => { void startBattleMusic().catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
   const navigate = (next: Screen) => {
-    if (next === 'battle') { setCue(''); if (progress?.settings.music) playMusicFromGesture(); }
-    else stopBattleMusic();
+    stopAudio();
+    if (next === 'battle') { setCue(''); if (progress?.settings.music && progress.active && !isDefeated(progress.active)) playMusicFromGesture(); }
+    else {
+      stopBattleMusic();
+      if (attackTimer.current) clearTimeout(attackTimer.current);
+      attackTimer.current = null; attackLock.current = false;
+      setAnimating(false); setCue('');
+    }
     setMobileMenu(false); setScreen(next);
   };
   const toggleMusic = () => {
@@ -100,8 +106,10 @@ export function App() {
     if (!progress) return;
     const prior = progress.active;
     commit(applySession(progress, next));
-    if (next.step === 'feedback' && ((next.success && !prior?.success) || (!next.success && prior?.step !== 'feedback'))) {
-      const damage = prior ? battleHealth(prior).enemyHp - battleHealth(next).enemyHp : 0;
+    if ((next.step === 'feedback' || next.step === 'defeat') && ((next.success && !prior?.success) || (!next.success && prior?.step !== 'feedback'))) {
+      const before = prior ? battleHealth(prior) : {playerHp:100,enemyHp:100};
+      const after = battleHealth(next);
+      const damage = next.success ? before.enemyHp - after.enemyHp : before.playerHp - after.playerHp;
       setCue((next.success ? 'success' : 'retry') + '-' + Date.now() + '-' + Math.round(damage));
       attackLock.current = true; setAnimating(true);
       if (attackTimer.current) clearTimeout(attackTimer.current);
@@ -118,6 +126,16 @@ export function App() {
     if (progress.settings.music) playMusicFromGesture();
     commit(applySession({ ...progress, settings: { ...progress.settings, mode: level.mode } }, session)); setResult(null); setIntro(null);
     setHintOpen(false); setScreen('battle');
+  };
+  const restart = () => {
+    if (!progress?.active || !isDefeated(progress.active)) return;
+    stopAudio();
+    if (attackTimer.current) clearTimeout(attackTimer.current);
+    attackLock.current = false; setAnimating(false); setCue('');
+    setHintOpen(false); setSourceOpen(false); setResult(null);
+    commit(restartBattle(progress));
+    if (progress.settings.music) playMusicFromGesture();
+    setScreen('battle');
   };
   const nextQuestion = () => {
     if (!progress?.active || attackLock.current) return;
@@ -163,7 +181,7 @@ export function App() {
   return <div className={'app-shell ' + (screen === 'battle' ? 'battle-shell' : '')}>
     <a className="skip-link" href="#main-content">跳到主要內容</a>
     <aside className={'sidebar ' + (mobileMenu ? 'open' : '')}>
-      <button className="brand" onClick={() => navigate('map')} aria-label="回冒險地圖">
+      <button className="brand" onClick={() => navigate('map')} aria-label="回到首頁">
         <img src={appAssetUrl('/icon-192.png')} alt="" /><span>AI 校園守護隊<small>CAMPUS GUARDIANS</small></span>
       </button>
       <p className="sidebar-label">你的守護旅程</p>
@@ -188,42 +206,44 @@ export function App() {
         <div className="topbar-tools"><div className="mode-toggle" aria-label="選擇難度">{(['starter', 'advanced'] as Mode[]).map(mode =>
           <button key={mode} className={progress.settings.mode === mode ? 'selected' : ''} aria-pressed={progress.settings.mode === mode}
             disabled={screen === 'battle'} onClick={() => commit({ ...progress, settings: { ...progress.settings, mode }, updatedAt: new Date().toISOString() })}>{modeNames[mode]}<span>{mode === 'starter' ? '3–4 年級' : '5–6 年級'}</span></button>)}</div>
+          <button className="icon-button" title="回到首頁" aria-label="回到首頁" onClick={() => navigate('map')}><Home size={21} /></button>
           <button className="icon-button" title="停止朗讀" aria-label="停止朗讀" onClick={stopAudio}><Volume2 size={21} /></button>
           <span className={'connection-dot ' + (offline.state.online ? '' : 'offline')} title={offline.state.online ? '目前連線中' : '目前沒有網路'}>{offline.state.online ? <Wifi size={16} /> : <WifiOff size={16} />}</span>
         </div>
       </header>
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
-          onLevel={setIntro} onResume={() => navigate('battle')} offline={offline} />}
+          onLevel={setIntro} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} offline={offline} />}
         {screen === 'battle' && active && battleLevel && battleChapter && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <Arena chapter={battleLevel.chapterId} guardian={battleChapter.guardian} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
           <div className="duel-hud">
-            <button className="duel-back" onClick={() => navigate('map')} aria-label="暫存回地圖"><Pause size={20} /><span>回地圖</span></button>
+            <button className="duel-back" onClick={() => navigate('map')} aria-label="回到首頁" title="回到首頁，保留本次挑戰"><Home size={20} /><span>首頁</span></button>
             <DuelMeter label="你 · 小羽" hp={health.playerHp} side="hero" cue={cue} reducedMotion={progress.settings.reducedMotion} />
             <div className="duel-round"><span>{modeNames[active.mode]} · 第 {active.mode === 'starter' ? battleLevel.id : battleLevel.id - 6} 關</span><b>第 {active.index + 1} 題 / {active.questionIds.length}</b></div>
             <DuelMeter label={battleChapter.guardian} hp={health.enemyHp} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
           </div>
-          <section className={'duel-bubble ' + (active.step === 'feedback' ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
+          <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
             <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button><button className="duel-tool" aria-label="查看教材來源" onClick={() => setSourceOpen(true)}><BookOpen size={18} /></button></div></div>
             <h1 id="question-title" tabIndex={-1}>{presented.prompt}</h1>
-            {active.step !== 'feedback' && !hintOpen && presented.evidence.length > 0 && <div className="duel-evidence">{presented.evidence.map((e,i) => <p key={i}><b>{e.title}：</b>{e.body}</p>)}</div>}
-            {hintOpen && active.step !== 'feedback' && <div className="duel-hint"><Lightbulb size={17} /><p>{question.hint}</p><button className="duel-tool" aria-label="聽提示" onClick={() => narrate(audioKey + '.hint')}><Volume2 size={18} /></button></div>}
-            {active.step === 'feedback' && <div className={'duel-feedback ' + (active.success ? 'success' : 'retry')} role="status"><strong>{active.demoUsed ? '伙伴示範，跟著學！' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
+            {active.step === 'action' && !hintOpen && presented.evidence.length > 0 && <div className="duel-evidence">{presented.evidence.map((e,i) => <p key={i}><b>{e.title}：</b>{e.body}</p>)}</div>}
+            {hintOpen && active.step === 'action' && <div className="duel-hint"><Lightbulb size={17} /><p>{question.hint}</p><button className="duel-tool" aria-label="聽提示" onClick={() => narrate(audioKey + '.hint')}><Volume2 size={18} /></button></div>}
+            {(active.step === 'feedback' || isDefeated(active)) && <div className={'duel-feedback ' + (active.success ? 'success' : 'retry')} role="status"><strong>{isDefeated(active) ? '血量歸零了' : active.demoUsed ? '伙伴示範，跟著學！' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
           </section>
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleChapter.guardian}</b></div>
           {animating && active.success && <div className="duel-attack-name" key={cue}><Sparkles size={18} />{abilityNames[battleLevel.chapterId - 1]}</div>}
-          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.success ? '命中！' : '再試一次'}</span><b>−{active.success ? active.review ? 50 : 20 : 12}<small> HP</small></b></div>}
+          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.success ? '命中！' : isDefeated(active) ? '血量歸零' : '再試一次'}</span><b>−{Number(cue.split('-').at(-1))}<small> HP</small></b></div>}
           <div className="duel-answer-area">
             <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '')} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
               if (attackLock.current || active.step !== 'action') return;
               attackLock.current = true; stopAudio(); setHintOpen(false);
               changeSession(submitAction(chooseAction(active,i)));
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
-            <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step === 'feedback'} onClick={() => { setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(active)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
+            <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(active)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
               <span className="duel-rule">答對出招 · 沒有倒數 · 自動存檔</span>
-              {active.step === 'feedback' ? active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { attackLock.current = false; changeSession(retryQuestion(active)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => changeSession(demonstrate(active))}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
+              {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { attackLock.current = false; changeSession(retryQuestion(active)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => changeSession(demonstrate(active))}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
             </div>
           </div>
+          {isDefeated(active) && !animating && <DefeatDialog level={battleLevel} hint={question.hint} onRestart={restart} onHome={() => navigate('map')} />}
         </section>}
         {screen === 'battle' && !active && <div className="empty-state"><ShieldCheck size={40} /><h1>你的冒險，從這裡開始</h1><button className="button primary" onClick={() => navigate('map')}>前往冒險地圖<ArrowRight size={18} /></button></div>}
         {screen === 'results' && result && <Results session={result} onLevel={setIntro} onMap={() => navigate('map')} onReview={() => start(getLevel(result.levelId)!, true)} onProposal={() => navigate('proposals')} />}
@@ -243,7 +263,7 @@ export function App() {
       <div className="source-note">教材：單元 {intro.source.units.join('、')} · 印刷 p{intro.source.pages} · {sourceLabels[intro.source.label]}</div>
       {progress.active && <div className="hint-box"><Pause size={18} /><p>目前第 {progress.active.levelId} 關已暫存。開始新任務會取代這份途中存檔，已完成紀錄會保留。</p></div>}
       <div className="dialog-actions"><button className="text-button" onClick={() => narrate('level.' + intro.id)}><Volume2 size={18} />聽任務說明</button>
-        {progress.active && <button className="button secondary" onClick={() => { setIntro(null); navigate('battle'); }}>繼續暫存任務</button>}
+        {progress.active && <button className="button secondary" onClick={() => { setIntro(null); if (isDefeated(progress.active!)) restart(); else navigate('battle'); }}>{isDefeated(progress.active) ? '重新挑戰原關卡' : '繼續暫存任務'}</button>}
         <button className="button primary" onClick={() => start(intro)}>開始對戰<ArrowRight size={18} /></button></div>
     </Dialog>}
     {sourceOpen && question && <Dialog onClose={() => setSourceOpen(false)} title="這個情境的教材來源">
@@ -254,6 +274,19 @@ export function App() {
       <p className="source-note">題目識別：{question.id} · 版本 2.0。深偽與作業誠信為倫理延伸案例。</p>
     </Dialog>}
   </div>;
+}
+
+function DefeatDialog({ level, hint, onRestart, onHome }: { level: Level; hint: string; onRestart: () => void; onHome: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const dialog = ref.current; dialog?.showModal(); return () => dialog?.close(); }, []);
+  return <dialog className="defeat-dialog" ref={ref} aria-labelledby="defeat-title" aria-describedby="defeat-description" onCancel={event => event.preventDefault()}>
+    <span className="defeat-icon" aria-hidden="true"><RotateCcw size={32} /></span>
+    <p className="defeat-level">{modeNames[level.mode]} · 第 {level.mode === 'starter' ? level.id : level.id - 6} 關 · 0 HP</p>
+    <h2 id="defeat-title">這次挑戰結束了</h2>
+    <p id="defeat-description">血量歸零了，整理一下想法，再出發！重新挑戰會從本關第一題開始，恢復 100 HP。已完成的關卡會保留。</p>
+    <div className="defeat-tip"><Lightbulb size={20} /><div><strong>這題的小提醒</strong><p>{hint}</p></div></div>
+    <div className="defeat-actions"><button className="button primary" onClick={onRestart} autoFocus><RotateCcw size={18} />重新挑戰本關</button><button className="button secondary" onClick={onHome}><Home size={18} />回到首頁</button></div>
+  </dialog>;
 }
 
 function DuelMeter({ label, hp, side, cue, reducedMotion }: { label: string; hp: number; side: 'hero' | 'enemy'; cue: string; reducedMotion: boolean }) {
@@ -276,7 +309,7 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, offline }:
       <div className="welcome-art" /><div className="welcome-shade" />
       <div className="welcome-copy"><span className="eyebrow"><span className="tiny-star">✦</span> 校園，需要你的好主意</span>
         <h1>一起讓科技，<br /><em>更友善。</em></h1><p>跟伙伴探索 AI，用觀察和思考，<br className="desktop-break" />修復一個人人都能安心生活的校園。</p>
-        <button className="button primary" onClick={() => progress.active ? onResume() : onLevel(nextLevel)}><Play size={17} fill="currentColor" />{progress.active ? '繼續第 ' + progress.active.levelId + ' 關' : progress.completed.length ? '繼續我的冒險' : '開始我的冒險'}<ArrowRight size={18} /></button>
+        <button className="button primary" onClick={() => progress.active ? onResume() : onLevel(nextLevel)}><Play size={17} fill="currentColor" />{progress.active ? (isDefeated(progress.active) ? '重新挑戰第 ' : '繼續第 ') + (progress.active.mode === 'starter' ? progress.active.levelId : progress.active.levelId - 6) + ' 關' : progress.completed.length ? '繼續我的冒險' : '開始我的冒險'}<ArrowRight size={18} /></button>
         <span className="welcome-note"><ShieldCheck size={15} />你的進度會存在這台裝置</span>
       </div>
       <div className="welcome-model" aria-hidden="true"><Arena chapter={1} guardian="資料大胃王" enemyHp={100} playerHp={100} cue="" reducedMotion={progress.settings.reducedMotion} /></div>
