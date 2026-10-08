@@ -169,6 +169,98 @@ describe('themed spell performances', () => {
     fx.dispose();
   });
 
+  it('establishes the castle shield before launching a crest, then seals the enemy at contact in both tiers', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), 1, mode);
+      const special = fx.root.getObjectByName('ultimate-1')!;
+      const fortress = special.getObjectByName('ultimate-formation')!;
+      const projectile = special.getObjectByName('ultimate-strike')!;
+      const impact = special.getObjectByName('castle-seal-impact')!;
+      const wave = special.getObjectByName('castle-seal-shockwave')!;
+      expect(special.userData.sequence).toBe('castle-shield-emblem-flight-seal-impact');
+      fx.update(frame({ ultimate: true, time: .15 }));
+      expect(fortress.visible).toBe(true); expect(projectile.visible).toBe(false);
+      expect(impact.visible).toBe(false); expect(wave.visible).toBe(false);
+      expect(fortress.getObjectByName('summoned-castle-shield')).toBeDefined();
+      fx.update(frame({ ultimate: true, time: .6 }));
+      expect(projectile.visible).toBe(true);
+      expect(projectile.getObjectByName('castle-emblem-projectile')).toBeDefined();
+      expect(projectile.position.x).toBeGreaterThan(frame().start.x);
+      expect(projectile.position.x).toBeLessThan(frame().target.x);
+      expect(impact.visible).toBe(false);
+      fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
+      expect(impact.visible).toBe(true); expect(wave.visible).toBe(true);
+      expect(projectile.position.x).toBe(frame().target.x);
+      expect(impact.position.x).toBe(frame().target.x);
+      const contactScale = wave.scale.x;
+      fx.update(frame({ ultimate: true, time: 1.6 }));
+      expect(projectile.visible).toBe(false); expect(fortress.visible).toBe(true);
+      expect(wave.scale.x).toBeGreaterThan(contactScale * 1.8);
+      expect(visibleMeshes(impact).length).toBeGreaterThan(30);
+      fx.dispose();
+    }
+  });
+
+  it('gives starter thunder, mirror and phoenix a giant travelling object followed by a separate fragment impact', () => {
+    const cases = [
+      { chapter: 2, normal: 'thunder-book-page', formation: 'thunder-index-summoning-array',
+        projectile: 'colossal-thunder-index', impact: 'thunder-index-impact', wave: 'thunder-index-page-wave' },
+      { chapter: 4, normal: 'mirror-blade', formation: 'mirror-summoning-array',
+        projectile: 'colossal-mirror-cleaver', impact: 'mirror-mask-shatter-impact', wave: 'mirror-cleaver-ripple' },
+      { chapter: 5, normal: 'flaming-feather-projectile', formation: 'phoenix-summoning-array',
+        projectile: 'wisdom-phoenix', impact: 'phoenix-fire-impact', wave: 'phoenix-fire-shockwave' },
+    ];
+    for (const example of cases) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), example.chapter, 'starter');
+      const special = fx.root.getObjectByName(`ultimate-${example.chapter}`)!;
+      fx.update(frame({ time: .7 })); fx.root.updateMatrixWorld(true);
+      const ordinary = fx.root.getObjectByName(`normal-${example.chapter}`)!.getObjectByName(example.normal)!;
+      const ordinarySize = new THREE.Box3().setFromObject(ordinary).getSize(new THREE.Vector3());
+      const ordinarySpan = Math.max(ordinarySize.x, ordinarySize.y);
+      fx.update(frame({ ultimate: true, time: .1 }));
+      expect(special.getObjectByName('ultimate-formation')!.visible).toBe(true);
+      expect(special.getObjectByName(example.formation)).toBeDefined();
+      expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+      const impact = special.getObjectByName(example.impact)!;
+      const wave = special.getObjectByName(example.wave)!;
+      expect(impact.visible).toBe(false); expect(wave.visible).toBe(false);
+      fx.update(frame({ ultimate: true, time: .7 })); fx.root.updateMatrixWorld(true);
+      const projectile = special.getObjectByName(example.projectile)!;
+      expect(projectile).toBeDefined(); expect(special.getObjectByName('ultimate-strike')!.visible).toBe(true);
+      const projectileSize = new THREE.Box3().setFromObject(projectile).getSize(new THREE.Vector3());
+      expect(Math.max(projectileSize.x, projectileSize.y)).toBeGreaterThan(ordinarySpan * 2.8);
+      expect(impact.visible).toBe(false);
+      fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
+      expect(impact.visible).toBe(true); expect(wave.visible).toBe(true);
+      expect(impact.position.x).toBe(frame().target.x);
+      expect(impact.position.y).toBe(frame().target.y);
+      const contactScale = wave.scale.x;
+      fx.update(frame({ ultimate: true, time: 1.7 }));
+      expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+      expect(wave.scale.x).toBeGreaterThan(contactScale * 1.8);
+      expect(visibleMeshes(impact).length).toBeGreaterThan(50);
+      fx.update(frame({ ultimate: true, time: 2.6 }));
+      expect(impact.visible).toBe(true);
+      fx.update(frame({ ultimate: true, time: ULTIMATE_CAST_SECONDS }));
+      expect(fx.root.visible).toBe(false);
+      fx.dispose();
+    }
+  });
+
+  it('holds the new starter impacts still in reduced motion while retaining elemental silhouettes', () => {
+    for (const chapter of [1, 2, 4, 5]) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, 'starter');
+      fx.update(frame({ ultimate: true, time: 1.2, reducedMotion: true }));
+      fx.root.updateMatrixWorld(true);
+      const before = visibleMeshes(fx.root).map(mesh => mesh.matrixWorld.elements.slice());
+      fx.update(frame({ ultimate: true, time: 1.7, reducedMotion: true })); fx.root.updateMatrixWorld(true);
+      const after = visibleMeshes(fx.root).map(mesh => mesh.matrixWorld.elements.slice());
+      expect(before.length).toBeGreaterThan(30);
+      expect(after).toEqual(before);
+      fx.dispose();
+    }
+  });
+
   it('matches 12 counterattacks to the boss species instead of firing the hero projectile backward', () => {
     const silhouettes = {
       starter: ['chain-link', 'classification-card', 'classification-stamp', 'false-mask', 'paper-wing', 'gear-fragment'],

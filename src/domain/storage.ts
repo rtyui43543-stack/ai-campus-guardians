@@ -1,6 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
-import { getUltimateCardKey } from '../content/ultimateSpells';
+import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
 import { createProgress } from './engine';
 import { reconstructRuns } from './scoring';
 import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session, UltimateCardUnlock } from './types';
@@ -161,11 +161,18 @@ function activeSession(value: unknown): Session | null {
   if (repaired !== Math.round(records.filter(record => record.status !== 'timeout').length / questionIds.length * 100)) reject('active修復進度與作答進度不一致');
   const releaseCount = records.filter(record => record.ultimateUsed).length + (extra.ultimateUsed ? 1 : 0);
   if (extra.bonusPoints !== undefined && extra.bonusPoints !== releaseCount * 10) reject('active必殺技獎勵與施放紀錄不一致');
-  const offensive = records.filter(record => record.ultimateUsed && [2, 4, 5].includes(record.ultimateId!)).length + (extra.ultimateUsed && [2, 4, 5].includes(extra.ultimateId!) ? 1 : 0);
-  const formerTreeOrIce = records.filter(record => record.ultimateUsed && record.ultimateId === 6).length + (extra.ultimateUsed && extra.ultimateId === 6 ? 1 : 0);
-  // Chapter six used to award a shield. Accept its saved zero damage as well as
-  // new ice attacks, without adding damage retroactively to the old checkpoint.
-  if (extra.enemyBonusDamage !== undefined && (extra.enemyBonusDamage % 10 !== 0 || extra.enemyBonusDamage < offensive * 10 || extra.enemyBonusDamage > (offensive + formerTreeOrIce) * 10)) reject('active額外傷害與施放紀錄不一致');
+  const releases = records.filter(record => record.ultimateUsed).map(record => record.ultimateId!);
+  if (extra.ultimateUsed) releases.push(extra.ultimateId!);
+  // Preserve saved effects exactly: castles formerly dealt zero damage, ice
+  // formerly shielded (zero) then attacked for ten, and advanced attacks used ten.
+  // Validate only a total composed of real historical or current cast values;
+  // reading an old checkpoint must never apply a new attack retroactively.
+  const allowedDamageTotals = releases.reduce((totals, ultimateId) => {
+    const currentDamage = getUltimateSpell(ultimateId, selectedMode)!.extraDamage;
+    const legacyDamage = ultimateId === 1 || ultimateId === 3 ? [0] : ultimateId === 6 ? [0, 10] : [10];
+    return new Set([...totals].flatMap(total => [...new Set([...legacyDamage, currentDamage])].map(damage => total + damage)));
+  }, new Set([0]));
+  if (extra.enemyBonusDamage !== undefined && !allowedDamageTotals.has(extra.enemyBonusDamage)) reject('active額外傷害與施放紀錄不一致');
   const feedback = text(raw.feedback, 'active.feedback', 30000, true);
   return {
     id: text(raw.id, 'active.id', 256), levelId, mode: selectedMode, review, questionIds, index,

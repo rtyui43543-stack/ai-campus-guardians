@@ -162,10 +162,12 @@ describe('new campaign storage and backups', () => {
   it.each([1, 7])('maps legacy enabled castle %i to one remaining block rather than upgrading a saved effect', async levelId => {
     const storage = await import('./storage');
     const legacy = solve(reachSlot(levelId, 4));
+    legacy.enemyBonusDamage = 0;
     delete legacy.barrierCharges;
     const original = applySession(createProgress(), legacy);
     const restored = storage.parseBackup(JSON.stringify(original));
-    expect(restored.active).toMatchObject({ barrier: true, barrierCharges: 1, shield: 100, bonusPoints: 10 });
+    expect(restored.active).toMatchObject({ barrier: true, barrierCharges: 1, shield: 100, bonusPoints: 10, enemyBonusDamage: 0 });
+    expect(battleHealth(restored.active!).enemyHp).toBe(20);
     expect(remainingBarrierCharges(restored.active!)).toBe(1);
     expect(restored.ultimateCards).toEqual(original.ultimateCards);
     const fifth = advanceSession(restored.active!).session!;
@@ -174,6 +176,35 @@ describe('new campaign storage and backups', () => {
     const secondHit = wrong(retryQuestion(firstHit));
     expect(secondHit).toMatchObject({ shield: 88, preventedDamage: false });
     expect(storage.parseBackup(storage.exportBackup(applySession(restored, secondHit))).active).toEqual(secondHit);
+  });
+
+  it.each([8, 10, 11, 12])('retains the former 10-HP attack in advanced mission %i checkpoints and history', async levelId => {
+    const storage = await import('./storage');
+    const legacy = { ...solve(reachSlot(levelId, 4)), enemyBonusDamage: 10 };
+    const original = applySession(createProgress(), legacy);
+    const restored = storage.parseBackup(storage.exportBackup(original));
+    expect(restored).toEqual(original);
+    expect(restored.active).toMatchObject({ enemyBonusDamage: 10, bonusPoints: 10 });
+    expect(battleHealth(restored.active!).enemyHp).toBe(10);
+    expect(submitAction(restored.active!)).toBe(restored.active);
+    const fifth = advanceSession(restored.active!).session!;
+    expect(fifth.enemyBonusDamage).toBe(10);
+    const finished = finishSession(restored, solve(fifth));
+    expect(storage.parseBackup(storage.exportBackup(finished))).toEqual(finished);
+    expect(finished.ultimateCards).toEqual(original.ultimateCards);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110 });
+    const newRelease = solve(reachSlot(levelId, 4));
+    expect(newRelease).toMatchObject({ enemyBonusDamage: 15, bonusPoints: 10 });
+    expect(storage.parseBackup(storage.exportBackup(applySession(restored, newRelease))).active).toEqual(newRelease);
+  });
+
+  it.each([[1, [1, 10]], [7, [5, 15]], [8, [0, 5, 20]], [12, [5, 20]], [9, [5, 10]]])('rejects damage values never applied by a mission %i cast', async (levelId, rejectedDamage) => {
+    const storage = await import('./storage');
+    const released = solve(reachSlot(levelId as number, 4));
+    for (const enemyBonusDamage of rejectedDamage as number[]) {
+      const bad = applySession(createProgress(), { ...released, enemyBonusDamage });
+      expect(() => storage.validateProgress(bad)).toThrow('額外傷害與施放紀錄不一致');
+    }
   });
 
   it.each([6, 12])('keeps the former tree shield and zero attack damage in old mission %i saves and history', async levelId => {

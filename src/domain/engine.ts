@@ -1,6 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
-import { getUltimateCardKey } from '../content/ultimateSpells';
+import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
 import { reconstructRuns } from './scoring';
 import type { AttemptRecord, LearningStatus, Mode, Progress, Session } from './types';
 
@@ -128,6 +128,7 @@ function successful(session: Session, feedback: string): Session {
     energy: session.review ? 0 : Math.min(3, (session.energy ?? 0) + 1), ultimateUsed: false,
     ultimateId: undefined, preventedDamage: false };
   const ultimateId = levels.find(level => level.id === session.levelId)!.chapterId;
+  const spell = getUltimateSpell(ultimateId, session.mode)!;
   const defensive = ultimateId === 1;
   const recovery = ultimateId === 3;
   const barrierCharges = defensive ? session.mode === 'advanced' ? 2 : 1 : remainingBarrierCharges(session);
@@ -136,7 +137,7 @@ function successful(session: Session, feedback: string): Session {
     bonusPoints: (session.bonusPoints ?? 0) + ULTIMATE_BONUS_POINTS,
     barrier: barrierCharges > 0, barrierCharges,
     shield: recovery ? Math.min(100, session.shield + (session.mode === 'advanced' ? 24 : 12)) : session.shield,
-    enemyBonusDamage: (session.enemyBonusDamage ?? 0) + (defensive || recovery ? 0 : 10),
+    enemyBonusDamage: (session.enemyBonusDamage ?? 0) + spell.extraDamage,
     preventedDamage: false,
   };
 }

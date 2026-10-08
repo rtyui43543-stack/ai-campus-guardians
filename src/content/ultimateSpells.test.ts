@@ -40,7 +40,7 @@ describe('chapter ultimate collectible definitions', () => {
       const base = ultimateSpells[index];
       expect(spell).toMatchObject({ id: base.id, mode: 'advanced', baseName: base.name,
         category: base.category, bonus: base.bonus });
-      if (![1, 3, 6].includes(spell.id)) expect(spell.description).toBe(base.description);
+      if (spell.category === 'attack') expect(spell.extraDamage).toBe(15);
       expect(spell.upgradeDescription).toContain(`${base.name}升級`);
       expect(spell.artPath).toBe(`/art/ultimate-advanced-${spell.id}${spell.id === 6 ? '-ice-v2' : '-v1'}.webp`);
       expect(getUltimateSpell(spell.id, 'advanced')).toBe(spell);
@@ -55,8 +55,19 @@ describe('chapter ultimate collectible definitions', () => {
     expect(getUltimateSpell(6)).toMatchObject({ name: '寒晶冰矛', category: 'attack' });
     expect(getUltimateSpell(6, 'advanced')).toMatchObject({ name: '極寒冰龍', category: 'attack', baseName: '寒晶冰矛' });
     for (const mode of ['starter', 'advanced'] as const) {
-      expect(getUltimateSpell(6, mode)?.description).toContain('魔王 10 HP');
+      expect(getUltimateSpell(6, mode)?.description).toContain(`魔王 ${mode === 'starter' ? 10 : 15} HP`);
       expect(getUltimateSpell(6, mode)?.description).not.toContain('護盾');
+    }
+  });
+  it('separates attack damage from scoring rewards and describes shield before castle counterattack', () => {
+    expect(ultimateSpells.map(spell => spell.extraDamage)).toEqual([5, 10, 0, 10, 10, 10]);
+    expect(advancedUltimateSpells.map(spell => spell.extraDamage)).toEqual([10, 15, 0, 15, 15, 15]);
+    for (const spell of allUltimateSpells) {
+      expect(spell.bonus).toBe(10);
+      if (spell.extraDamage) expect(spell.description).toContain(`魔王 ${spell.extraDamage} HP`);
+      if (spell.id === 1) {
+        expect(spell.description.indexOf('城堡護盾')).toBeLessThan(spell.description.indexOf('城門發射'));
+      }
     }
   });
   it('identifies old cards by their actual source question and keeps each tier separate', () => {

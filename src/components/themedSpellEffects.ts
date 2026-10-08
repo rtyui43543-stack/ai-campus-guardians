@@ -276,6 +276,30 @@ function gear(parent: THREE.Object3D) {
   body(result, new THREE.CircleGeometry(.095, 10), ink, 0, 0, .05); return result;
 }
 
+function ritualRing(parent: THREE.Object3D, name: string, color: number, radius = .8) {
+  const result = group(parent, name);
+  const points = Array.from({ length: 17 }, (_, i) => [Math.cos(i * Math.PI / 8) * radius,
+    Math.sin(i * Math.PI / 8) * radius, .025]);
+  tube(result, points, .023, color);
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    const rune = box(result, .095, .045, .03, cream, Math.cos(a) * radius, Math.sin(a) * radius, .045);
+    rune.rotation.z = a;
+  }
+  return result;
+}
+
+function impactWave(parent: THREE.Object3D, name: string, color: number) {
+  const result = group(parent, name);
+  for (let i = 0; i < 3; i++) {
+    const radius = .38 + i * .15;
+    const points = Array.from({ length: 17 }, (_, n) => [Math.cos(n * Math.PI / 8) * radius,
+      Math.sin(n * Math.PI / 8) * radius * .32, .025]);
+    tube(result, points, .025, i === 1 ? cream : color);
+  }
+  return result;
+}
+
 function anchor(object: THREE.Group, point: THREE.Vector3, frame: SpellFrame, size = 1) {
   object.position.copy(point); object.position.z = .85;
   object.quaternion.copy(frame.camera.quaternion); object.scale.setScalar(frame.scale * size);
@@ -413,15 +437,77 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
   const formation = group(root, 'ultimate-formation'), strike = group(root, 'ultimate-strike');
   let update: Variant['update'];
   if (theme === 1) {
-    castle(formation); const shields = Array.from({ length: 5 }, () => shield(root, 0x49bda0));
-    const seal = padlock(strike, 1.5);
+    root.userData.sequence = 'castle-shield-emblem-flight-seal-impact';
+    const fortress = castle(formation); fortress.name = 'summoned-castle-shield';
+    const shields = Array.from({ length: mode === 'advanced' ? 7 : 5 }, () => shield(root, 0x49bda0));
+    const crest = group(strike, 'castle-emblem-projectile');
+    shield(crest, 0x2ab99c).scale.setScalar(1.55);
+    const flyingKeep = castle(crest); flyingKeep.scale.setScalar(.46); flyingKeep.position.set(0, -.10, .23);
+    padlock(crest, .58).position.set(0, -.20, .32);
+    const impact = group(root, 'castle-seal-impact');
+    const seal = padlock(impact, 1.4);
+    const fragments = Array.from({ length: mode === 'advanced' ? 16 : 12 }, (_, i) => {
+      const token = group(impact, 'castle-crest-fragment');
+      shield(token, i % 2 ? 0x5bc9b0 : 0x319ca0).scale.setScalar(.30);
+      return token;
+    });
+    const wave = impactWave(root, 'castle-seal-shockwave', 0x53bfa6);
     update = f => {
-      const point = f.hero.clone(); point.y += .10 * f.scale; anchor(formation, point, f, 1.10);
-      formation.visible = visibleDuring(f, .04, 2.80); formation.scale.y *= f.reducedMotion ? 1 : .30 + .7 * smooth(f.time / .48);
+      const point = f.hero.clone(); point.y += .10 * f.scale; anchor(formation, point, f, mode === 'advanced' ? 1.30 : 1.15);
+      formation.visible = visibleDuring(f, .04, 2.80); formation.scale.y *= f.reducedMotion ? 1 : .30 + .7 * smooth(f.time / .36);
       const center = f.hero.clone(); center.y += 1.3 * f.scale;
-      animateOrbit(shields, f, center, .90, .65, .18, 2.8);
-      anchor(strike, f.reducedMotion ? f.target : path(f), f); strike.visible = visibleDuring(f, .42, 2.3);
-      seal.scale.setScalar(1 + (f.reducedMotion ? 0 : Math.sin(f.time * 3) * .08));
+      animateOrbit(shields, f, center, mode === 'advanced' ? 1 : .90, .45, .10, 2.8);
+      // The hero's fortress is established before the gate launches the crest.
+      anchor(strike, f.reducedMotion ? f.target : path(f), f, mode === 'advanced' ? 1.45 : 1.20);
+      strike.visible = visibleDuring(f, .42, 1.04);
+      if (!f.reducedMotion) strike.rotateZ(Math.sin(limit((f.time - .42) / .48) * Math.PI) * -.18);
+      const spread = f.reducedMotion ? .65 : smooth((f.time - .9) / .70);
+      anchor(impact, f.target, f, mode === 'advanced' ? 1.25 : 1.10); impact.visible = visibleDuring(f, .9, 2.80);
+      seal.scale.setScalar(1.20 - spread * .20);
+      fragments.forEach((piece, i) => {
+        const a = i * Math.PI * 2 / fragments.length, radius = .28 + spread * .80;
+        piece.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .75, .10);
+        piece.rotation.z = a + (f.reducedMotion ? 0 : spread * .55);
+      });
+      const ground = f.target.clone(); ground.y -= .48 * f.scale;
+      anchor(wave, ground, f, 1 + spread * .90); wave.visible = visibleDuring(f, .9, 2.80);
+    };
+  } else if (theme === 2 && mode === 'starter') {
+    root.userData.sequence = 'thunder-book-charge-index-flight-lightning-impact';
+    const book = openBook(formation); book.scale.setScalar(1.45);
+    const array = ritualRing(formation, 'thunder-index-summoning-array', 0xe3bb5a, .78);
+    const index = group(strike, 'colossal-thunder-index');
+    openBook(index).scale.setScalar(2.0);
+    const scrolls = Array.from({ length: 5 }, () => thunderPage(index));
+    scrolls.forEach((page, i) => {
+      page.position.set(-.55 - i * .12, (i - 2) * .19, .14);
+      page.rotation.z = (i - 2) * .25; page.scale.setScalar(1.25);
+    });
+    const impact = group(root, 'thunder-index-impact');
+    const bolts = Array.from({ length: 7 }, (_, i) => lightning(impact, i === 0 ? 1.75 : 1.05));
+    bolts.forEach((bolt, i) => {
+      bolt.position.set((i % 3 - 1) * .40, Math.floor(i / 3) * .31 - .25, i * .018);
+      bolt.rotation.z = (i % 3 - 1) * .65;
+    });
+    const pages = Array.from({ length: 18 }, () => thunderPage(impact));
+    const wave = impactWave(root, 'thunder-index-page-wave', 0xe6b94e);
+    update = f => {
+      anchor(formation, f.start, f, 1.10); formation.visible = visibleDuring(f, .02, .70);
+      if (!f.reducedMotion) { array.rotation.z = f.time * .60; book.rotation.y = Math.sin(f.time * 4) * .20; }
+      anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.12);
+      strike.visible = visibleDuring(f, .30, 1.04);
+      if (!f.reducedMotion) strike.rotateZ(Math.sin(limit((f.time - .42) / .48) * Math.PI) * -.20);
+      anchor(impact, f.target, f); impact.visible = visibleDuring(f, .9, 2.80);
+      const spread = f.reducedMotion ? .60 : smooth((f.time - .9) / .75);
+      bolts.forEach((bolt, i) => { bolt.scale.setScalar((i === 0 ? 1.75 : 1.05) * (.80 + .20 * (1 - spread))); });
+      pages.forEach((page, i) => {
+        const a = i * 2.4, radius = .22 + spread * (.66 + i % 3 * .08);
+        page.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .76, .12);
+        page.rotation.z = f.reducedMotion ? a : a + spread * .80;
+        page.scale.setScalar(.55 - spread * .12);
+      });
+      const ground = f.target.clone(); ground.y -= .48 * f.scale;
+      anchor(wave, ground, f, .95 + spread * .95); wave.visible = visibleDuring(f, .9, 2.80);
     };
   } else if (theme === 2) {
     const pages = Array.from({ length: 8 }, (_, i) => card(root, i % 2 ? 0x32b3be : 0xc89b4b, i));
@@ -449,6 +535,46 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       const ground = f.hero.clone(); ground.y += .1 * f.scale; anchor(formation, ground, f, 1.10); formation.visible = visibleDuring(f, .9, 2.8);
       strike.visible = false;
     };
+  } else if (theme === 4 && mode === 'starter') {
+    root.userData.sequence = 'mirror-array-charge-cleaver-flight-mask-shatter';
+    ritualRing(formation, 'mirror-summoning-array', 0xc4a0e9, .76);
+    const orbit = Array.from({ length: 8 }, (_, i) => mirrorShard(formation, i));
+    orbit.forEach((piece, i) => {
+      const a = i * Math.PI / 4; piece.position.set(Math.cos(a) * .74, Math.sin(a) * .74, .06);
+      piece.rotation.z = a; piece.scale.setScalar(.64);
+    });
+    const cleaver = group(strike, 'colossal-mirror-cleaver');
+    const blade = mirrorShard(cleaver); blade.scale.setScalar(2.65); blade.rotation.z = -Math.PI / 2;
+    blade.position.x = -.98;
+    for (const side of [-1, 1]) {
+      const facet = mirrorShard(cleaver, 1); facet.position.set(-1.10, side * .34, -.05);
+      facet.rotation.z = side * .45 - Math.PI / 2; facet.scale.setScalar(1.20);
+    }
+    const brokenMasks = Array.from({ length: 3 }, () => mask(root));
+    const impact = group(root, 'mirror-mask-shatter-impact');
+    const fragments = Array.from({ length: 24 }, (_, i) => mirrorShard(impact, i));
+    const wave = impactWave(root, 'mirror-cleaver-ripple', 0xb590e1);
+    update = f => {
+      anchor(formation, f.start, f); formation.visible = visibleDuring(f, .03, .70);
+      if (!f.reducedMotion) formation.rotateZ(f.time * .80);
+      anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.05); strike.visible = visibleDuring(f, .28, 1.04);
+      if (!f.reducedMotion) strike.rotateZ(Math.sin(limit((f.time - .42) / .48) * Math.PI) * .34);
+      const spread = f.reducedMotion ? .65 : smooth((f.time - .9) / .75);
+      brokenMasks.forEach((piece, i) => {
+        const center = f.target.clone(); center.x += (i - 1) * .36 * f.scale;
+        anchor(piece, center, f, 1.10); piece.visible = visibleDuring(f, .9, 1.85);
+        piece.scale.x *= 1 - spread * .80; if (!f.reducedMotion) piece.rotateZ((i - 1) * spread * .70);
+      });
+      anchor(impact, f.target, f); impact.visible = visibleDuring(f, .9, 2.80);
+      fragments.forEach((piece, i) => {
+        const a = i * 2.4, radius = .20 + spread * (.65 + i % 3 * .08);
+        piece.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .75, .10);
+        piece.rotation.z = f.reducedMotion ? a : a + spread * .90;
+        piece.scale.setScalar(.48 - spread * .12);
+      });
+      const ground = f.target.clone(); ground.y -= .48 * f.scale;
+      anchor(wave, ground, f, 1 + spread * .90); wave.visible = visibleDuring(f, .9, 2.80);
+    };
   } else if (theme === 4) {
     const mirrors = Array.from({ length: 10 }, (_, i) => mirrorShard(root, i));
     const masks = Array.from({ length: 3 }, () => mask(strike)); masks.forEach((m, i) => m.position.set((i - 1) * .48, (i % 2) * .35, .01));
@@ -460,6 +586,42 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       anchor(strike, f.target, f, 1.3); strike.visible = visibleDuring(f, .62, 2.25);
       masks.forEach((m, i) => { m.rotation.z = f.reducedMotion ? 0 : (i - 1) * broken * .8; m.scale.set(1 - broken * .7, 1, 1); });
       formation.visible = false;
+    };
+  } else if (theme === 5 && mode === 'starter') {
+    root.userData.sequence = 'fire-feather-charge-phoenix-flight-flame-impact';
+    ritualRing(formation, 'phoenix-summoning-array', 0xf5ad45, .70);
+    const feathers = Array.from({ length: 8 }, (_, i) => feather(formation, i % 2 ? 0xffd875 : 0xf88430, .65));
+    feathers.forEach((piece, i) => {
+      const a = i * Math.PI / 4; piece.position.set(Math.cos(a) * .70, Math.sin(a) * .70, .06);
+      piece.rotation.z = a - Math.PI / 2;
+    });
+    const bird = phoenix(strike); bird.position.x = -.31;
+    const impact = group(root, 'phoenix-fire-impact');
+    const flames = Array.from({ length: 14 }, () => flame(impact, .8));
+    const cinders = Array.from({ length: 24 }, (_, i) => feather(impact, i % 2 ? 0xffc957 : 0xf47230, .52));
+    const wave = impactWave(root, 'phoenix-fire-shockwave', 0xf39138);
+    update = f => {
+      anchor(formation, f.start, f, 1.10); formation.visible = visibleDuring(f, .03, .70);
+      if (!f.reducedMotion) formation.rotateZ(-f.time * .75);
+      anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.85);
+      strike.visible = visibleDuring(f, .25, 1.04);
+      bird.children.filter(piece => piece.name === 'phoenix-wing').forEach((wing, i) => {
+        wing.rotation.z = f.reducedMotion ? 0 : (i ? -1 : 1) * Math.sin(f.time * 8) * .25;
+      });
+      anchor(impact, f.target, f); impact.visible = visibleDuring(f, .9, 2.80);
+      const spread = f.reducedMotion ? .65 : smooth((f.time - .9) / .75);
+      flames.forEach((piece, i) => {
+        const a = i * Math.PI * 2 / flames.length, radius = .20 + spread * .75;
+        piece.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .70 + spread * .12, .05);
+        piece.rotation.z = Math.PI / 2 - a; piece.scale.setScalar(.60 - spread * .15);
+      });
+      cinders.forEach((piece, i) => {
+        const a = i * 2.4, radius = .18 + spread * (.84 + i % 3 * .08);
+        piece.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .75 + spread * .18, .12);
+        piece.rotation.z = f.reducedMotion ? a : a + spread * .70; piece.scale.setScalar(.45 - spread * .17);
+      });
+      const ground = f.target.clone(); ground.y -= .48 * f.scale;
+      anchor(wave, ground, f, 1 + spread); wave.visible = visibleDuring(f, .9, 2.80);
     };
   } else if (theme === 5) {
     const bird = phoenix(strike);

@@ -4,13 +4,66 @@ import { UltimateCinematic } from './UltimateCinematic';
 import { getUltimateSpell } from '../content/ultimateSpells';
 
 describe('upgraded ultimate battlefield presentation', () => {
-  it('keeps beginner and ordinary counterattack cues out of the advanced cinematic', () => {
-    for (let chapter = 1; chapter <= 5; chapter++) {
-      expect(renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-1-20" reducedMotion={false} />)).toBe('');
-    }
+  it('keeps the unchanged starter support spell and ordinary counterattack cues out of these attack cinematics', () => {
+    expect(renderToStaticMarkup(<UltimateCinematic chapter={3} mode="starter" cue="ultimate-1-20" reducedMotion={false} />)).toBe('');
     for (const cue of ['', 'success-1-20', 'retry-2-12', 'blocked-3-0']) {
-      expect(renderToStaticMarkup(<UltimateCinematic chapter={1} mode="advanced" cue={cue} reducedMotion={false} />)).toBe('');
-      expect(renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue={cue} reducedMotion={false} />)).toBe('');
+      for (const mode of ['starter', 'advanced'] as const) {
+        for (let chapter = 1; chapter <= 6; chapter++) {
+          expect(renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode={mode} cue={cue} reducedMotion={false} />)).toBe('');
+        }
+      }
+    }
+  });
+
+  it.each([
+    { chapter: 1, object: 'ultimate-castle-crest', phases: ['castle-shield-charge', 'castle-crest-flight', 'castle-seal-impact'], fragments: 'ultimate-castle-brick-burst' },
+    { chapter: 2, object: 'ultimate-thunder-scroll', phases: ['great-book-charge', 'thunder-scroll-flight', 'branching-lightning-impact'], fragments: 'ultimate-index-hit-pages' },
+    { chapter: 4, object: 'ultimate-colossal-mirror-blade', phases: ['mirror-array-charge', 'colossal-mirror-blade-flight', 'false-mask-shatter'], fragments: 'ultimate-mirror-hit-fragments' },
+    { chapter: 5, object: 'ultimate-phoenix-wing', phases: ['fire-feather-array', 'summon-grow-flight', 'enemy-impact', 'fire-feather-burst'], fragments: 'ultimate-starter-fire-fragments' },
+  ])('gives starter chapter $chapter a summon, concrete flying object and themed impact without duplicating the skill banner', ({ chapter, object, phases, fragments }) => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(markup).toContain('data-ultimate-tier="starter"');
+    expect(markup).toContain(`初階必殺技：${getUltimateSpell(chapter, 'starter')!.name}`);
+    expect(markup).toContain(object);
+    expect(markup).toContain(fragments);
+    const positions = phases.map(phase => markup.indexOf(`data-phase="${phase}"`));
+    expect(positions.every(position => position > -1)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(markup).not.toContain('ultimate-tier-banner');
+    expect(markup).not.toContain('<button');
+  });
+
+  it('keeps starter phoenix fire around the enemy while preserving the advanced full-field burn', () => {
+    const starter = renderToStaticMarkup(<UltimateCinematic chapter={5} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
+    const advanced = renderToStaticMarkup(<UltimateCinematic chapter={5} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(starter).toContain('data-phase="fire-feather-burst"');
+    expect(starter).not.toContain('data-phase="full-battlefield-burn"');
+    expect(starter).not.toContain('ultimate-phoenix-fire-front');
+    expect(advanced).toContain('data-phase="full-battlefield-burn"');
+    expect(advanced).toContain('ultimate-phoenix-fire-front');
+    expect(advanced).not.toContain('ultimate-starter-fire-array');
+  });
+
+  it('upgrades castle protection before launching an enlarged castle seal at the opponent, retaining its advanced banner', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={1} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(markup).toContain('ultimate-castle-projection is-upgraded');
+    expect(markup).toContain('ultimate-castle-extra-guards');
+    const positions = ['castle-shield-charge', 'castle-crest-flight', 'castle-seal-impact'].map(phase => markup.indexOf(`data-phase="${phase}"`));
+    expect(positions.every(position => position > -1)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(markup).toContain('data-scope="half"');
+    expect(markup).toContain('ultimate-tier-banner');
+    expect(markup).toContain('城堡徽印飛向對手');
+    expect(markup).not.toContain('<button');
+  });
+
+  it('preserves all four distinct starter projectile forms when reduced motion is enabled', () => {
+    for (const [chapter, form] of [[1, 'ultimate-castle-crest'], [2, 'ultimate-thunder-scroll'], [4, 'ultimate-colossal-mirror-blade'], [5, 'ultimate-phoenix-wing']] as const) {
+      const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion />);
+      expect(markup).toContain('is-reduced');
+      expect(markup).toContain(form);
+      expect(markup).toContain(getUltimateSpell(chapter, 'starter')!.name);
+      expect(markup).not.toContain('ultimate-tier-banner');
     }
   });
 

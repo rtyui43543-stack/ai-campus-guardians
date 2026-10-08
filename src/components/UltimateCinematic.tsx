@@ -16,9 +16,9 @@ const feather = 'M0 0C-18-35-33-96 0-170C35-96 22-34 0 0Z';
 
 /** Keep the bird's proportions while its HTML anchor travels between the same
  * left/right actor lanes as the arena. Contact is at 900 ms, when HP changes. */
-function PhoenixProjectile({ id }: { id: string }) {
+function PhoenixProjectile({ id, fieldBurn = true }: { id: string; fieldBurn?: boolean }) {
   const fire = `url(#${id}-phoenix-fire)`;
-  return <div className="ultimate-phoenix" data-sequence="summon-grow-flight-impact-burn">
+  return <div className="ultimate-phoenix" data-sequence={fieldBurn ? 'summon-grow-flight-impact-burn' : 'summon-grow-flight-impact-feathers'}>
     <div className="ultimate-phoenix-flight" data-phase="summon-grow-flight">
       <svg viewBox="0 0 1440 900" aria-hidden="true" focusable="false">
         <defs><linearGradient id={`${id}-phoenix-fire`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b83928" /><stop offset=".4" stopColor="#f47b37" /><stop offset=".75" stopColor="#ffd269" /><stop offset="1" stopColor="#fff9d7" /></linearGradient></defs>
@@ -47,7 +47,7 @@ function PhoenixProjectile({ id }: { id: string }) {
         <path d="M0-100 20-38 80-27 38 19 47 85-9 47-66 88-46 19-104-22-35-39Z" fill="#fff8d2" />
       </svg>
     </div>
-    <div className="ultimate-phoenix-screen-blaze" data-phase="full-battlefield-burn" />
+    {fieldBurn && <><div className="ultimate-phoenix-screen-blaze" data-phase="full-battlefield-burn" />
     <svg className="ultimate-phoenix-burn" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <defs><linearGradient id={`${id}-screen-flame`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b73523" stopOpacity=".72" /><stop offset=".4" stopColor="#f27831" stopOpacity=".86" /><stop offset=".76" stopColor="#ffca67" stopOpacity=".68" /><stop offset="1" stopColor="#fff3b6" stopOpacity=".15" /></linearGradient></defs>
       <g className="ultimate-phoenix-fire-front" fill={`url(#${id}-screen-flame)`}>
@@ -57,7 +57,135 @@ function PhoenixProjectile({ id }: { id: string }) {
       <g className="ultimate-phoenix-fire-embers" fill="#ffe4a2">
         {Array.from({ length: 25 }, (_, i) => <path key={i} d={feather} transform={`translate(${31 + i * 59} ${790 - (i % 5) * 99}) rotate(${(i % 3 - 1) * 34}) scale(${.07 + (i % 4) * .015})`} />)}
       </g>
-    </svg>
+    </svg></>}
+  </div>;
+}
+
+function CastleProjection({ id, upgraded = false }: { id: string; upgraded?: boolean }) {
+  const jade = `url(#${id}-castle-jade)`, gold = `url(#${id}-castle-gold)`;
+  return <div className={`ultimate-castle-projection${upgraded ? ' is-upgraded' : ''}`} data-sequence="castle-shield-crest-flight-seal-impact">
+    <div className="ultimate-castle-charge" data-phase="castle-shield-charge">
+      <svg viewBox="-260 -260 520 520" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-castle-jade`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#a1ffe1" /><stop offset=".42" stopColor="#42b8a0" /><stop offset="1" stopColor="#155668" /></linearGradient>
+          <linearGradient id={`${id}-castle-gold`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#fff1ac" /><stop offset=".5" stopColor="#ebbf62" /><stop offset="1" stopColor="#956022" /></linearGradient></defs>
+        <path d="M-184-133 0-212 184-133 150 98 0 206-150 98Z" fill={jade} fillOpacity=".67" stroke={gold} strokeWidth="13" />
+        <g className="ultimate-castle-summon" fill={jade} stroke="#13444f" strokeWidth="5" strokeLinejoin="round">
+          <path d="M-125 105V-100H-88V-125H-58V-100H-24V-157H9V-180H42V-157H72V-100H100V-125H130V-100H158V105Z" />
+          <path d="M-52 105V-25Q15-103 82-25V105Z" fill={gold} />
+          <path className="ultimate-castle-gate" d="M-35 104V-21Q15-71 65-21V104Z" fill="#1b6463" />
+        </g>
+        <path d="M-79-58-12 9 108-93" fill="none" stroke="#eaffdd" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
+        {upgraded && <g className="ultimate-castle-extra-guards" fill={jade} stroke={gold} strokeWidth="6">{[-1, 1].map(side => <g key={side} transform={`translate(${side * 212} 24) scale(.6)`}><path d="M-50-70 0-93 50-70 42 32 0 79-42 32Z" /><path d="M-23-5-5 15 26-28" fill="none" stroke="#e6ffde" strokeWidth="10" /></g>)}</g>}
+      </svg>
+    </div>
+    <div className="ultimate-castle-crest-flight" data-phase="castle-crest-flight">
+      <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
+        <g className="ultimate-castle-crest" fill={jade} stroke={gold} strokeWidth="11" strokeLinejoin="round">
+          <path d="M-135-101 0-166 135-101 105 84 0 168-105 84Z" />
+          <path d="M-88 62V-72H-66V-91H-42V-72H-19V-112H3V-133H26V-112H50V-72H71V-91H94V-72H111V62Z" fill={gold} stroke="#164e56" strokeWidth="4" />
+          <path d="M-9 62V-10Q17-42 43-10V62Z" fill="#1c6866" stroke="none" />
+          <path d="M-52 92-9 128 68 66" fill="none" stroke="#e9ffe3" strokeWidth="12" strokeLinecap="round" />
+        </g>
+      </svg>
+    </div>
+    <div className="ultimate-castle-seal-impact" data-phase="castle-seal-impact">
+      <svg viewBox="-300 -260 600 520" aria-hidden="true" focusable="false">
+        <g fill={jade} stroke={gold} strokeWidth="7" strokeLinejoin="round"><path d="M-237 152V-68H-190V-104H-142V-68H-87V-156H-45V-190H1V-156H53V-68H110V-104H158V-68H203V152Z" /><path d="M-67 152V22Q-15-56 37 22V152Z" fill="#c9f8df" /></g>
+        <path d="M-88 72-24 126 94-2" fill="none" stroke="#206a6a" strokeWidth="17" strokeLinecap="round" />
+        <g className="ultimate-castle-brick-burst" fill={gold} stroke="#1c665e" strokeWidth="3">{Array.from({ length: 16 }, (_, i) => <path key={i} d="M-18-11H18V11H-18Z" transform={`rotate(${i * 22.5}) translate(0 -226) rotate(${i * 13})`} />)}</g>
+      </svg>
+    </div>
+  </div>;
+}
+
+function IndexProjection({ id }: { id: string }) {
+  const paper = `url(#${id}-index-paper)`;
+  return <div className="ultimate-index-projection" data-sequence="great-book-charge-scroll-flight-lightning-impact">
+    <div className="ultimate-index-book-charge" data-phase="great-book-charge">
+      <svg viewBox="-300 -260 600 520" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-index-paper`} x1="0" y1="0" x2=".7" y2="1"><stop stopColor="#fffce5" /><stop offset="1" stopColor="#e6c878" /></linearGradient></defs>
+        <path d="M-240-84Q-98-162 0-81Q98-162 240-84L205 143Q89 96 0 165Q-92 95-205 143Z" fill="#1d4d6d" stroke="#aa7735" strokeWidth="13" strokeLinejoin="round" />
+        <g className="ultimate-index-open-pages" fill={paper} stroke="#ad8c47" strokeWidth="4"><path d="M-216-102Q-96-151 0-65V137Q-93 68-185 111Z" /><path d="M216-102Q96-151 0-65V137Q93 68 185 111Z" /></g>
+        <g fill="none" stroke="#b7984b" strokeWidth="6">{[0, 1, 2].map(i => <path key={i} d={`M-164 ${-46 + i * 44}Q-89 ${-70 + i * 44}-28 ${-18 + i * 44}M28 ${-18 + i * 44}Q89 ${-70 + i * 44} 164 ${-46 + i * 44}`} />)}</g>
+        <path d="M-28-191 49-191 1-118 53-118-42-5-6-82-60-82Z" fill="#ffe294" stroke="#bf883c" strokeWidth="4" />
+      </svg>
+    </div>
+    <div className="ultimate-index-scroll-flight" data-phase="thunder-scroll-flight">
+      <svg viewBox="-260 -250 520 500" aria-hidden="true" focusable="false">
+        <g className="ultimate-thunder-scroll" stroke="#8f662d" strokeWidth="6" strokeLinejoin="round"><path d="M-145-172Q0-200 145-172V172Q0 137-145 172Z" fill={paper} /><path d="M-145-172Q-194-207-194-148V151Q-194 199-145 172Z" fill="#dfb458" /><path d="M145-172Q194-206 194-149V152Q194 198 145 172Z" fill="#b98535" /><path d="M-26-107H70L12-26H83L-57 128-16 30H-78Z" fill="#f1c454" stroke="#547891" strokeWidth="4" /><path d="M-106-136H106M-106 136H106" fill="none" strokeWidth="4" /></g>
+        <g className="ultimate-index-orbit-pages" fill={paper} stroke="#b59047" strokeWidth="3">{Array.from({ length: 6 }, (_, i) => <path key={i} d="M-18-27H18V27H-18Z" transform={`rotate(${i * 60}) translate(0 -222) rotate(${-i * 60})`} />)}</g>
+      </svg>
+    </div>
+    <div className="ultimate-index-lightning-impact" data-phase="branching-lightning-impact">
+      <svg viewBox="-320 -310 640 620" aria-hidden="true" focusable="false">
+        <g className="ultimate-index-hit-bolts" fill="#ffe599" stroke="#a57227" strokeWidth="4" strokeLinejoin="round">{Array.from({ length: 6 }, (_, i) => <path key={i} d="M-10-285 39-285 11-147 56-153-21 32-1-89-43-82Z" transform={`rotate(${i * 60})`} />)}</g>
+        <g className="ultimate-index-hit-pages" fill={paper} stroke="#a38237" strokeWidth="3">{Array.from({ length: 12 }, (_, i) => <g key={i} transform={`rotate(${i * 30}) translate(0 -173) rotate(${i * 9})`}><path d="M-25-34H25V34H-25Z" /><path d="M-15-12H15M-15 3H10" fill="none" /></g>)}</g>
+        <path d="M-81-63H81V63H-81Z" fill="#3d698e" stroke="#dfb44f" strokeWidth="6" /><path d="M-36-2-7 25 43-32" fill="none" stroke="#e1f8f1" strokeWidth="10" strokeLinecap="round" />
+      </svg>
+    </div>
+    <div className="ultimate-index-storm-wash" />
+  </div>;
+}
+
+function MirrorProjection({ id }: { id: string }) {
+  const silver = `url(#${id}-mirror-projectile)`;
+  return <div className="ultimate-mirror-projection" data-sequence="mirror-array-charge-blade-flight-mask-shatter">
+    <div className="ultimate-mirror-array-charge" data-phase="mirror-array-charge">
+      <svg viewBox="-250 -250 500 500" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-mirror-projectile`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#eefcff" /><stop offset=".34" stopColor="#92cde7" /><stop offset=".55" stopColor="#ded0ff" /><stop offset="1" stopColor="#765bba" /></linearGradient></defs>
+        <g fill={silver} stroke="#c2a363" strokeWidth="5">{Array.from({ length: 8 }, (_, i) => <g key={i} transform={`rotate(${i * 45}) translate(0 -157)`}><path d="M0-62 30-24 23 35 0 64-23 35-30-24Z" /><path d="M-16 13 15-33" fill="none" stroke="#f8f9ff" strokeWidth="4" /></g>)}</g>
+        <path d="M-100-100 100 100M100-100-100 100" fill="none" stroke="#d9e8ff" strokeWidth="3" />
+      </svg>
+    </div>
+    <div className="ultimate-mirror-blade-flight" data-phase="colossal-mirror-blade-flight">
+      <svg viewBox="-250 -270 500 540" aria-hidden="true" focusable="false">
+        <g className="ultimate-colossal-mirror-blade" fill={silver} stroke="#aa8747" strokeWidth="9" strokeLinejoin="round"><path d="M0-229 151-73 100 102 0 229-100 102-151-73Z" /><path d="M0-201 124-67 77 93 0 201Z" fill="#b9b8eb" stroke="#e3efff" strokeWidth="4" /><path d="M0-201-125-68-77 93 0 201Z" fill="#d0f5ff" stroke="#e3efff" strokeWidth="4" /><path d="M-83 58 85-124M-56 121 107-60" fill="none" stroke="#ffffff" strokeWidth="8" opacity=".7" /><path d="M-42 4-9 33 51-40" fill="none" stroke="#426678" strokeWidth="13" strokeLinecap="round" /></g>
+      </svg>
+    </div>
+    <div className="ultimate-mirror-mask-impact" data-phase="false-mask-shatter">
+      <svg viewBox="-300 -280 600 560" aria-hidden="true" focusable="false">
+        <g fill="#9672c4" stroke="#3d3868" strokeWidth="7" strokeLinejoin="round"><g className="ultimate-mask-half left"><path d="M0-142-62-186-149-127-115 106 0 168-16 38 14-10Z" /><path d="M-103-47-33-26M-52 91-9 62" fill="none" stroke="#d8c3f5" /></g><g className="ultimate-mask-half right"><path d="M0-142 62-186 149-127 115 106 0 168-16 38 14-10Z" /><path d="M33-26 103-47M9 62 52 91" fill="none" stroke="#d8c3f5" /></g></g>
+        <g className="ultimate-mirror-hit-fragments" fill={silver} stroke="#647899" strokeWidth="3">{Array.from({ length: 18 }, (_, i) => <path key={i} d="M0-48 25-3 9 44-21 19-23-20Z" transform={`rotate(${i * 20}) translate(0 -222) rotate(${i * 11})`} />)}</g>
+      </svg>
+    </div>
+    <div className="ultimate-mirror-prism-wash" />
+  </div>;
+}
+
+function StarterPhoenixProjection({ id }: { id: string }) {
+  return <div className="ultimate-starter-phoenix" data-sequence="fire-feather-array-phoenix-flight-flame-impact">
+    <div className="ultimate-starter-fire-array" data-phase="fire-feather-array">
+      <svg viewBox="-250 -250 500 500" aria-hidden="true" focusable="false">
+        <path d="M0-167 145-83 145 83 0 167-145 83-145-83Z" fill="none" stroke="#efb55d" strokeWidth="6" />
+        <g fill="#ffa345" stroke="#b3662d" strokeWidth="3">{Array.from({ length: 12 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 30}) translate(0 -205) rotate(180) scale(.42)`} />)}</g>
+        <path d={feather} transform="translate(0 80) scale(1.05)" fill="#ffcf67" stroke="#c87932" strokeWidth="4" />
+      </svg>
+    </div>
+    <PhoenixProjectile id={id} fieldBurn={false} />
+    <div className="ultimate-starter-fire-impact" data-phase="fire-feather-burst">
+      <svg viewBox="-320 -300 640 600" aria-hidden="true" focusable="false">
+        <g className="ultimate-starter-fire-plumes" fill="#f68b3c" stroke="#b7652e" strokeWidth="3">{Array.from({ length: 13 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 360 / 13}) translate(0 -72) scale(.85 1.2)`} />)}</g>
+        <g className="ultimate-starter-fire-fragments" fill="#ffd679">{Array.from({ length: 18 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 20}) translate(0 -251) rotate(180) scale(.21)`} />)}</g>
+      </svg>
+    </div>
+    <div className="ultimate-starter-fire-wash" />
+  </div>;
+}
+
+function StarterCombatCinematic({ id, chapter, name, cue, reducedMotion }: { id: string; chapter: number; name: string; cue: string; reducedMotion: boolean }) {
+  const descriptions: Record<number, string> = {
+    1: '先形成城堡護盾，再從城門發射城堡徽印，命中對手形成封印堡壘',
+    2: '大書蓄力打開，雷霆書卷飛向對手，命中後書頁與分岔雷電擴散',
+    4: '鏡片結陣召喚巨大鏡刃，飛向對手擊破假面，碎鏡爆散',
+    5: '火羽召喚陣組成大鳳凰，飛向對手，命中後火焰與火羽爆裂',
+  };
+  return <div className={`ultimate-cinematic ultimate-theme-${chapter} ultimate-starter-combat scope-full${reducedMotion ? ' is-reduced' : ''}`}
+    role="img" aria-label={`初階必殺技：${name}，${descriptions[chapter]}`}
+    data-ultimate-tier="starter" data-spell={chapter} data-cue={cue} data-scope="full">
+    {chapter === 1 && <CastleProjection id={id} />}
+    {chapter === 2 && <IndexProjection id={id} />}
+    {chapter === 4 && <MirrorProjection id={id} />}
+    {chapter === 5 && <StarterPhoenixProjection id={id} />}
   </div>;
 }
 
@@ -172,15 +300,17 @@ function StarterFrostLance({ id, name, cue, reducedMotion }: { id: string; name:
   </div>;
 }
 
-/** Advanced forms and the starter ice lance fill the battlefield below the UI.
+/** Advanced forms and starter attack ultimates fill the battlefield below the UI.
  * The existing 3D staff, projectile and impact still play beneath it. No game
  * state, animation timer or damage is owned by this presentation component. */
 export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: UltimateCinematicProps) {
   const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  if (!cue.startsWith('ultimate') || chapter < 1 || chapter > 6 || (mode === 'starter' && chapter !== 6)) return null;
+  if (!cue.startsWith('ultimate') || chapter < 1 || chapter > 6 || (mode === 'starter' && chapter === 3)) return null;
   const spell = getUltimateSpell(chapter, mode);
   const id = 'ultimate-field-' + instanceId;
-  if (mode === 'starter') return <StarterFrostLance id={id} name={spell?.name ?? '寒晶冰矛'} cue={cue} reducedMotion={reducedMotion} />;
+  if (mode === 'starter') return chapter === 6
+    ? <StarterFrostLance id={id} name={spell?.name ?? '寒晶冰矛'} cue={cue} reducedMotion={reducedMotion} />
+    : <StarterCombatCinematic id={id} chapter={chapter} name={spell?.name ?? '主題魔法'} cue={cue} reducedMotion={reducedMotion} />;
   const colors = ['#54e9c0', '#8edcff', '#a1e27c', '#dab2ff', '#ffbb5a', '#a7eaff'];
   const accent = colors[chapter - 1];
   const fill = (name: string) => `url(#${id}-${name})`;
@@ -189,6 +319,7 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
   const presentation = chapter === 5
     ? '烈焰鳳變大展翼，飛向右方對手，命中後火焰燃燒全場'
     : chapter === 6 ? '有角與冰晶翼的巨大冰龍飛向對手，命中碎冰炸裂，寒霜蔓延全場'
+    : chapter === 1 ? '天穹城堡護盾先形成，城門發射巨大城堡徽印飛向對手，命中展開封印堡壘'
     : `${scope === 'half' ? '半屏' : '全場'}魔法展開`;
   const maskFaces = [[315, 405], [720, 435], [1115, 405]];
   return <div className={`ultimate-cinematic ultimate-theme-${chapter} scope-${scope}${reducedMotion ? ' is-reduced' : ''}`}
@@ -280,6 +411,7 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
         {Array.from({ length: 18 }, (_, i) => <path key={i} d={star} className="ultimate-star" style={{ '--piece-delay': `${(i % 5) * .035}s` } as CSSProperties} transform={`translate(${45 + i * 80} ${220 + (i % 4) * 130}) scale(${.35 + i % 3 * .14})`} />)}
       </g>
     </svg>
+    {chapter === 1 && <CastleProjection id={id} upgraded />}
     {chapter === 5 && <PhoenixProjectile id={id} />}
     {chapter === 6 && <IceDragonProjectile id={id} />}
     <div className="ultimate-tier-banner"><span>技能升級 · 進階必殺</span><strong>{spell?.name}</strong></div>

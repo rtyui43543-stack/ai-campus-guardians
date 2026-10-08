@@ -157,7 +157,7 @@ describe('per-run energy and ultimate rewards', () => {
 
   it('saves the upgraded castle across questions and blocks two distinct mistakes, not a third', () => {
     const released = solve(reachQuestion(7, 4));
-    expect(released).toMatchObject({ barrier: true, barrierCharges: 2, bonusPoints: 10, enemyBonusDamage: 0 });
+    expect(released).toMatchObject({ barrier: true, barrierCharges: 2, bonusPoints: 10, enemyBonusDamage: 10 });
     const savedRelease = roundTrip(released).active!;
     let fifth = roundTrip(advanceSession(savedRelease).session!).active!;
     expect(remainingBarrierCharges(fifth)).toBe(2);
@@ -193,28 +193,48 @@ describe('per-run energy and ultimate rewards', () => {
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 80, bonusScore: 10, timeouts: 1 });
   });
 
-  it.each([2, 4, 5, 6, 8, 10, 11, 12])('uses offensive mission %i to add damage without skipping a question', levelId => {
+  it.each([[1, 5], [7, 10], [2, 10], [4, 10], [5, 10], [6, 10], [8, 15], [10, 15], [11, 15], [12, 15]])('uses mission %i to add %i damage without skipping a question', (levelId, extraDamage) => {
     const fourth = solve(reachQuestion(levelId, 4));
-    expect(fourth).toMatchObject({ enemyBonusDamage: 10, bonusPoints: 10 });
-    expect(battleHealth(fourth).enemyHp).toBe(10);
+    expect(fourth).toMatchObject({ enemyBonusDamage: extraDamage, bonusPoints: 10 });
+    expect(battleHealth(fourth).enemyHp).toBe(20 - extraDamage);
     const next = advanceSession(fourth);
     expect(next.finished).toBe(false);
     expect(next.session?.index).toBe(4);
-    expect(battleHealth(next.session!).enemyHp).toBe(10);
+    expect(battleHealth(next.session!).enemyHp).toBe(20 - extraDamage);
     const final = solve(next.session!);
     expect(battleHealth(final).enemyHp).toBe(0);
-    expect(final.enemyBonusDamage).toBe(10);
+    expect(final.enemyBonusDamage).toBe(extraDamage);
+    const finished = finishSession(createProgress(), final);
+    expect(finished.runs![0].records).toHaveLength(5);
+    expect(finished.completed).toContain(levelId);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110 });
   });
 
   it.each([6, 12])('gives ice mission %i extra attack damage without creating a shield', levelId => {
     const released = solve(reachQuestion(levelId, 4));
-    expect(released).toMatchObject({ ultimateId: 6, bonusPoints: 10, enemyBonusDamage: 10, barrier: false, barrierCharges: 0 });
+    expect(released).toMatchObject({ ultimateId: 6, bonusPoints: 10, enemyBonusDamage: levelId === 6 ? 10 : 15, barrier: false, barrierCharges: 0 });
     expect(remainingBarrierCharges(released)).toBe(0);
     expect(submitAction(released)).toBe(released);
     const fifth = roundTrip(advanceSession(released).session!).active!;
     const hit = wrong(fifth);
     expect(hit).toMatchObject({ shield: 88, preventedDamage: false, barrierCharges: 0 });
     expect(roundTrip(hit).ultimateCards).toHaveLength(1);
+  });
+
+  it.each([1, 7, 8, 10, 11, 12])('clamps mission %i damage to zero HP when a demonstration delays the ultimate until the fifth answer', levelId => {
+    const fourth = demonstrate(reachQuestion(levelId, 4));
+    expect(fourth).toMatchObject({ energy: 3, ultimateUsed: false, enemyBonusDamage: 0 });
+    const fifth = advanceSession(fourth).session!;
+    const cast = solve(fifth);
+    expect(cast).toMatchObject({ energy: 0, ultimateUsed: true, bonusPoints: 10 });
+    expect(cast.enemyBonusDamage).toBeGreaterThan(0);
+    expect(battleHealth(cast).enemyHp).toBe(0);
+    const saved = roundTrip(cast);
+    expect(submitAction(saved.active!)).toBe(saved.active);
+    expect(battleHealth(saved.active!).enemyHp).toBe(0);
+    const finished = finishSession(saved, saved.active!);
+    expect(finished.runs![0].records).toHaveLength(5);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 80, bonusScore: 10, totalScore: 90, ultimateUses: 1 });
   });
 
   it.each([[3, 12], [9, 24]])('uses support mission %i to heal %i HP up to the 100 HP limit', (levelId, recoveredHp) => {
@@ -257,7 +277,7 @@ describe('per-run energy and ultimate rewards', () => {
     const secondAdvanced = solve(reachQuestion(8, 4));
     expect(applySession(progress, secondAdvanced).ultimateCards).toEqual(progress.ultimateCards);
     expect(scoreSession(upgraded)).toMatchObject({ score: 80, bonusScore: 10, totalScore: 90 });
-    expect(battleHealth(upgraded).enemyHp).toBe(10);
+    expect(battleHealth(upgraded).enemyHp).toBe(5);
     expect(startSession(8, 'advanced').energy).toBe(0);
   });
 
@@ -350,7 +370,7 @@ describe('advanced time challenge boundaries and timeout transitions', () => {
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 80, timeouts: 1, bonusScore: 10, totalScore: 90 });
     expect(parseBackup(exportBackup(finished))).toEqual(finished);
     expect(finishSession(finished, final)).toBe(finished);
-    expect(battleHealth(final).enemyHp).toBe(10);
+    expect(battleHealth(final).enemyHp).toBe(5);
   });
 
   it('finishes a last-question timeout with a score while retaining earlier completed status and cards', () => {
