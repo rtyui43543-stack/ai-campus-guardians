@@ -1,5 +1,9 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { basename, resolve, sep } from 'node:path';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 vi.mock('./urls', () => ({
   appAssetUrl: (path: string) => new URL(path.replace(/^\//, ''), 'https://school.test/game/').href,
@@ -161,6 +165,48 @@ describe('offline battle music lifecycle', () => {
     expect(instances[0].volume).toBe(.20);
   });
 
+  it('starts the separately bundled final loop once and reports it as active battle music', async () => {
+    const first = music.startMusic('final'), second = music.startMusic('final');
+    expect(first).toBe(second); await first; await music.startMusic('final');
+    expect(instances).toHaveLength(1);
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/final-battle.wav',
+      loop: true, hidden: true, volume: .27, paused: false });
+    expect(instances[0].attributes['data-testid']).toBe('final-music');
+    expect(instances[0].play).toHaveBeenCalledTimes(1);
+    expect(allEvents.at(-1)).toEqual({ track: 'final', playing: true });
+    expect(events.at(-1)).toEqual({ playing: true });
+    music.setBattleMusicDucked(true); expect(instances[0].volume).toBe(.09);
+    music.setBattleMusicDucked(false); expect(instances[0].volume).toBe(.27);
+  });
+
+  it('switches final, ordinary battle and exploration tracks without overlapping or recreating them', async () => {
+    for (const track of ['adventure', 'battle', 'final', 'battle', 'adventure', 'final'] as const) {
+      await music.startMusic(track);
+      const playing = instances.filter(audio => !audio.paused);
+      expect(playing).toHaveLength(1);
+      expect(playing[0].src).toBe('https://school.test/game/music/'
+        + (track === 'final' ? 'final-battle' : track === 'battle' ? 'battle-theme' : 'adventure-theme') + '.wav');
+      expect(instances.filter(audio => audio.paused).every(audio => audio.currentTime === 0)).toBe(true);
+      expect(allEvents.at(-1)).toEqual({ track, playing: true });
+      playing[0].currentTime = 7;
+    }
+    expect(instances).toHaveLength(3);
+    music.stopMusic();
+    expect(instances.every(audio => audio.paused && audio.currentTime === 0)).toBe(true);
+  });
+
+  it('cannot restart a delayed final-boss playback after returning to exploration', async () => {
+    const held = deferred();
+    playback = audio => held.promise.then(() => { audio.paused = false; });
+    const final = music.startMusic('final');
+    playback = async audio => { audio.paused = false; };
+    await music.startAdventureMusic(); held.resolve(); await final;
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/final-battle.wav', paused: true });
+    expect(instances[1].paused).toBe(false);
+    expect(allEvents.at(-1)).toEqual({ track: 'adventure', playing: true });
+    expect(events.at(-1)).toEqual({ playing: false });
+  });
+
   it('cannot restart a stale exploration request after a battle has begun', async () => {
     const held = deferred();
     playback = audio => held.promise.then(() => { audio.paused = false; });
@@ -191,6 +237,56 @@ describe('offline battle music lifecycle', () => {
 });
 
 describe('bundled original instrumental', () => {
+  it('bundles an independent 48-second final battle loop without clipping or silent sections', () => {
+    const wav = readFileSync(new URL('../../public/music/final-battle.wav', import.meta.url));
+    const battle = readFileSync(new URL('../../public/music/battle-theme.wav', import.meta.url));
+    const adventure = readFileSync(new URL('../../public/music/adventure-theme.wav', import.meta.url));
+    expect(wav.subarray(0, 4).toString()).toBe('RIFF'); expect(wav.subarray(8, 12).toString()).toBe('WAVE');
+    expect(wav.readUInt16LE(20)).toBe(1); expect(wav.readUInt16LE(22)).toBe(2);
+    expect(wav.readUInt16LE(34)).toBe(16);
+    const rate = wav.readUInt32LE(24), frames = wav.readUInt32LE(40) / 4;
+    expect(frames / rate).toBe(48); expect(wav.length).toBeLessThan(5 * 1024 * 1024);
+    expect(wav.subarray(44, battle.length).equals(battle.subarray(44))).toBe(false);
+    expect(wav.subarray(44, adventure.length).equals(adventure.subarray(44))).toBe(false);
+    let peak = 0;
+    for (let start = 0; start < frames; start += rate / 2) {
+      let energy = 0, count = 0;
+      for (let frame = start; frame < Math.min(frames, start + rate / 2); frame += 1) {
+        for (let channel = 0; channel < 2; channel += 1) {
+          const value = wav.readInt16LE(44 + frame * 4 + channel * 2) / 32768;
+          energy += value * value; count += 1; peak = Math.max(peak, Math.abs(value));
+        }
+      }
+      expect(Math.sqrt(energy / count)).toBeGreaterThan(.025);
+    }
+    expect(peak).toBeGreaterThan(.5); expect(peak).toBeLessThan(.86);
+    for (let channel = 0; channel < 2; channel += 1) {
+      const seam = Math.abs(wav.readInt16LE(44 + channel * 2) - wav.readInt16LE(wav.length - 4 + channel * 2)) / 32768;
+      expect(seam).toBeLessThan(.01);
+    }
+  });
+
+  it('includes the real final loop in the verified offline audio pack instead of the core-only install', () => {
+    const temporaryRoot = resolve(tmpdir()), folder = mkdtempSync(resolve(temporaryRoot, 'guardians-final-music-'));
+    try {
+      const wav = readFileSync(new URL('../../public/music/final-battle.wav', import.meta.url));
+      mkdirSync(resolve(folder, 'music')); writeFileSync(resolve(folder, 'index.html'), '<!doctype html><head></head>');
+      writeFileSync(resolve(folder, 'music', 'final-battle.wav'), wav);
+      const built = spawnSync(process.execPath, ['scripts/build-offline.mjs', folder], { cwd: process.cwd(), encoding: 'utf8' });
+      expect(built.status, built.stderr).toBe(0);
+      const manifest = JSON.parse(readFileSync(resolve(folder, 'offline-manifest.json'), 'utf8'));
+      expect(manifest.files.filter((file: { core: boolean }) => !file.core)).toEqual([{
+        url: '/music/final-battle.wav', size: wav.length, core: false,
+        hash: createHash('sha256').update(wav).digest('hex'),
+      }]);
+    } finally {
+      const absoluteFolder = resolve(folder);
+      if (!absoluteFolder.startsWith(temporaryRoot + sep) || !basename(absoluteFolder).startsWith('guardians-final-music-'))
+        throw new Error('Refusing to remove a test directory outside the created temporary folder.');
+      rmSync(absoluteFolder, { recursive: true, force: true });
+    }
+  });
+
   it('bundles a distinct, seamless and gentler 20-second exploration melody for offline use', () => {
     const wav = readFileSync(new URL('../../public/music/adventure-theme.wav', import.meta.url));
     const battle = readFileSync(new URL('../../public/music/battle-theme.wav', import.meta.url));

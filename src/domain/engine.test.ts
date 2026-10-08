@@ -13,7 +13,7 @@ function solve(session: Session, action?: number): Session {
   return submitAction(chooseAction(session, action ?? Number(Object.keys(q.valid)[0])));
 }
 function reachSlot(levelId: number, slot: number): Session {
-  let session = startSession(levelId, 'starter', slot > 5);
+  let session = startSession(levelId, 'starter');
   while (currentQuestion(session).slot < slot) session = advanceSession(solve(session)).session!;
   return session;
 }
@@ -24,13 +24,13 @@ function wrongIndex(session: Session) {
 
 describe('direct-answer battle engine', () => {
   it('binds each level to its actual curriculum rather than relabelling its difficulty', () => {
-    expect(levels.filter(level => level.mode === 'starter')).toHaveLength(6);
-    expect(levels.filter(level => level.mode === 'advanced')).toHaveLength(6);
-    for (const level of levels) {
+    expect(levels.filter(level => level.mode === 'starter' && !level.finalBoss)).toHaveLength(6);
+    expect(levels.filter(level => level.mode === 'advanced' && !level.finalBoss)).toHaveLength(6);
+    for (const level of levels.filter(level => !level.finalBoss)) {
       const requested: Mode = level.mode === 'starter' ? 'advanced' : 'starter';
       expect(startSession(level.id, requested).mode).toBe(level.mode);
     }
-    expect(() => startSession(13, 'starter')).toThrow('找不到');
+    expect(() => startSession(15, 'starter')).toThrow('找不到');
     expect(() => startSession(1, 'easy' as Mode)).toThrow('有效');
   });
 
@@ -47,8 +47,8 @@ describe('direct-answer battle engine', () => {
     expect(submitReason(answered)).toBe(answered);
   });
 
-  it('uses direct answers for every main and review question in both curricula', () => {
-    for (const question of questions) {
+  it('uses direct answers for every ordinary main question in both curricula', () => {
+    for (const question of questions.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss)) {
       const session = reachSlot(question.levelId, question.slot);
       expect(requiresReason(session)).toBe(false);
       expect(solve(session)).toMatchObject({ step: 'feedback', success: true, reason: null });
@@ -123,17 +123,17 @@ describe('direct-answer battle engine', () => {
     expect(session).toMatchObject({ step: 'defeat', shield: 0, retries: 9 });
   });
 
-  it('restarts the same advanced review challenge at full health without erasing existing progress', () => {
+  it('restarts the same advanced challenge at full health without erasing existing progress', () => {
     let completedSession = startSession(1, 'starter');
     for (let i = 0; i < 4; i++) completedSession = advanceSession(solve(completedSession)).session!;
     const completed = finishSession(createProgress(), solve(completedSession));
-    const prior = advanceSession(solve(startSession(8, 'advanced', true))).session!;
+    const prior = advanceSession(solve(startSession(8, 'advanced'))).session!;
     const depleted = { ...prior, shield: 8 };
     const defeated = submitAction(chooseAction(depleted, wrongIndex(depleted)));
     const original = applySession({ ...completed, settings: { ...completed.settings, music: false } }, defeated);
     const restarted = restartBattle(original);
     expect(restarted.active).toMatchObject({
-      levelId: 8, mode: 'advanced', review: true, step: 'action', shield: 100,
+      levelId: 8, mode: 'advanced', review: false, step: 'action', shield: 100,
       index: 0, repaired: 0, selected: null, feedback: '', retries: 0,
       hintUsed: false, demoUsed: false, records: [], success: false,
     });
@@ -205,17 +205,9 @@ describe('direct-answer battle engine', () => {
     expect(startSession(1, 'starter').id).not.toBe(session.id);
   });
 
-  it('uses only two variations in review and does not mark a main level complete', () => {
-    let session = startSession(3, 'starter', true);
-    expect(session.questionIds).toEqual(['V2L03Q06', 'V2L03Q07']);
-    expect(battleHealth(solve(session)).enemyHp).toBe(50);
-    session = advanceSession(solve(session)).session!;
-    session = solve(session);
-    expect(battleHealth(session).enemyHp).toBe(0);
-    const progress = finishSession(createProgress(), session);
-    expect(progress.completed).toEqual([]);
-    expect(progress.attempts).toHaveLength(2);
-    expect(progress.runs![0]).toMatchObject({ levelId: 3, review: true });
+  it('rejects new two-question practice starts after the route is removed', () => {
+    expect(() => startSession(3, 'starter', true)).toThrow('練習已移除');
+    expect(() => startSession(8, 'advanced', true)).toThrow('練習已移除');
   });
 
   it('preserves health between questions and reaches zero enemy health at the last success', () => {

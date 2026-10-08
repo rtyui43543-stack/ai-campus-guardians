@@ -7,6 +7,7 @@ import {
 } from './engine';
 import { exportBackup, parseBackup } from './storage';
 import type { AttemptRecord, Progress, Session } from './types';
+const ordinaryLevels = levels.filter(level => !level.finalBoss);
 
 function roundTrip(progress: Progress, session: Session): Session {
   const restored = parseBackup(exportBackup(applySession(progress, session)));
@@ -35,7 +36,7 @@ function completeLevel(progress: Progress, levelId: number, review = false) {
 }
 
 describe('complete twelve-level campaign', () => {
-  it.each(levels.map(level => [level.id, level.title] as const))('completes level %i (%s), accepts each permitted option and restores every checkpoint', (levelId) => {
+  it.each(ordinaryLevels.map(level => [level.id, level.title] as const))('completes level %i (%s), accepts each permitted option and restores every checkpoint', (levelId) => {
     let session = startSession(levelId, 'starter');
     const progress = createProgress();
     expect(session.questionIds).toHaveLength(5);
@@ -63,10 +64,10 @@ describe('complete twelve-level campaign', () => {
   });
 
   it('finishes six beginner and six advanced missions as sixty distinct learning records', () => {
-    expect(levels).toHaveLength(12);
+    expect(ordinaryLevels).toHaveLength(12);
     let progress = createProgress();
-    for (const level of levels) progress = completeLevel(progress, level.id).progress;
-    expect(progress.completed).toEqual(levels.map(level => level.id));
+    for (const level of ordinaryLevels) progress = completeLevel(progress, level.id).progress;
+    expect(progress.completed).toEqual(ordinaryLevels.map(level => level.id));
     expect(progress.attempts).toHaveLength(60);
     expect(new Set(progress.attempts.map(record => record.questionId)).size).toBe(60);
     expect(progress.attempts.filter(record => record.mode === 'starter')).toHaveLength(30);
@@ -77,8 +78,8 @@ describe('complete twelve-level campaign', () => {
 
   it('rejects every distractor, preserves its explanation and permits supported correction', () => {
     let rejected = 0;
-    for (const question of questions) {
-      let checkpoint = startSession(question.levelId, 'starter', question.slot > 5);
+    for (const question of questions.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss)) {
+      let checkpoint = startSession(question.levelId, 'starter');
       while (currentQuestion(checkpoint).slot < question.slot) checkpoint = advanceSession(solve(checkpoint)).session!;
       for (let action = 0; action < question.choices.length; action++) {
         if (question.valid[action]?.length) continue;
@@ -97,13 +98,15 @@ describe('complete twelve-level campaign', () => {
     expect(rejected).toBeGreaterThan(150);
   });
 
-  it('records all twenty-four review variants without adding completed levels', () => {
+  it('reads all twenty-four historical review variants without creating new play entries', () => {
     let progress = completeLevel(createProgress(), 1).progress;
-    for (const level of levels) {
-      const result = completeLevel(progress, level.id, true);
-      expect(result.records.map(record => record.questionId)).toEqual(getQuestions(level.id, true).map(question => question.id));
-      expect(result.session.review).toBe(true);
-      progress = result.progress;
+    for (const level of ordinaryLevels) {
+      const records: AttemptRecord[] = getQuestions(level.id, true).map(q => ({ questionId: q.id, mode: level.mode,
+        action: Number(Object.keys(q.valid)[0]), reason: null, status: 'first', retries: 0, hintUsed: false, at: progress.updatedAt }));
+      progress = { ...progress, attempts: [...progress.attempts, ...records], runs: [...progress.runs!, {
+        sessionId: `legacy-review-${level.id}`, levelId: level.id, mode: level.mode, review: true, records, at: progress.updatedAt,
+      }] };
+      expect(() => startSession(level.id, level.mode, true)).toThrow('練習已移除');
       expect(progress.completed).toEqual([1]);
     }
     expect(progress.attempts).toHaveLength(29);

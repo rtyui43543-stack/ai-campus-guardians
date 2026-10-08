@@ -6,9 +6,12 @@ import type { Mode } from '../domain/types';
 import { getBossForTheme } from '../content/missionBosses';
 import { getAdvancedBossArt } from './advancedBossSprite';
 import { normalSpellNames } from './themedSpellEffects';
+import { finalBosses } from '../content/missionBosses';
 
 interface ArenaProps {
   chapter: number;
+  spellChapter?: number;
+  finalBoss?: boolean;
   mode: Mode;
   enemyHp: number;
   playerHp: number;
@@ -47,7 +50,7 @@ export function GuardianPortrait({ chapter, mode, className = '' }: { chapter: n
   }} />;
 }
 
-export function Arena({ chapter, mode, enemyHp, playerHp, reducedMotion, cue, guardian, cinemaShot, cinemaPaused = false, companion = false }: ArenaProps) {
+export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode, enemyHp, playerHp, reducedMotion, cue, guardian, cinemaShot, cinemaPaused = false, companion = false }: ArenaProps) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<ReturnType<typeof createArenaScene> | null>(null);
   const lastCue = useRef('');
@@ -60,7 +63,7 @@ export function Arena({ chapter, mode, enemyHp, playerHp, reducedMotion, cue, gu
     try {
       const arena = createArenaScene(host.current, chapter, reducedMotion, nextPhase => {
         if (alive) setPhase(nextPhase);
-      }, cinemaShot, companion, mode);
+      }, cinemaShot, companion, mode, finalBoss);
       scene.current = arena;
       arena.health(enemyHp, playerHp);
       arena.pauseCinema(cinemaPaused);
@@ -76,7 +79,7 @@ export function Arena({ chapter, mode, enemyHp, playerHp, reducedMotion, cue, gu
     return () => { alive = false; };
     // Health and cues update the existing scene without recreating its meshes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapter, mode, reducedMotion, companion]);
+  }, [chapter, mode, reducedMotion, companion, finalBoss]);
   useEffect(() => {
     scene.current?.health(enemyHp, playerHp);
   }, [enemyHp, playerHp]);
@@ -85,10 +88,10 @@ export function Arena({ chapter, mode, enemyHp, playerHp, reducedMotion, cue, gu
     if (!cue || cue === lastCue.current) return;
     lastCue.current = cue;
     const ultimate = cue.startsWith('ultimate');
-    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'));
-  }, [cue]);
+    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'), spellChapter);
+  }, [cue, spellChapter]);
   return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
-    data-boss={companion ? 'mimi-companion' : getBossForTheme(chapter, mode).id} data-boss-mode={companion ? 'companion' : mode}
+    data-boss={companion ? 'mimi-companion' : finalBoss ? finalBosses[mode].id : getBossForTheme(chapter, mode).id} data-boss-mode={companion ? 'companion' : mode}
     aria-label={'原創 3D 風格校園魔法師小羽與' + guardian + '的答題對戰'}>
     <div className="arena3d-canvas" ref={host} />
     {fallback && <div className="arena3d-fallback" role="status">

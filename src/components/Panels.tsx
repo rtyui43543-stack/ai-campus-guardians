@@ -30,7 +30,7 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
   const needsPractice = [...latest.values()].filter(a => a.status === 'practice' || a.status === 'timeout');
   return <>
     <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看自己的進步，再挑戰一次！</Heading>
-    <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / 12</small></strong><span>已完成關卡</span></div>
+    <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / {levels.length}</small></strong><span>已完成關卡</span></div>
       <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>已練習情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>待練習情境</span></div></div>
     <GrowthDashboard progress={progress} onLevel={onLevel} onRun={onRun} />
@@ -38,7 +38,7 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
       const Icon = chapterIcons[chapter.icon];
-      const completed = levels.filter(l => l.chapterId === chapter.id && progress.completed.includes(l.id)).length;
+      const completed = levels.filter(l => !l.finalBoss && l.chapterId === chapter.id && progress.completed.includes(l.id)).length;
       return <div key={chapter.id} className={'skill-card ' + (completed === 2 ? 'unlocked' : '')} style={{ '--chapter-color': chapter.color } as React.CSSProperties}>
         <Icon size={29} /><h3>{chapter.skill}</h3><p>{chapter.shortTitle}</p><span>{completed === 2 ? '已點亮' : completed + ' / 2 關'}</span>
       </div>;
@@ -121,7 +121,7 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
       <div className="preference-row"><div><b>冒險與戰鬥背景音樂</b><p>主頁播放輕快的探索配樂，對戰時換成緊湊配樂。可用頁面上的音樂按鈕隨時關閉；關閉設定會保留。</p></div><Toggle label="冒險與戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
       <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
-      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六關，都能集能量解鎖必殺技。兩題重玩練習不限時、不充能。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
+      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟300HP最終魔王關。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
     </section>
   </>;
 }

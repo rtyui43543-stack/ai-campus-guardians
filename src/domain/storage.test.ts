@@ -5,7 +5,7 @@ import {
   demonstrate, finishSession, restartBattle, retryQuestion, startSession, submitAction,
   remainingBarrierCharges,
 } from './engine';
-import type { Progress, Session } from './types';
+import type { AttemptRecord, Progress, Session } from './types';
 import { describeAttempt, getLevelRuns, latestRun, scoreSession } from './scoring';
 import { getUltimateCardKey } from '../content/ultimateSpells';
 
@@ -25,6 +25,15 @@ function reachSlot(levelId: number, slot: number): Session {
   return session;
 }
 function complete(progress: Progress, levelId: number, review = false): Progress {
+  if (review) {
+    const mode = levelId <= 6 ? 'starter' : 'advanced';
+    const at = progress.updatedAt;
+    const records: AttemptRecord[] = getQuestions(levelId, true).map(q => ({ questionId: q.id, mode, action: Number(Object.keys(q.valid)[0]), reason: null,
+      status: 'first' as const, retries: 0, hintUsed: false, at }));
+    return { ...progress, attempts: [...progress.attempts, ...records], runs: [...(progress.runs ?? []), {
+      sessionId: `historical-review-${levelId}`, levelId, mode, review: true, records, at,
+    }] };
+  }
   let session = startSession(levelId, 'starter', review);
   for (let i = 0; i < session.questionIds.length - 1; i++) session = advanceSession(solve(session)).session!;
   return finishSession(progress, solve(session));
@@ -508,7 +517,7 @@ describe('new campaign storage and backups', () => {
 
   it.each([
     ['unknown schema', (p: Record<string, unknown>) => { p.schemaVersion = 3; }],
-    ['unknown level', (p: Record<string, unknown>) => { p.completed = [13]; }],
+    ['unknown level', (p: Record<string, unknown>) => { p.completed = [15]; }],
     ['duplicate level', (p: Record<string, unknown>) => { p.completed = [1, 1]; }],
     ['bad settings', (p: Record<string, unknown>) => { p.settings = { mode: 'easy', sound: true, narration: true, reducedMotion: false }; }],
     ['bad date', (p: Record<string, unknown>) => { p.updatedAt = 'not a date'; }],
@@ -536,7 +545,7 @@ describe('new campaign storage and backups', () => {
     expect(() => storage.validateProgress(sparse)).toThrow('缺漏項目');
   });
 
-  it('rejects a shuffled question sequence, wrong review sequence or mismatched difficulty', async () => {
+  it('rejects shuffled sequences or mismatched difficulty and retires old active practice', async () => {
     const storage = await import('./storage');
     const base = applySession(createProgress(), startSession(7, 'advanced'));
     const shuffled = structuredClone(base);
@@ -547,7 +556,7 @@ describe('new campaign storage and backups', () => {
     expect(() => storage.validateProgress(wrongMode)).toThrow('模式與關卡不符');
     const wrongReview = structuredClone(base);
     wrongReview.active!.review = true;
-    expect(() => storage.validateProgress(wrongReview)).toThrow('練習模式');
+    expect(storage.validateProgress(wrongReview).active).toBeNull();
   });
 
   it('rejects forged success, obsolete reason stages and invalid battle state', async () => {

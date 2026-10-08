@@ -9,3 +9,5 @@
 [Microsoft 官方語系與音色表](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)列有本音色。生成腳本為 `scripts/generate-audio.ps1`，只在更新教材文字或更換朗讀版本時需要連網執行。
 
 `generation.json` 記錄音色、參數、各音檔大小與 SHA-256。每段音檔已通過完整 MP3 解碼檢查；題庫索引與音檔檔名使用 `zh-TW-HsiaoChenNeural-rate-6-pitch-2-v2` 版本識別。生成前會整理重複句點及多餘空格，保留題幹、四個選項、提示與解說的原意。
+
+目前696個索引鍵對應486段唯一MP3，包含十四關的46段劇情。最終綜合題沿用主要題文字，因此新題目ID可共用相同文本hash的既有音檔；同文本不重複生成。舊24題複習的168段朗讀已從現行離線包移除，歷史文字與成績仍保留。

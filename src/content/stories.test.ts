@@ -22,10 +22,10 @@ describe('original offline mission stories', () => {
     }
   });
 
-  it('introduces the same twelve distinct opponents that the map and battle display', () => {
+  it('introduces the same fourteen distinct opponents that the map and battle display', () => {
     const starterNames = levels.filter(level => level.mode === 'starter').map(level => getMissionBoss(level).name);
     const opponents = levels.map(level => getMissionBoss(level).name);
-    expect(new Set(opponents).size).toBe(12);
+    expect(new Set(opponents).size).toBe(14);
     for (const level of levels) {
       const story = getLevelStory(level.id);
       expect(story[0].text, `第 ${level.id} 關開場魔王`).toContain(getMissionBoss(level).name);
@@ -40,7 +40,7 @@ describe('original offline mission stories', () => {
   });
 
   it('does not assume earlier missions have been completed when students freely choose a level', () => {
-    for (const level of levels) {
+    for (const level of levels.filter(level => !level.finalBoss)) {
       const captions = getLevelStory(level.id).map(beat => beat.text).join('');
       expect(captions, `第 ${level.id} 關自由選關`).not.toMatch(/前面學過|走過這些任務|最後挑戰到了|再次擊敗|復活/);
     }

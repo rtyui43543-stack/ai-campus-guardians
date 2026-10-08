@@ -11,7 +11,7 @@ export function OfflineDownloadCard({ offline }: { offline: OfflineController })
   return <section className={'offline-pack surface ' + (state.ready ? 'is-ready' : '')} aria-labelledby="offline-pack-title" data-testid="offline-download-card">
     <div className="offline-pack-heading"><span className="offline-pack-icon">{state.ready ? <ShieldCheck size={26} /> : <Download size={26} />}</span>
       <h2 id="offline-pack-title">把冒險帶著走</h2><span className={'offline-pack-status ' + (state.ready ? 'ready' : '')} role="status">{status}</span></div>
-    <p>{state.updateAvailable ? '新版已完整下載。按下方「套用」，再關閉並重新開啟遊戲，即可使用新版。' : state.ready ? '全部內容已下載。下次從這台裝置的遊戲圖示開啟，就能直接離線遊玩。' : '先加入主畫面，再下載完整遊戲與中文朗讀；沒有網路也能挑戰十二關。'}</p>
+    <p>{state.updateAvailable ? '新版已完整下載。按下方「套用」，再關閉並重新開啟遊戲，即可使用新版。' : state.ready ? '全部內容已下載。下次從這台裝置的遊戲圖示開啟，就能直接離線遊玩。' : '先加入主畫面，再下載完整遊戲與中文朗讀；沒有網路也能挑戰十四關。'}</p>
     <div className="offline-pack-count">{state.total ? <><span>已下載 <b>{state.done.toLocaleString()} / {state.total.toLocaleString()}</b> 個檔案</span><span><b>{percent}%</b>（{mb(state.bytes)} / {mb(state.totalBytes)} MB）</span></> : <span>正在檢查這台裝置的離線內容…</span>}</div>
     <progress className="offline-pack-progress" max={state.totalBytes || 1} value={state.bytes} aria-label="完整離線內容下載進度" aria-valuetext={percent + '%，已下載 ' + state.done + ' 個檔案'} />
     {state.paused && <p className="offline-pack-note">已下載的檔案會保留，按「繼續下載」即可接著完成。</p>}

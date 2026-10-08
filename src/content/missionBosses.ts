@@ -39,5 +39,9 @@ export function getBossForTheme(chapterId: number, mode: Mode = 'starter'): Miss
   return boss;
 }
 
-export const getMissionBoss = (level: Pick<Level, 'chapterId' | 'mode'>): MissionBoss =>
-  getBossForTheme(level.chapterId, level.mode);
+export const finalBosses: Readonly<Record<Mode, MissionBoss>> = Object.freeze({
+  starter: { id: 'chaos-grimoire-king', name: '混沌魔典王', chapterId: 6, mode: 'starter', description: '把六種生活難題混在魔法書裡，考驗你能否用學會的六種好方法解開混亂。', artPath: '/art/final-bosses-v1.webp' },
+  advanced: { id: 'illusion-nine-dragon', name: '幻象九頭龍', chapterId: 6, mode: 'advanced', description: '讓多種AI風險同時出現，必須保護資料、查證與協作，才能擊破幻象。', artPath: '/art/final-bosses-v1.webp' },
+});
+export const getMissionBoss = (level: Pick<Level, 'chapterId' | 'mode' | 'finalBoss'>): MissionBoss =>
+  level.finalBoss ? finalBosses[level.mode] : getBossForTheme(level.chapterId, level.mode);

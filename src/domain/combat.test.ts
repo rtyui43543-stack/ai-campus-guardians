@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getQuestions } from '../content';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   demonstrate, expireQuestion, finishSession, restartBattle, retryQuestion, startSession,
@@ -28,22 +29,10 @@ function roundTrip(session: Session, progress = createProgress()): Progress {
 }
 
 describe('per-run energy and ultimate rewards', () => {
-  it('keeps both review questions at zero energy without ultimate bonuses or collectible cards', () => {
+  it('does not create new review sessions after practice removal', () => {
     for (const levelId of [1, 8]) {
-      let session = startSession(levelId, 'advanced', true);
-      expect(session.energy).toBe(0);
-      const mistake = wrong({ ...session, energy: 3 });
-      expect(mistake.energy).toBe(0);
-      expect(demonstrate({ ...session, energy: 3 }).energy).toBe(0);
-      for (let index = 0; index < 2; index++) {
-        session = solve(session);
-        expect(session).toMatchObject({ energy: 0, ultimateUsed: false, bonusPoints: 0 });
-        expect(roundTrip(session).ultimateCards).toEqual([]);
-        if (index === 0) session = advanceSession(session).session!;
-      }
-      const finished = finishSession(createProgress(), session);
-      expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 0, ultimateUses: 0 });
-      expect(finished.ultimateCards).toEqual([]);
+      expect(() => startSession(levelId, 'advanced', true)).toThrow('練習已移除');
+      expect(getQuestions(levelId, true)).toHaveLength(2);
     }
   });
 
@@ -289,13 +278,11 @@ describe('per-run energy and ultimate rewards', () => {
 });
 
 describe('advanced time challenge boundaries and timeout transitions', () => {
-  it('times only new advanced main challenges; beginner and all review questions stay untimed', () => {
+  it('times only new advanced main challenges; removed review sessions cannot start', () => {
     for (let levelId = 1; levelId <= 12; levelId++) {
       const main = startSession(levelId, 'advanced');
       expect(main.timed).toBe(levelId > 6);
-      const review = startSession(levelId, 'advanced', true);
-      expect(review.timed).toBe(false);
-      expect(tickQuestion(review, 90_000)).toBe(review);
+      expect(() => startSession(levelId, 'advanced', true)).toThrow('練習已移除');
       if (levelId <= 6) expect(tickQuestion(main, 90_000)).toBe(main);
     }
   });
@@ -454,8 +441,11 @@ describe('new combat backup validation and legacy score preservation', () => {
     const duplicate = roundTrip(ready);
     duplicate.ultimateCards!.push({ ...duplicate.ultimateCards![0] });
     expect(() => validateProgress(duplicate)).toThrow('重複收藏');
-    const review = advanceSession(solve(startSession(7, 'advanced', true))).session!;
-    review.records[0] = { ...review.records[0], timed: true, elapsedMs: 1_000 };
-    expect(() => validateProgress(applySession(createProgress(), review))).toThrow('限時紀錄');
+    const historical = createProgress();
+    const records = getQuestions(7, true).map(q => ({ questionId: q.id, mode: 'advanced' as const, action: Number(Object.keys(q.valid)[0]),
+      reason: null, status: 'first' as const, retries: 0, hintUsed: false, at: historical.updatedAt }));
+    historical.attempts = [{ ...records[0], timed: true, elapsedMs: 1_000 }, records[1]];
+    historical.runs = [{ sessionId: 'old-review', levelId: 7, mode: 'advanced', review: true, records: historical.attempts, at: historical.updatedAt }];
+    expect(() => validateProgress(historical)).toThrow('限時紀錄');
   });
 });

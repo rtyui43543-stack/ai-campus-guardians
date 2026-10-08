@@ -86,7 +86,7 @@ function bestOf(runs: readonly ScoredDashboardRun[]): ScoredDashboardRun | null 
 
 /** Read-only dashboard projection; scoring and saved progress are never changed. */
 export function buildGrowthDashboard(progress: Progress, scope: DashboardScope = 'all'): GrowthDashboardData {
-  const scopedLevels = levels.filter(level => scope === 'starter' || scope === 'advanced' ? level.mode === scope : true);
+  const scopedLevels = levels.filter(level => scope === 'review' ? !level.finalBoss : scope === 'starter' || scope === 'advanced' ? level.mode === scope : true);
   const availableLevels = new Map(scopedLevels.map(level => [level.id, level]));
   const availableChapters = new Map(chapters.map(chapter => [chapter.id, chapter]));
   const source = progress.runs ?? reconstructRuns(progress.attempts);
@@ -103,7 +103,7 @@ export function buildGrowthDashboard(progress: Progress, scope: DashboardScope =
       const score = scoreSession(run);
       return {
         run, level, chapter: availableChapters.get(level.chapterId)!, score, at: run.at,
-        passed: run.passed !== false && score.timeouts === 0,
+        passed: run.passed !== false && (level.finalBoss || score.timeouts === 0),
       };
     });
   const levelData = scopedLevels.map((level): DashboardLevel => {

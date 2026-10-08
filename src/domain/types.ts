@@ -31,6 +31,9 @@ export interface Question extends QuestionSpec {
   source: Source;
   animation: string;
   variantOf?: string;
+  /** Final missions retain the original learning topic and editorial source. */
+  copiedFrom?: string;
+  themeId?: number;
 }
 export interface Chapter {
   id: number; title: string; shortTitle: string; subtitle: string;
@@ -40,6 +43,7 @@ export interface Chapter {
 export interface Level {
   id: number; chapterId: number; title: string; objective: string;
   intro: string; boss: boolean; source: Source; mode: Mode;
+  finalBoss?: boolean;
 }
 export type LearningStatus = 'first' | 'supported' | 'practice' | 'timeout';
 export interface AttemptRecord {
@@ -73,6 +77,8 @@ export interface Session {
   barrierCharges?: number;
   bonusPoints?: number;
   enemyBonusDamage?: number;
+  /** Final missions let the learner choose a spell only after all three energy points are earned. */
+  preparedUltimateId?: number;
   /** Timers are opt-in on newly started advanced main missions. */
   timed?: boolean;
   remainingMs?: number;

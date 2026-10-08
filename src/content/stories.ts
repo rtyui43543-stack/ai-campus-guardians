@@ -197,6 +197,34 @@ export const levelStories: Readonly<Record<number, readonly StoryBeat[]>> = {
       text: '讓我們化解只求快的混亂，一起訂下守護約定！讓校園的 AI 幫手照顧更多人的需要。',
     },
   ],
+  13: [
+    {
+      id: 'level-13-1', speaker: '旁白', scene: 'team', durationMs: 8500,
+      text: '六種守護魔法匯聚時，混沌魔典王展開巨大的書頁，把校園難題攪成一團。',
+    },
+    {
+      id: 'level-13-2', speaker: '米米', scene: 'team', durationMs: 8500,
+      text: '個資、消息和作業問題一起來了！小羽，這次要看清每個情境，選對守護的方法。',
+    },
+    {
+      id: 'level-13-3', speaker: '小羽', scene: 'team', durationMs: 8500,
+      text: '我會用六種守護本領看清難題！一起破解魔典的混亂，讓校園裡的幫手恢復可靠。',
+    },
+  ],
+  14: [
+    {
+      id: 'level-14-1', speaker: '旁白', scene: 'team', durationMs: 8500,
+      text: '六種進階魔法準備好了，幻象九頭龍展開晶甲，把真假消息和不同需求藏進幻象。',
+    },
+    {
+      id: 'level-14-2', speaker: '米米', scene: 'team', durationMs: 8500,
+      text: '有些畫面很逼真，有些方法很方便，卻可能漏掉伙伴。小羽，我們要一起想周到。',
+    },
+    {
+      id: 'level-14-3', speaker: '小羽', scene: 'team', durationMs: 8500,
+      text: '我會查證，也會照顧每個人的需要！一起拆解九頭龍的幻象，完成最終守護挑戰。',
+    },
+  ],
 };
 
 export const getOpeningStory = (): readonly StoryBeat[] => openingStory;

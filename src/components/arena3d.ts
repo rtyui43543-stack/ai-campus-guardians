@@ -3,6 +3,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createCoverHero } from './coverHero';
 import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
+import { createFinalBossSprite } from './finalBossSprite';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
@@ -131,7 +132,7 @@ function disposeScene(scene: THREE.Scene) {
 
 /** Cover-derived actor art, articulated 3D bosses and local 3D spell effects. */
 export function createArenaScene(host: HTMLDivElement, chapter: number, reducedMotion: boolean,
-  onPhase: (phase: string) => void, initialShot?: CinemaShot, companion = false, mode: Mode = 'starter') {
+  onPhase: (phase: string) => void, initialShot?: CinemaShot, companion = false, mode: Mode = 'starter', finalBoss = false) {
   const theme = clamp(chapter, 1, 6);
   const scene = new THREE.Scene();
   scene.background = null;
@@ -168,17 +169,20 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     onReady: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-hero-status', 'ready'); } },
     onError: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-hero-status', 'unavailable'); } },
   });
-  renderer.domElement.setAttribute('data-boss-status', !companion && mode === 'advanced' ? 'loading' : 'ready');
-  const enemy = createMissionEnemy(theme, mode, companion, {
+  renderer.domElement.setAttribute('data-boss-status', !companion && (mode === 'advanced' || finalBoss) ? 'loading' : 'ready');
+  const enemyOptions = {
     onReady: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-boss-status', 'ready'); } },
     onError: () => { if (alive) { dirty = true; renderer.domElement.setAttribute('data-boss-status', 'unavailable'); } },
-  });
+  };
+  const enemy = finalBoss ? createFinalBossSprite(mode, enemyOptions) : createMissionEnemy(theme, mode, companion, enemyOptions);
   scene.add(hero.root, enemy.root);
   renderer.domElement.setAttribute('data-guardian', enemy.root.userData.missionBossId);
   renderer.domElement.setAttribute('data-boss', enemy.root.userData.missionBossId);
   renderer.domElement.setAttribute('data-boss-mode', companion ? 'companion' : mode);
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
-  const drone = createDrone(scene), effects = createThemedSpellEffects(scene, theme, mode);
+  const drone = createDrone(scene);
+  let effectTheme = theme;
+  let effects = createThemedSpellEffects(scene, effectTheme, mode);
   const cinemaMagic = new THREE.Group(); scene.add(cinemaMagic);
   const cinemaHalo = ring(cinemaMagic, .95, .025, luminous(0x70f5dd, .65), 0, .05, 0);
   cinemaHalo.rotation.x = Math.PI / 2;
@@ -278,7 +282,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     enemy.glow.emissive.setHex(enemyHp === 0 ? 0x1e614d : 0x000000);
     enemy.glow.emissiveIntensity = enemyHp === 0 ? .18 : 0;
     hero.glow.emissiveIntensity = .65;
-    hero.glow.emissive.setHex(heroSpellColors[theme - 1]);
+    hero.glow.emissive.setHex(heroSpellColors[effectTheme - 1]);
     // Keep the helper clear of the cover actor's wider hat, hair and face.
     drone.position.set(heroX - modelScale * 1.45, modelScale * (3.30 + (reducedMotion ? 0 : Math.sin(idle * 3) * .08)), -.1);
     drone.rotation.y = reducedMotion ? 0 : Math.sin(idle * 1.5) * .12;
@@ -333,8 +337,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       // Scale only the effect clock; ordinary motion contacts at 900 ms.
       const t = effectClock;
       const success = attack.success;
-      const phoenixCast = success && theme === 5;
-      const iceCast = success && theme === 6;
+      const phoenixCast = success && effectTheme === 5;
+      const iceCast = success && effectTheme === 6;
       emitPhase(attack.ultimate
         ? phoenixCast ? t < .42 ? '烈焰鳳召喚' : t < .9 ? '烈焰鳳飛襲' : t < 2.65 ? '烈焰命中燃燒' : '烈焰收勢'
         : iceCast ? t < .42 ? '寒晶凝結' : t < .9 ? mode === 'advanced' ? '極寒冰龍飛襲' : '冰矛飛襲' : t < 2.65 ? '碎冰寒霜蔓延' : '寒霜收勢'
@@ -396,7 +400,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       renderer.domElement.setAttribute('data-spell-element', String(effects.root.userData.element));
       renderer.domElement.setAttribute('data-spell-phase', String(effects.root.userData.phase));
       if (success && t >= .9) {
-        enemy.glow.emissive.setHex(heroSpellColors[theme - 1]); enemy.glow.emissiveIntensity = (1 - burst) * .65;
+        enemy.glow.emissive.setHex(heroSpellColors[effectTheme - 1]); enemy.glow.emissiveIntensity = (1 - burst) * .65;
       }
       if (t >= (attack.ultimate ? ULTIMATE_CAST_SECONDS : NORMAL_CAST_SECONDS)) { attack = null; effects.clear(); emitPhase('待命'); resize(); }
     } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方退場' : playerHp === 0 ? '伙伴守護中' : '待命');
@@ -416,8 +420,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       cinemaShot = next; cinemaStarted = cinemaTime - (cinemaPaused ? 1.3 : 0); resize();
     },
     pauseCinema(paused: boolean) { if (cinemaPaused !== paused) lastFrame = performance.now(); cinemaPaused = paused; dirty = true; },
-    play(success: boolean, ultimate = false, blocked = false) {
+    play(success: boolean, ultimate = false, blocked = false, spellChapter = theme) {
       if (!alive) return;
+      const nextTheme = clamp(spellChapter, 1, 6);
+      if (nextTheme !== effectTheme) { scene.remove(effects.root); effects.dispose(); effectTheme = nextTheme; effects = createThemedSpellEffects(scene, effectTheme, mode); }
       attack = { started: performance.now(), success, ultimate: success && ultimate, blocked: !success && blocked }; dirty = true;
     },
     health(enemy: number, player: number) {

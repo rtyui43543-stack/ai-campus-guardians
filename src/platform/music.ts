@@ -2,13 +2,14 @@ import { appAssetUrl } from './urls';
 
 export const BATTLE_MUSIC_EVENT = 'battle-music-status';
 export const MUSIC_EVENT = 'game-music-status';
-export type MusicTrack = 'adventure' | 'battle';
+export type MusicTrack = 'adventure' | 'battle' | 'final';
 export interface BattleMusicStatus { playing: boolean; error?: string }
 export interface MusicStatus extends BattleMusicStatus { track: MusicTrack | null }
 
 const TRACKS = {
   adventure: { file: 'adventure-theme.wav', volume: .20, ducked: .06 },
   battle: { file: 'battle-theme.wav', volume: .27, ducked: .09 },
+  final: { file: 'final-battle.wav', volume: .27, ducked: .09 },
 } as const;
 const players: Partial<Record<MusicTrack, HTMLAudioElement>> = {};
 let wantedTrack: MusicTrack | null = null;
@@ -19,8 +20,8 @@ let listening = false;
 
 function report(status: MusicStatus) {
   window.dispatchEvent(new CustomEvent<MusicStatus>(MUSIC_EVENT, { detail: status }));
-  const legacy: BattleMusicStatus = { playing: status.playing && status.track === 'battle' };
-  if (status.error && status.track === 'battle') legacy.error = status.error;
+  const legacy: BattleMusicStatus = { playing: status.playing && (status.track === 'battle' || status.track === 'final') };
+  if (status.error && (status.track === 'battle' || status.track === 'final')) legacy.error = status.error;
   window.dispatchEvent(new CustomEvent<BattleMusicStatus>(BATTLE_MUSIC_EVENT, { detail: legacy }));
 }
 

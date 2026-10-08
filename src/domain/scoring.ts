@@ -1,5 +1,6 @@
 import { getQuestions, questionById } from '../content';
 import { levels } from '../content/levels';
+import { getUltimateSpell } from '../content/ultimateSpells';
 import type { AttemptRecord, CompletedRun, Progress, Session } from './types';
 
 export interface ScoredRow { record: AttemptRecord; points: number; maxPoints: number; bonusPoints: number; timeLimitPoints: number }
@@ -15,7 +16,7 @@ export interface SessionScore {
 const rounded = (value: number) => Math.round(value * 100) / 100;
 const unknownDemoRetries = (record: AttemptRecord) => record.status === 'practice' && record.demoUsed !== true && record.retries === 2;
 
-/** Game performance only: main questions have 20 points, review questions 50. */
+/** Game performance only; final missions normalize the questions actually challenged to 100. */
 export function scoreRecord(record: AttemptRecord, totalQuestions: number): number {
   if (!Number.isInteger(totalQuestions) || totalQuestions < 1) throw new Error('計分需要有效的題目數。');
   if (record.status === 'practice' || record.demoUsed || record.status === 'timeout' || record.timedOut) return 0;
@@ -60,8 +61,9 @@ function recordsForScore(value: Session | CompletedRun): AttemptRecord[] {
 
 /** Includes successful current feedback once; unanswered questions earn zero. */
 export function scoreSession(value: Session | CompletedRun): SessionScore {
-  const questionCount = 'questionIds' in value ? value.questionIds.length : getQuestions(value.levelId, value.review).length;
   const records = recordsForScore(value);
+  const finalBoss = levels.find(level => level.id === value.levelId)?.finalBoss === true;
+  const questionCount = finalBoss ? Math.max(1, records.length) : 'questionIds' in value ? value.questionIds.length : getQuestions(value.levelId, value.review).length;
   const rows = records.map(record => ({ record, points: scoreRecord(record, questionCount), maxPoints: 100 / questionCount,
     bonusPoints: record.ultimateUsed ? 10 : 0, timeLimitPoints: timeLimitPoints(record) / 20 * (100 / questionCount) }));
   const unresolved = 'questionIds' in value && records.length === value.index ? value : null;
@@ -73,15 +75,23 @@ export function scoreSession(value: Session | CompletedRun): SessionScore {
     + (unresolved?.hintUsed && !unresolved.demoUsed ? 1 : 0);
   const demos = records.filter(record => record.status === 'practice').length + (unresolved?.demoUsed ? 1 : 0);
   const firstTryCorrect = records.filter(record => record.retries === 0 && !record.hintUsed && record.status !== 'practice' && record.status !== 'timeout').length;
-  const score = Math.min(100, rounded(rows.reduce((sum, row) => sum + row.points, 0)));
+  // Normalize the total before rounding so fifteen-question averages do not accumulate 0.01-point row errors.
+  const score = Math.min(100, rounded(records.reduce((sum, record) => sum + scoreRecord(record, 5) / 20 * (100 / questionCount), 0)));
   const bonusScore = rows.reduce((sum, row) => sum + row.bonusPoints, 0);
   const timeouts = records.filter(record => record.status === 'timeout' || record.timedOut).length;
   return {
     score, maxScore: 100, firstTryCorrect, wrongAnswers, hints, demos, questionCount,
     bonusScore, totalScore: score + bonusScore, timeouts, ultimateUses: rows.filter(row => row.bonusPoints > 0).length,
-    perfect: records.length === questionCount && firstTryCorrect === questionCount && score === 100,
+    perfect: records.length === questionCount && firstTryCorrect === questionCount && score === 100
+      && (!finalBoss || finalBossDamage(records) >= 300),
     unknownWrongAnswers, rows,
   };
+}
+
+/** Final missions have no historical damage variants: each completed non-timeout question hits for 20 HP. */
+export function finalBossDamage(records: readonly AttemptRecord[]): number {
+  return records.reduce((damage, record) => damage + (record.status === 'timeout' ? 0 : 20)
+    + (record.ultimateUsed ? getUltimateSpell(record.ultimateId!, record.mode)?.extraDamage ?? 0 : 0), 0);
 }
 
 /** Recover only exact, contiguous complete sequences; partial history has no score. */
@@ -90,18 +100,28 @@ export function reconstructRuns(attempts: readonly AttemptRecord[]): CompletedRu
   for (let index = 0; index < attempts.length;) {
     const first = attempts[index], question = questionById.get(first.questionId);
     if (!question || (question.slot !== 1 && question.slot !== 6) || levels.find(level => level.id === question.levelId)?.mode !== first.mode) { index++; continue; }
-    const review = question.slot === 6;
+    const finalBoss = levels.find(level => level.id === question.levelId)?.finalBoss;
+    const review = !finalBoss && question.slot === 6;
     const expected = getQuestions(question.levelId, review).map(item => item.id);
-    const records = attempts.slice(index, index + expected.length);
-    if (records.length !== expected.length || records.some((record, i) => record.questionId !== expected[i] || record.mode !== first.mode)) {
+    let count = expected.length;
+    if (finalBoss) {
+      count = 0;
+      while (count < expected.length && attempts[index + count]?.questionId === expected[count] && attempts[index + count]?.mode === first.mode) {
+        count++;
+        if (finalBossDamage(attempts.slice(index, index + count)) >= 300) break;
+      }
+    }
+    const records = attempts.slice(index, index + count);
+    if (!records.length || (!finalBoss && records.length !== expected.length) || (finalBoss && count < expected.length && finalBossDamage(records) < 300)
+      || records.some((record, i) => record.questionId !== expected[i] || record.mode !== first.mode)) {
       index++; continue;
     }
     const at = records[records.length - 1].at;
     runs.push({ sessionId: `legacy-v2-${index}-${question.levelId}-${review ? 'review' : 'main'}-${at}`,
       levelId: question.levelId, mode: first.mode, review, records: [...records], at,
-      ...(records.some(record => record.status === 'timeout') ? { passed: false } : {}),
+      ...(finalBoss ? { passed: finalBossDamage(records) >= 300 } : records.some(record => record.status === 'timeout') ? { passed: false } : {}),
     });
-    index += expected.length;
+    index += records.length;
   }
   return runs;
 }

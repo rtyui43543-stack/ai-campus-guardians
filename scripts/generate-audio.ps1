@@ -24,7 +24,7 @@ try {
   & npx tsx scripts/audio-manifest.ts --stage
   if ($LASTEXITCODE -ne 0) { throw 'Unable to stage the narration manifest.' }
   $generator=@'
-import asyncio, hashlib, json, os, pathlib, re, subprocess, sys, time
+import asyncio, hashlib, json, os, pathlib, re, shutil, subprocess, sys, time
 root = pathlib.Path(sys.argv[1]).resolve()
 work = root / '.audio-work'
 sys.path.insert(0, str(work / 'tts-runtime'))
@@ -72,6 +72,13 @@ async def one(row):
         if len(failures) >= pool_size:
             return  # A persistent outage must not cause hundreds of doomed requests.
         target = staging / row['file']
+        previous = root / 'public' / 'audio' / row['file']
+        if not force and not target.is_file() and previous.is_file() and previous.stat().st_size > 500:
+            try:
+                await asyncio.to_thread(validate, previous)
+                shutil.copyfile(previous, target)
+            except Exception:
+                pass
         if not force and target.is_file() and target.stat().st_size > 500:
             try:
                 await asyncio.to_thread(validate, target)

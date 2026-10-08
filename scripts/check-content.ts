@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { questions, presentQuestion, questionBank } from '../src/content';
+import { questions, legacyReviewQuestions, presentQuestion, questionBank } from '../src/content';
 import { chapters, levels } from '../src/content/levels';
 import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
@@ -12,17 +12,27 @@ export interface AuditResult { errors: string[]; summary: Record<string, number>
 export function auditContent(items: readonly Question[] = questions): AuditResult {
   const errors: string[] = [];
   const ids = new Set(items.map(q => q.id));
-  if (items.length !== 84 || ids.size !== 84) errors.push('題庫必須有84個不重複題目ID。');
-  const main = items.filter(q => q.slot <= 5).length;
-  const variations = items.filter(q => q.slot > 5).length;
-  if (main !== 60 || variations !== 24) errors.push('主要情境必須60題、變式必須24題。');
-  if (levels.length !== 12 || chapters.length !== 6 || questionBank.schemaVersion !== 2) errors.push('需要第2版題庫、12關和6個主題。');
-  for (const mode of ['starter', 'advanced']) if (levels.filter(level => level.mode === mode).length !== 6) errors.push(mode + '必須各有6關。');
+  if (items.length !== 90 || ids.size !== 90) errors.push('現行題庫必須有90個不重複題目ID。');
+  const main = items.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss).length;
+  const finals = items.filter(q => levels.find(level => level.id === q.levelId)?.finalBoss).length;
+  const variations = items.filter(q => q.variantOf !== undefined).length;
+  if (main !== 60 || finals !== 30 || variations !== 0) errors.push('主題關必須60題、最終關必須30題，現行題庫不提供複習變式。');
+  if (levels.length !== 14 || chapters.length !== 6 || questionBank.schemaVersion !== 2) errors.push('需要第2版題庫、14關和6個主題。');
+  for (const mode of ['starter', 'advanced']) {
+    if (levels.filter(level => level.mode === mode && !level.finalBoss).length !== 6) errors.push(mode + '必須各有6個主題關。');
+    if (levels.filter(level => level.mode === mode && level.finalBoss).length !== 1) errors.push(mode + '必須各有1個最終關。');
+  }
   for (let level = 1; level <= 12; level++) {
     const slots = items.filter(q => q.levelId === level).map(q => q.slot).sort((a, b) => a - b);
-    if (slots.join(',') !== '1,2,3,4,5,6,7') errors.push(`第${level}關必須各有slot1–7。`);
+    if (slots.join(',') !== '1,2,3,4,5') errors.push(`第${level}關必須各有slot1–5。`);
     const mission = levels.find(item => item.id === level);
     if (mission?.mode !== (level <= 6 ? 'starter' : 'advanced') || mission.chapterId !== (level - 1) % 6 + 1) errors.push(`第${level}關的難度或主題不符。`);
+  }
+  for (const level of levels.filter(item => item.finalBoss)) {
+    const qs = items.filter(q => q.levelId === level.id);
+    if (qs.map(q => q.slot).sort((a, b) => a - b).join(',') !== Array.from({ length: 15 }, (_, i) => i + 1).join(',')) errors.push(`最終關${level.id}必須有slot1–15。`);
+    if (level.id !== (level.mode === 'starter' ? 13 : 14) || level.chapterId !== 6) errors.push(`最終關${level.id}的難度或設定不符。`);
+    if (new Set(qs.map(q => q.themeId)).size !== 6 || [1,2,3,4,5,6].some(theme => !qs.some(q => q.themeId === theme))) errors.push(`最終關${level.id}必須涵蓋六個生活主題。`);
   }
   const answerPositions = new Set<number>();
   for (const q of items) {
@@ -37,13 +47,15 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
       if (!pageNumbers.length || pageNumbers.some(page => page < 1 || page > 185)) errors.push(prefix + '來源需使用教材印刷頁碼1–185。');
       for (const range of q.source.pages.matchAll(/(\d+)\s*[–－-]\s*(\d+)/g)) if (Number(range[1]) > Number(range[2])) errors.push(prefix + '教材頁碼範圍倒置。');
     }
-    if ((q.levelId === 4 || q.levelId === 10) && q.source.label !== 'extension') errors.push(prefix + '深偽必須標為倫理延伸，不宣稱原教材有深偽內容。');
-    if (q.slot > 5) {
-      const expected = `V2L${String(q.levelId).padStart(2, '0')}Q${q.slot === 6 ? '03' : '05'}`;
-      if (q.variantOf !== expected || !ids.has(expected) || q.variantOf === q.id) errors.push(prefix + '變式需指向同關第3或第5個主題。');
-    } else if (q.variantOf !== undefined) errors.push(prefix + '主要題不可被標為變式。');
     const mission = levels.find(item => item.id === q.levelId);
     if (!mission) { errors.push(prefix + '不存在的關卡。'); continue; }
+    if ((q.levelId === 4 || q.levelId === 10 || q.themeId === 4) && q.source.label !== 'extension') errors.push(prefix + '深偽必須標為倫理延伸，不宣稱原教材有深偽內容。');
+    if (q.variantOf !== undefined) errors.push(prefix + '現行正式題不可被標為複習變式。');
+    if (mission.finalBoss) {
+      const original = items.find(item => item.id === q.copiedFrom);
+      const originalLevel = levels.find(level => level.id === original?.levelId);
+      if (!original || originalLevel?.finalBoss || originalLevel?.mode !== mission.mode || q.themeId !== originalLevel?.chapterId) errors.push(prefix + '最終題需對應同等級的現行主要題和原主題，不可使用封存複習題。');
+    }
     const p = presentQuestion(q, mission.mode);
     if (p.choices.length !== 4) errors.push(prefix + '需要4個可直接選取的選項。');
     for (const choice of p.choices) {
@@ -60,9 +72,29 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     if (p.kind === 'tradeoff' && actions.length < 2) errors.push(prefix + '取捨題必須接受至少兩個完整方案。');
     for (const evidence of p.evidence) if (!evidence.title.trim() || !evidence.body.trim()) errors.push(prefix + '證據卡有空白。');
   }
-  if (items.length === 84 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
+  if (items.length === 90 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
   if (!items.some(q => q.levelId === 12 && q.slot === 3 && Object.keys(q.valid).length >= 2)) errors.push('最後合作關需接受至少兩個完整合理方案。');
-  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, variations, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+  errors.push(...auditLegacyReview().errors);
+  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+}
+
+/** Archived answers remain resolvable without reintroducing a playable review bank. */
+export function auditLegacyReview(items: readonly Question[] = legacyReviewQuestions): AuditResult {
+  const errors: string[] = [];
+  const ids = new Set(items.map(q => q.id));
+  if (items.length !== 24 || ids.size !== 24) errors.push('歷史複習封存應保留24個不重複題目ID。');
+  for (let level = 1; level <= 12; level++) {
+    if (items.filter(q => q.levelId === level).map(q => q.slot).sort().join(',') !== '6,7') errors.push(`歷史第${level}關應保留slot6、7。`);
+  }
+  for (const q of items) {
+    const prefix = `${q.id}：`;
+    const expected = `V2L${String(q.levelId).padStart(2, '0')}Q${q.slot === 6 ? '03' : '05'}`;
+    if (q.variantOf !== expected || !questions.some(item => item.id === expected) || q.variantOf === q.id) errors.push(prefix + '歷史變式需指向同關第3或第5個主題。');
+    if (questions.some(item => item.id === q.id)) errors.push(prefix + '歷史題不可回到現行題庫。');
+    if (q.choices.some(choice => !choice.text.trim() || !choice.feedback.trim())) errors.push(prefix + '選項或針對性回饋為空。');
+    for (const [action, reasons] of Object.entries(q.valid)) if (!Number.isInteger(Number(action)) || !q.choices[Number(action)] || reasons.join(',') !== '0') errors.push(prefix + '單步判定表不合法。');
+  }
+  return { errors, summary: { legacyQuestions: items.length, uniqueIds: ids.size } };
 }
 
 function speechText(raw: string) { return raw.replace(/\bAI\b/g, '人工智慧').replace(/★/g, '').replace(/／/g, '，'); }

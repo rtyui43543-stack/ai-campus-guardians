@@ -3,11 +3,11 @@ import { chapters, levels } from './levels';
 import { getBossForTheme, getMissionBoss, missionBosses } from './missionBosses';
 
 describe('mission opponents', () => {
-  it('gives all twelve missions different identities and separates the two difficulties', () => {
+  it('gives all fourteen missions different identities and separates the two difficulties', () => {
     const bosses = levels.map(getMissionBoss);
-    expect(bosses).toHaveLength(12);
-    expect(new Set(bosses.map(boss => boss.id)).size).toBe(12);
-    expect(new Set(bosses.map(boss => boss.name)).size).toBe(12);
+    expect(bosses).toHaveLength(14);
+    expect(new Set(bosses.map(boss => boss.id)).size).toBe(14);
+    expect(new Set(bosses.map(boss => boss.name)).size).toBe(14);
     for (let theme = 1; theme <= 6; theme++) {
       expect(getBossForTheme(theme, 'advanced').id).not.toBe(getBossForTheme(theme, 'starter').id);
       expect(getBossForTheme(theme, 'advanced').name).not.toBe(getBossForTheme(theme, 'starter').name);

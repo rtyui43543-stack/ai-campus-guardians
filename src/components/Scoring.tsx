@@ -1,12 +1,14 @@
 import { Award, CheckCircle2, Lightbulb, RotateCcw, Sparkles } from 'lucide-react';
 import type { CompletedRun, Progress } from '../domain/types';
 import { bestRun, getLevelRuns, scoreSession } from '../domain/scoring';
+import { getLevel } from '../content/levels';
 
 export function ScoreSummary({ run }: { run: CompletedRun }) {
   const result = scoreSession(run);
+  const finalBoss = getLevel(run.levelId).finalBoss;
   return <section className="score-summary" aria-label="本次闖關成績">
     <div className="score-heading"><div><span>本次得分</span><h2>{result.perfect ? '首次全對，滿分過關！' : '每次思考，都看得見進步'}</h2></div><Award size={34} aria-hidden="true" /></div>
-    <div className="score-total"><strong>{result.score}</strong><span>／100 答題分</span><b>{run.review ? '兩題重玩練習' : '五題關卡挑戰'}</b></div>
+    <div className="score-total"><strong>{result.score}</strong><span>／100 答題分</span><b>{finalBoss ? `最終決戰 · 挑戰 ${run.records.length} 題` : run.review ? '舊版練習紀錄' : '五題關卡挑戰'}</b></div>
     <div className="score-bonus">
       <span className="score-bonus-gain"><Sparkles size={24} aria-hidden="true" /><span>必殺獎勵</span><b className="score-bonus-number">＋{result.bonusScore}</b><span>分</span></span>
       <span className="score-bonus-uses">釋放 <b>{result.ultimateUses}</b> 次</span>
@@ -20,9 +22,9 @@ export function ScoreSummary({ run }: { run: CompletedRun }) {
     </div>
     {result.unknownWrongAnswers > 0 && <p className="score-legacy-note">有 {result.unknownWrongAnswers} 題舊紀錄未記下確切錯誤次數；重新挑戰可留下完整成績。</p>}
     <details className="score-rule"><summary>分數怎麼算？</summary>
-      <ul><li>{run.review ? '重玩共兩題，每題 50 分；每答錯一次扣 10 分，自己答對至少得 10 分。' : '每關五題，每題 20 分；每答錯一次扣 4 分，自己答對至少得 4 分。'}</li>
+      <ul><li>{finalBoss ? '最終關最多15題，每題原始20分；答錯一次扣4分，自己答對至少4分。依實際挑戰題數換算百分制，魔王HP歸零即可提前過關。' : run.review ? '舊版練習共兩題，每題 50 分；每答錯一次扣 10 分，自己答對至少得 10 分。' : '每關五題，每題 20 分；每答錯一次扣 4 分，自己答對至少得 4 分。'}</li>
         <li>{run.review ? '用過提示，該題最高 40 分；伙伴示範完成的題目得 0 分。' : '用過提示，該題最高 16 分；伙伴示範完成的題目得 0 分。'}</li>
-        {run.records.some(record => record.timed) && <li>進階每題 30 秒：10 秒內最高 20 分、20 秒內最高 16 分、倒數歸零前最高 12 分。答錯、提示與時間上限取較低分數。超時 0 分、扣 12 HP、自動進下一題；含超時題須重新挑戰才可過關。</li>}
+        {run.records.some(record => record.timed) && <li>進階每題 30 秒：10 秒內原始最高 20 分、20 秒內最高 16 分、倒數歸零前最高 12 分。答錯、提示與時間上限取較低分數。超時 0 分、扣 12 HP、自動進下一題；{finalBoss ? '最終關以魔王HP歸零為過關條件。' : '含超時題須重新挑戰才可過關。'}</li>}
         <li>必殺技另外獎勵 10 分；總分是答題分加必殺獎勵，可超過 100 分。血量不影響分數。</li>
         <li>首次全對代表全部第一次答對，而且沒有用提示或示範。初階與重玩練習不計速度；舊紀錄保留原分數。</li></ul>
     </details>

@@ -27,9 +27,9 @@ describe('growth dashboard projection', () => {
     expect(buildGrowthDashboard(value, 'starter').runs.map(item => item.run.sessionId)).toEqual(['beginner']);
     expect(buildGrowthDashboard(value, 'advanced').runs.map(item => item.run.sessionId)).toEqual(['advanced']);
     expect(buildGrowthDashboard(value, 'review').runs.map(item => item.run.sessionId)).toEqual(['replay']);
-    expect(buildGrowthDashboard(value).levels).toHaveLength(12);
-    expect(buildGrowthDashboard(value, 'starter').levels).toHaveLength(6);
-    expect(buildGrowthDashboard(value, 'advanced').levels).toHaveLength(6);
+    expect(buildGrowthDashboard(value).levels).toHaveLength(14);
+    expect(buildGrowthDashboard(value, 'starter').levels).toHaveLength(7);
+    expect(buildGrowthDashboard(value, 'advanced').levels).toHaveLength(7);
     expect(buildGrowthDashboard(value, 'review').levels).toHaveLength(12);
   });
 
