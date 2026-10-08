@@ -3,13 +3,13 @@ import { ArrowRight, BookOpen, ChevronRight, Download, Flag, Lightbulb, Medal, P
 import { chapters, levels } from '../content/levels';
 import { presentQuestion, questionById } from '../content';
 import type { CompletedRun, Level, Progress } from '../domain/types';
-import { scoreSession } from '../domain/scoring';
 import { exportBackup, parseBackup } from '../domain/storage';
 import { useOffline } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
 import { chapterIcons, modeNames, statusNames } from '../App';
 import { UltimateCollection } from './UltimateCollection';
+import { GrowthDashboard } from './GrowthDashboard';
 
 export function downloadFile(name: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -28,17 +28,13 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
   const latest = new Map<string, (typeof progress.attempts)[number]>();
   progress.attempts.forEach(attempt => latest.set(attempt.questionId + ':' + attempt.mode, attempt));
   const needsPractice = [...latest.values()].filter(a => a.status === 'practice' || a.status === 'timeout');
-  const runs = [...(progress.runs ?? [])].reverse();
   return <>
-    <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看哪些題目自己答對，哪些用過提示。下次再試一次，學會的好方法就更多了。</Heading>
-    <div className="growth-overview"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / 12</small></strong><span>已完成的修復任務</span></div>
-      <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>留下思考紀錄的情境</span></div>
-      <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>值得再練習的情境</span></div></div>
+    <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看自己的進步，再挑戰一次！</Heading>
+    <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / 12</small></strong><span>已完成關卡</span></div>
+      <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>已練習情境</span></div>
+      <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>待練習情境</span></div></div>
+    <GrowthDashboard progress={progress} onLevel={onLevel} onRun={onRun} />
     <UltimateCollection cards={progress.ultimateCards ?? []} />
-    <section className="surface run-history" aria-label="我的闖關成績"><h2>我的闖關成績</h2><p>每次挑戰的答題分、必殺獎勵與回答方式都會保留。點一筆成績，就能查看逐題得分。</p>
-      {runs.length ? <div className="run-history-list">{runs.map(run => { const level = levels.find(item => item.id === run.levelId)!; const score = scoreSession(run); return <button key={run.sessionId} onClick={() => onRun(run)}>
-        <span><b>{modeNames[run.mode]} · 第 {run.mode === 'starter' ? run.levelId : run.levelId - 6} 關 · {level.title}{run.review ? '（重玩練習）' : ''}</b><small>{new Date(run.at).toLocaleString('zh-TW')} · {run.passed === false ? '有超時題，尚未過關' : score.perfect ? '首次全對' : '點開查看回答紀錄'}{score.bonusScore ? ' · 答題 ' + score.score + '＋必殺 ' + score.bonusScore : ''}</small></span><strong>{score.totalScore} 分</strong><ChevronRight size={19} /></button>; })}</div> : <p className="empty-score-history">完成一次關卡挑戰後，這裡會顯示分數。舊版的完整回答紀錄也會換算；沒有完整紀錄的關卡可重新挑戰。</p>}
-    </section>
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
       const Icon = chapterIcons[chapter.icon];
