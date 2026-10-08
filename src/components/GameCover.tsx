@@ -34,7 +34,7 @@ export function GameCover({ offline, onStart, onResume, completed, reducedMotion
         {completed > 0 && <p className="game-cover-saved"><ShieldCheck size={19} />這台裝置已完成 <strong>{Math.min(12, completed)} / 12</strong> 關</p>}
       </div>
       <div className="game-cover-promise" aria-label="遊戲使用方式">
-        <span><WifiOff size={21} />下載後離線玩</span><i aria-hidden="true">·</i><span><UserRound size={21} />不用登入</span><i aria-hidden="true">·</i><span><Clock3 size={21} />不限時間</span>
+        <span><WifiOff size={21} />下載後離線玩</span><i aria-hidden="true">·</i><span><UserRound size={21} />不用登入</span><i aria-hidden="true">·</i><span><Clock3 size={21} />初階不限時</span>
       </div>
     </section>
     <section className="game-cover-download" aria-label="下載完整離線遊戲">

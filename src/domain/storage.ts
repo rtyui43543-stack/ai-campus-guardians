@@ -2,7 +2,7 @@ import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
 import { createProgress } from './engine';
 import { reconstructRuns } from './scoring';
-import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session } from './types';
+import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session, UltimateCardUnlock } from './types';
 
 // Level numbers now describe a different curriculum. Preserve v1 without mapping it into v2.
 const DB_NAME = 'ai-campus-guardians-v2';
@@ -62,23 +62,41 @@ function selectedIndex(value: unknown, path: string, count: number): number | nu
   return value === null ? null : integer(value, path, 0, count - 1);
 }
 
+function combatRecordFields(raw: Record<string, unknown>, path: string, levelId: number, slot: number): Partial<AttemptRecord> {
+  const fields: Partial<AttemptRecord> = {};
+  for (const key of ['timed', 'timedOut', 'ultimateUsed', 'preventedDamage'] as const) {
+    if (raw[key] !== undefined) fields[key] = boolean(raw[key], `${path}.${key}`);
+  }
+  if (raw.elapsedMs !== undefined) fields.elapsedMs = integer(raw.elapsedMs, `${path}.elapsedMs`, 0, 30_000);
+  if (fields.timed && (levelId <= 6 || slot > 5 || fields.elapsedMs === undefined)) reject(`${path}限時紀錄與關卡不一致`);
+  if (fields.timedOut && (!fields.timed || fields.elapsedMs !== 30_000)) reject(`${path}超時紀錄缺少限時結束時間`);
+  if (raw.ultimateId !== undefined) fields.ultimateId = integer(raw.ultimateId, `${path}.ultimateId`, 1, 6);
+  if (fields.ultimateUsed && (fields.ultimateId !== levels.find(level => level.id === levelId)?.chapterId || slot < 4 || slot > 5)) reject(`${path}必殺技與本關主題或充能順序不符`);
+  if (fields.ultimateId !== undefined && !fields.ultimateUsed) reject(`${path}未施放卻帶有必殺技編號`);
+  return fields;
+}
+
 function attempt(value: unknown, path: string): AttemptRecord {
   const raw = object(value, path);
   const selectedMode = mode(raw.mode, `${path}.mode`);
   const q = question(raw.questionId, `${path}.questionId`, selectedMode);
-  const action = integer(raw.action, `${path}.action`, 0, q.choices.length - 1);
+  const action = selectedIndex(raw.action, `${path}.action`, q.choices.length);
   if (raw.reason !== null) reject(`${path}新版題目採直接選答，不能有第二次理由作答`);
   const reason = null;
-  if (!q.valid[action]?.length) reject(`${path}沒有有效的作答`);
+  const extra = combatRecordFields(raw, path, q.levelId, q.slot);
+  const expired = raw.status === 'timeout';
+  if (expired ? action !== null || !extra.timedOut : action === null || !q.valid[action]?.length || extra.timedOut) reject(`${path}沒有有效的作答或超時紀錄`);
   const retries = integer(raw.retries, `${path}.retries`, 0, 1000000);
   const hintUsed = boolean(raw.hintUsed, `${path}.hintUsed`);
-  if (raw.status !== 'first' && raw.status !== 'supported' && raw.status !== 'practice') reject(`${path}.status不是有效學習紀錄`);
+  if (raw.status !== 'first' && raw.status !== 'supported' && raw.status !== 'practice' && raw.status !== 'timeout') reject(`${path}.status不是有效學習紀錄`);
   if (raw.status === 'first' && (retries !== 0 || hintUsed)) reject(`${path}首次理解與提示紀錄不一致`);
   if (raw.status === 'supported' && retries === 0 && !hintUsed) reject(`${path}提示完成缺少提示紀錄`);
   const demoUsed = raw.demoUsed === undefined ? undefined : boolean(raw.demoUsed, `${path}.demoUsed`);
   if ((demoUsed === true && raw.status !== 'practice') || (raw.status === 'practice' && (!hintUsed || demoUsed === false || (demoUsed !== true && retries < 2)))) reject(`${path}示範紀錄不一致`);
+  if (extra.ultimateUsed && (expired || raw.status === 'practice' || demoUsed)) reject(`${path}超時或示範不能施放必殺技`);
+  if (extra.timed && !expired && raw.status !== 'practice' && extra.elapsedMs === 30_000) reject(`${path}時間到後不能記為答對`);
   return { questionId: q.id, mode: selectedMode, action, reason, status: raw.status, retries, hintUsed, at: timestamp(raw.at, `${path}.at`),
-    ...(demoUsed === undefined ? {} : { demoUsed }) };
+    ...(demoUsed === undefined ? {} : { demoUsed }), ...extra };
 }
 
 function activeSession(value: unknown): Session | null {
@@ -99,9 +117,24 @@ function activeSession(value: unknown): Session | null {
   const step = raw.step;
   if (step !== 'action' && step !== 'feedback' && step !== 'defeat') reject('active.step不是有效的直接作答階段');
   const success = boolean(raw.success, 'active.success');
+  const extra: Partial<Session> = {};
+  for (const key of ['timed', 'timedOut', 'ultimateUsed', 'barrier', 'preventedDamage'] as const) {
+    if (raw[key] !== undefined) extra[key] = boolean(raw[key], `active.${key}`);
+  }
+  if (raw.energy !== undefined) extra.energy = integer(raw.energy, 'active.energy', 0, 3);
+  if (raw.elapsedMs !== undefined) extra.elapsedMs = integer(raw.elapsedMs, 'active.elapsedMs', 0, 30_000);
+  if (raw.remainingMs !== undefined) extra.remainingMs = integer(raw.remainingMs, 'active.remainingMs', 0, 30_000);
+  if (raw.bonusPoints !== undefined) extra.bonusPoints = integer(raw.bonusPoints, 'active.bonusPoints', 0, 50);
+  if (raw.enemyBonusDamage !== undefined) extra.enemyBonusDamage = integer(raw.enemyBonusDamage, 'active.enemyBonusDamage', 0, 50);
+  if (raw.ultimateId !== undefined) extra.ultimateId = integer(raw.ultimateId, 'active.ultimateId', 1, 6);
+  if (extra.timed && (selectedMode !== 'advanced' || review || extra.remainingMs === undefined || extra.elapsedMs === undefined || extra.remainingMs + extra.elapsedMs !== 30_000)) reject('active限時設定與本關模式或時間不一致');
+  if (extra.timedOut && (!extra.timed || success || selected !== null || extra.remainingMs !== 0 || extra.elapsedMs !== 30_000 || step === 'action')) reject('active超時狀態不一致');
+  if (extra.timed && extra.remainingMs === 0 && !extra.timedOut) reject('active時間已到卻沒有超時處理');
+  if (extra.ultimateUsed && (!success || extra.energy !== 0 || extra.ultimateId !== levels.find(level => level.id === levelId)?.chapterId || index < 3 || review)) reject('active必殺技與本關或充能狀態不一致');
+  if (extra.ultimateId !== undefined && !extra.ultimateUsed) reject('active未施放卻帶有必殺技編號');
   const validAction = selected !== null && !!q.valid[selected]?.length;
   if (success && (step !== 'feedback' || !validAction)) reject('active成功狀態與作答不一致');
-  if ((step === 'feedback' || step === 'defeat') && selected === null) reject('active回饋階段缺少行動');
+  if ((step === 'feedback' || step === 'defeat') && selected === null && !extra.timedOut) reject('active回饋階段缺少行動');
   if ((step === 'feedback' || step === 'defeat') && !success && validAction) reject('active錯誤回饋與有效答案不一致');
   const shield = integer(raw.shield, 'active.shield', 0, 100);
   if ((shield === 0) !== (step === 'defeat')) reject('active零血量與挑戰結束狀態不一致');
@@ -111,16 +144,21 @@ function activeSession(value: unknown): Session | null {
   const demoRetriesKnown = raw.demoRetriesKnown === undefined ? undefined : boolean(raw.demoRetriesKnown, 'active.demoRetriesKnown');
   if (demoRetriesKnown && !demoUsed) reject('active示範次數標記不一致');
   if (demoUsed && (!success || !hintUsed || (!demoRetriesKnown && retries < 2))) reject('active示範狀態不一致');
-  if ((step === 'feedback' || step === 'defeat') && !success && retries === 0) reject('active錯誤回饋缺少重試紀錄');
+  if (demoUsed && extra.ultimateUsed) reject('active示範不能施放必殺技');
+  if ((step === 'feedback' || step === 'defeat') && !success && retries === 0 && !extra.timedOut) reject('active錯誤回饋缺少重試紀錄');
   const records = list(raw.records, 'active.records', 7).map((record, i) => attempt(record, `active.records[${i}]`));
   if (records.length !== index || records.some((record, i) => record.questionId !== questionIds[i] || record.mode !== selectedMode)) reject('active已完成紀錄與題目順序不一致');
   const repaired = integer(raw.repaired, 'active.repaired', 0, 100);
-  if (repaired !== Math.round(index / questionIds.length * 100)) reject('active修復進度與作答進度不一致');
+  if (repaired !== Math.round(records.filter(record => record.status !== 'timeout').length / questionIds.length * 100)) reject('active修復進度與作答進度不一致');
+  const releaseCount = records.filter(record => record.ultimateUsed).length + (extra.ultimateUsed ? 1 : 0);
+  if (extra.bonusPoints !== undefined && extra.bonusPoints !== releaseCount * 10) reject('active必殺技獎勵與施放紀錄不一致');
+  const offensive = records.filter(record => record.ultimateUsed && [2, 4, 5].includes(record.ultimateId!)).length + (extra.ultimateUsed && [2, 4, 5].includes(extra.ultimateId!) ? 1 : 0);
+  if (extra.enemyBonusDamage !== undefined && extra.enemyBonusDamage !== offensive * 10) reject('active額外傷害與施放紀錄不一致');
   const feedback = text(raw.feedback, 'active.feedback', 30000, true);
   return {
     id: text(raw.id, 'active.id', 256), levelId, mode: selectedMode, review, questionIds, index,
     step, selected, reason, success, retries, hintUsed, demoUsed, feedback,
-    shield, repaired, records,
+    shield, repaired, records, ...extra,
     ...(demoRetriesKnown === undefined ? {} : { demoRetriesKnown }),
   };
 }
@@ -135,8 +173,19 @@ function completedRun(value: unknown, path: string): CompletedRun {
   const expected = getQuestions(levelId, review).map(question => question.id);
   if (records.length !== expected.length || records.some((record, i) => record.questionId !== expected[i] || record.mode !== selectedMode)) reject(`${path}需要完整且依序的本關作答紀錄`);
   // Never accept a caller's numeric score; scoring is derived from these records.
+  const passed = raw.passed === undefined ? undefined : boolean(raw.passed, `${path}.passed`);
+  if (passed !== undefined && passed !== !records.some(record => record.status === 'timeout')) reject(`${path}通關狀態與超時紀錄不一致`);
   return { sessionId: text(raw.sessionId, `${path}.sessionId`, 256), levelId, mode: selectedMode,
-    review, records, at: timestamp(raw.at, `${path}.at`) };
+    review, records, at: timestamp(raw.at, `${path}.at`), ...(passed === undefined ? {} : { passed }) };
+}
+
+function ultimateCard(value: unknown, path: string): UltimateCardUnlock {
+  const raw = object(value, path);
+  const ultimateId = integer(raw.ultimateId, `${path}.ultimateId`, 1, 6);
+  const questionId = text(raw.questionId, `${path}.questionId`, 30);
+  const q = questionById.get(questionId);
+  if (!q || q.slot < 4 || q.slot > 5 || levels.find(level => level.id === q.levelId)?.chapterId !== ultimateId) reject(`${path}收藏與施放關卡不一致`);
+  return { ultimateId, questionId, sessionId: text(raw.sessionId, `${path}.sessionId`, 256), unlockedAt: timestamp(raw.unlockedAt, `${path}.unlockedAt`) };
 }
 
 function validateRunHistory(runs: CompletedRun[], attempts: AttemptRecord[]): void {
@@ -184,10 +233,12 @@ export function validateProgress(value: unknown): Progress {
   if (new Set(runs.map(run => run.sessionId)).size !== runs.length) reject('runs包含重複挑戰');
   validateRunHistory(runs, attempts);
   const active = activeSession(raw.active);
+  const ultimateCards = raw.ultimateCards === undefined ? undefined : list(raw.ultimateCards, 'ultimateCards', 6).map((value, i) => ultimateCard(value, `ultimateCards[${i}]`));
+  if (ultimateCards && new Set(ultimateCards.map(card => card.ultimateId)).size !== ultimateCards.length) reject('ultimateCards包含重複收藏');
   if (active && (finishedSessionIds.includes(active.id) || runs.some(run => run.sessionId === active.id))) reject('active挑戰已經完成');
   return {
     schemaVersion: 2, completed,
-    attempts, runs,
+    attempts, runs, ...(ultimateCards === undefined ? {} : { ultimateCards }),
     active,
     proposals: list(raw.proposals, 'proposals', 10000).map((value, i) => proposal(value, `proposals[${i}]`)),
     settings: {

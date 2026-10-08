@@ -27,7 +27,7 @@ function completeLevel(progress: Progress, levelId: number, review = false) {
     session = roundTrip(progress, solve(session));
     const next = advanceSession(session);
     records.push(next.record);
-    expect(battleHealth(session).enemyHp).toBe(100 - records.length * 100 / session.questionIds.length);
+    expect(battleHealth(session).enemyHp).toBe(Math.max(0, 100 - records.length * 100 / session.questionIds.length - (session.enemyBonusDamage ?? 0)));
     if (next.finished) return { progress: finishSession(progress, session), session, records };
     expect(battleHealth(next.session!)).toEqual(battleHealth(session));
     session = roundTrip(progress, next.session!);
@@ -45,7 +45,7 @@ describe('complete twelve-level campaign', () => {
       for (const action of Object.keys(question.valid).map(Number)) {
         const answer = roundTrip(progress, solve(session, action));
         expect(answer.success).toBe(true);
-        expect(battleHealth(answer).enemyHp).toBe(100 - slot * 20);
+        expect(battleHealth(answer).enemyHp).toBe(Math.max(0, 100 - slot * 20 - (answer.enemyBonusDamage ?? 0)));
       }
       session = solve(session);
       const next = advanceSession(session);
@@ -84,7 +84,7 @@ describe('complete twelve-level campaign', () => {
         if (question.valid[action]?.length) continue;
         rejected++;
         const wrong = submitAction(chooseAction(checkpoint, action));
-        expect(wrong).toMatchObject({ success: false, step: 'feedback', retries: 1, shield: 88 });
+        expect(wrong).toMatchObject({ success: false, step: 'feedback', retries: 1, shield: checkpoint.barrier ? 100 : 88 });
         expect(wrong.feedback).toBe(question.choices[action].feedback);
         expect(battleHealth(wrong).enemyHp).toBe(battleHealth(checkpoint).enemyHp);
         expect(submitAction(wrong)).toBe(wrong);
@@ -118,7 +118,7 @@ describe('complete twelve-level campaign', () => {
         at: result.progress.updatedAt, mode: 'advanced', reflection: '我會保護同學、查證資訊，並自己理解作業。',
         decisions: result.records.map(record => {
           const question = questions.find(item => item.id === record.questionId)!;
-          return { questionId: record.questionId, action: question.choices[record.action].text, reason: '' };
+          return { questionId: record.questionId, action: question.choices[record.action!].text, reason: '' };
         }),
       }],
     };

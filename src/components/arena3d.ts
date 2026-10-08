@@ -5,6 +5,7 @@ import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
+import { createThemedSpellEffects, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -18,7 +19,6 @@ interface Rig {
   tip: THREE.Object3D;
   glow: THREE.MeshStandardMaterial;
 }
-const palettes = [0xf6a642, 0x36b8c5, 0x6d91e5, 0x9c70d8, 0xe67970, 0x637dda];
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const ease = (value: number) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
@@ -112,103 +112,6 @@ function createDrone(scene: THREE.Scene) {
   return drone;
 }
 
-function createEffects(scene: THREE.Scene, theme: number) {
-  const root = new THREE.Group(); root.name = 'attack-effects'; root.visible = false; scene.add(root);
-  const flight = new THREE.Group(); root.add(flight);
-  const color = theme === 1 ? 0xffc96d : palettes[theme - 1];
-  const bright = luminous(color, .92), white = luminous(0xfff3c2, .92);
-  if (theme === 3) {
-    for (let i = 0; i < 4; i++) {
-      const angle = i * Math.PI / 2;
-      const card = roundBox(flight, .33, .43, .05, solid([0x8ee4c4, 0xffce71, 0x90a8ff, 0xefadb9][i]),
-        Math.cos(angle) * .32, Math.sin(angle) * .32, i * .025, .03);
-      card.rotation.z = angle + .25;
-      ball(card, .060, solid(0xffffff), 0, .075, .055);
-      box(card, .15, .032, .014, solid(0xffffff), 0, -.095, .053);
-    }
-    ring(flight, .52, .028, bright);
-    ring(flight, .36, .014, white).rotation.y = .7;
-  } else if (theme === 4) {
-    const prismMaterial = solid(0xc4a2ef, .45);
-    prismMaterial.emissive.setHex(0x7b46ae); prismMaterial.emissiveIntensity = .45;
-    mesh(flight, new THREE.OctahedronGeometry(.35), prismMaterial);
-    ring(flight, .48, .033, white).rotation.y = .8;
-    ring(flight, .48, .028, bright).rotation.x = .8;
-    for (let i = 0; i < 3; i++) {
-      const angle = i * Math.PI * 2 / 3;
-      ball(flight, .095, luminous([0x8becdf, 0xffdc7f, 0xe99eff][i]),
-        Math.cos(angle) * .52, Math.sin(angle) * .52, .12);
-    }
-  } else if (theme === 5) {
-    for (const side of [-1, 1]) {
-      const page = roundBox(flight, .31, .44, .035, solid(0xfff5dc), side * .16, 0, .055, .01);
-      const cover = box(flight, .34, .47, .045, solid(0x56b9a3), side * .17, 0, 0);
-      page.rotation.y = cover.rotation.y = -side * .3;
-      for (let i = 0; i < 3; i++) box(flight, .17, .019, .015, solid(0xb6946c), side * .16, -.08 + i * .08, .091);
-    }
-    mesh(flight, starGeometry(.12), bright, 0, .31, .09);
-    ring(flight, .53, .028, white);
-  } else if (theme === 6) {
-    mesh(flight, starGeometry(.30), white, 0, 0, .10);
-    for (let i = 0; i < 3; i++) {
-      const angle = i * Math.PI * 2 / 3;
-      mesh(flight, starGeometry(.15), luminous([0xffd379, 0x8cebd7, 0xbea2ff][i]),
-        Math.cos(angle) * .48, Math.sin(angle) * .48, 0);
-    }
-    ring(flight, .49, .029, luminous(0x9bdcc6, .85));
-    ring(flight, .57, .017, bright).rotation.x = .65;
-  } else if (theme === 2) {
-    ring(flight, .36, .055, bright);
-    ring(flight, .49, .021, white);
-    const handle = mesh(flight, new THREE.CylinderGeometry(.035, .035, .29, 8), white, -.32, -.32, 0);
-    handle.rotation.z = -.7;
-    for (const angle of [0, Math.PI / 2, Math.PI, Math.PI * 1.5]) {
-      const mark = box(flight, .16, .024, .03, white, Math.cos(angle) * .27, Math.sin(angle) * .27);
-      mark.rotation.z = angle;
-    }
-    ball(flight, .27, luminous(0xe1fbfd, .23));
-  } else {
-    // A protective orb, rather than a physical shield attack.
-    const core = mesh(flight, new THREE.IcosahedronGeometry(.28, 0), bright);
-    core.rotation.z = .20;
-    mesh(flight, starGeometry(.17), white, 0, 0, .30);
-    ring(flight, .44, .043, bright).rotation.y = .45;
-    ring(flight, .44, .030, white).rotation.x = .70;
-  }
-  const glowBall = ball(flight, .59, luminous(color, .17)); glowBall.castShadow = false;
-  flight.traverse(object => { if (object instanceof THREE.Mesh) object.castShadow = false; });
-  const beam = mesh(root, new THREE.CylinderGeometry(.12, .12, 1, 9), luminous(color, .48), 0, 0, 0, false);
-  const beamCore = mesh(root, new THREE.CylinderGeometry(.036, .036, 1, 8), luminous(0xfffae5, .92), 0, 0, 0, false);
-  const groundRing = ring(root, .67, .030, luminous(color, .80)); groundRing.rotation.x = Math.PI / 2;
-  const groundInner = ring(root, .44, .022, luminous(0xfff2c5, .72)); groundInner.rotation.x = Math.PI / 2;
-  const runeGeometry = starGeometry(.075);
-  const groundRunes = Array.from({ length: 6 }, (_, i) => {
-    const rune = mesh(root, runeGeometry, luminous(i % 2 ? color : 0xfff2c5, .75), 0, 0, 0, false);
-    rune.rotation.x = -Math.PI / 2;
-    return rune;
-  });
-  const hitRing = ring(root, .30, .065, luminous(0xffe8a6, .95));
-  const secondRing = ring(root, .27, .038, luminous(color, .90)); secondRing.rotation.y = .65;
-  const thirdRing = ring(root, .23, .025, luminous(color, .85)); thirdRing.rotation.x = .85;
-  const impactCore = ball(root, .40, luminous(0xfff7ce, .75)); impactCore.castShadow = false;
-  const charge = ring(root, .25, .037, luminous(color, .85)); charge.rotation.y = .2;
-  const chargeInner = ring(root, .19, .022, luminous(0xfff5cf, .90)); chargeInner.rotation.x = .6;
-  const chargeCore = ball(root, .17, luminous(color, .50)); chargeCore.castShadow = false;
-  const orbitGeometry = new THREE.OctahedronGeometry(.05);
-  const gathering = Array.from({ length: 10 }, (_, i) => mesh(root, orbitGeometry,
-    luminous(i % 2 ? color : 0xfff5cf, .85), 0, 0, 0, false));
-  const waveRings = Array.from({ length: 3 }, () => ring(root, .24, .021, luminous(color, .70)));
-  const trailGeometry = new THREE.SphereGeometry(.09, 7, 5);
-  const trail = Array.from({ length: 24 }, (_, i) => mesh(root, trailGeometry,
-    luminous(i % 3 ? color : 0xfff6d7, .74), 0, 0, 0, false));
-  const sparkGeometry = new THREE.OctahedronGeometry(.073);
-  const sparks = Array.from({ length: 32 }, (_, i) => mesh(root, sparkGeometry,
-    luminous(i % 2 ? color : 0xffe6a1, .95), 0, 0, 0, false));
-  return { root, flight, beam, beamCore, groundRing, groundInner, groundRunes,
-    hitRing, secondRing, thirdRing, impactCore, charge, chargeInner, chargeCore,
-    gathering, waveRings, trail, sparks };
-}
-
 function disposeScene(scene: THREE.Scene) {
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
   scene.traverse(object => {
@@ -275,7 +178,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   renderer.domElement.setAttribute('data-boss', enemy.root.userData.missionBossId);
   renderer.domElement.setAttribute('data-boss-mode', companion ? 'companion' : mode);
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
-  const drone = createDrone(scene), effects = createEffects(scene, theme);
+  const drone = createDrone(scene), effects = createThemedSpellEffects(scene, theme, mode);
   const cinemaMagic = new THREE.Group(); scene.add(cinemaMagic);
   const cinemaHalo = ring(cinemaMagic, .95, .025, luminous(0x70f5dd, .65), 0, .05, 0);
   cinemaHalo.rotation.x = Math.PI / 2;
@@ -285,10 +188,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   let framingY = 1.8, framingElevation = 4.7;
   let raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
   let enemyHp = 100, playerHp = 100, requestedEnemyHp = 100, requestedPlayerHp = 100;
-  let attack: { started: number; success: boolean; launchOrigin?: THREE.Vector3 } | null = null;
+  let attack: { started: number; success: boolean; ultimate: boolean; blocked: boolean; launchOrigin?: THREE.Vector3 } | null = null;
   let reportedPhase = '';
   const start = new THREE.Vector3(), target = new THREE.Vector3(), moving = new THREE.Vector3();
-  const direction = new THREE.Vector3(), midpoint = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
   const baseHeroRotation = .13, baseEnemyRotation = -.15;
   const stage = host.closest('.duel-stage');
   const bubble = stage?.querySelector<HTMLElement>('.duel-bubble');
@@ -426,11 +328,14 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     }
     effects.root.visible = !!attack;
     if (attack) {
-      // Reduced-motion mode completes its fixed flash before the UI unlocks at 450 ms.
-      // Scale only the effect clock; the ordinary cast still impacts at 900 ms.
+      // Reduced-motion mode shows the same recognizable object with a short hold.
+      // Scale only the effect clock; ordinary motion contacts at 900 ms.
       const t = effectClock;
       const success = attack.success;
-      emitPhase(t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.45 ? '法術命中' : '收杖');
+      emitPhase(attack.ultimate
+        ? t < .42 ? '必殺蓄勢' : t < .9 ? '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
+        : attack.blocked && t >= .9 && t < 1.75 ? '守護盾攔截'
+        : t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.75 ? '法術命中' : '收杖');
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);
       const recovery = 1 - ease((t - 1.2) / .45);
       const cast = ease((t - .25) / .28) * recovery;
@@ -454,8 +359,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         } else {
           enemy.leftArm.rotation.z = -.26 - 1.65 * cast;
           enemy.root.rotation.y -= .14 * cast;
-          hero.root.position.x -= recoil * .19 * modelScale;
-          hero.root.rotation.z += recoil * .10;
+          hero.root.position.x -= recoil * (attack.blocked ? .035 : .19) * modelScale;
+          hero.root.rotation.z += recoil * (attack.blocked ? .025 : .10);
           poseMage(hero, { defense: cast });
         }
       }
@@ -475,108 +380,17 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         attack.launchOrigin ??= start.clone();
         start.copy(attack.launchOrigin);
       }
-      const fly = ease((t - .48) / .42);
       const burst = clamp((t - .9) / .55);
-      const inFlight = t >= .48 && t < .9;
-      moving.copy(start).lerp(target, fly);
-      moving.y += Math.sin(fly * Math.PI) * (theme === 3 ? .50 : .18) * modelScale;
-      effects.flight.visible = inFlight && !reducedMotion;
-      effects.flight.position.copy(moving);
-      effects.flight.scale.setScalar(modelScale * (reducedMotion ? .85 : 1.10));
-      effects.flight.rotation.z = reducedMotion ? 0 : t * (theme === 3 ? 8 : theme === 6 ? 4 : 1.8);
-      effects.flight.rotation.y = reducedMotion ? 0 : Math.sin(t * 5) * .25;
-      const gathering = clamp(t / .48);
-      for (const [i, charge] of [effects.charge, effects.chargeInner, effects.chargeCore].entries()) {
-        charge.visible = t < .48 && !reducedMotion;
-        charge.position.copy(start);
-        charge.scale.setScalar(modelScale * (.65 + gathering * 1.6));
-        if (i < 2) charge.rotation.z = t * (i ? -6 : 5);
-        (charge.material as THREE.MeshBasicMaterial).opacity = .5 + gathering * .35;
-      }
-      for (let i = 0; i < effects.gathering.length; i++) {
-        const particle = effects.gathering[i]; particle.visible = t < .48 && !reducedMotion;
-        const angle = i * Math.PI * 2 / effects.gathering.length + t * 6;
-        const radius = (.70 * (1 - gathering) + .13) * modelScale;
-        particle.position.copy(start);
-        particle.position.x += Math.cos(angle) * radius;
-        particle.position.y += Math.sin(angle) * radius;
-        particle.position.z += Math.sin(angle * 2) * radius * .25;
-        particle.scale.setScalar(modelScale * (.55 + gathering * .65));
-      }
-      const beamVisible = inFlight && !reducedMotion && (theme === 2 || theme === 4 || !success);
-      effects.beam.visible = beamVisible; effects.beamCore.visible = beamVisible;
-      if (beamVisible) {
-        direction.copy(moving).sub(start); midpoint.copy(start).add(moving).multiplyScalar(.5);
-        const length = direction.length(); direction.normalize();
-        for (const beam of [effects.beam, effects.beamCore]) {
-          beam.position.copy(midpoint); beam.scale.set(modelScale, length, modelScale);
-          beam.quaternion.setFromUnitVectors(yAxis, direction);
-        }
-        (effects.beam.material as THREE.MeshBasicMaterial).color.setHex(success ? 0x64dbe2 : 0xf5b172);
-      }
-      const circleScale = modelScale * (.85 + windup * .65);
-      for (const [i, circle] of [effects.groundRing, effects.groundInner].entries()) {
-        circle.visible = t < .9 && !reducedMotion;
-        circle.position.set(success ? hero.root.position.x : enemyX, .025 + i * .005, .10);
-        circle.scale.setScalar(circleScale);
-        (circle.material as THREE.MeshBasicMaterial).opacity = .80 * (1 - fly);
-      }
-      for (let i = 0; i < effects.groundRunes.length; i++) {
-        const rune = effects.groundRunes[i], angle = i * Math.PI / 3 + t * .8;
-        rune.visible = t < .9 && !reducedMotion;
-        rune.position.set((success ? hero.root.position.x : enemyX) + Math.cos(angle) * circleScale * .55,
-          .035, .1 + Math.sin(angle) * circleScale * .55);
-        rune.scale.setScalar(modelScale);
-        rune.rotation.z = angle;
-        (rune.material as THREE.MeshBasicMaterial).opacity = .85 * (1 - fly);
-      }
-      for (let i = 0; i < effects.waveRings.length; i++) {
-        const wave = effects.waveRings[i]; wave.visible = inFlight && !reducedMotion && theme !== 3;
-        const p = clamp(fly - .10 - i * .12);
-        wave.position.copy(start).lerp(target, p);
-        wave.position.y += Math.sin(p * Math.PI) * .18 * modelScale;
-        wave.rotation.y = Math.PI / 2;
-        wave.scale.setScalar(modelScale * (.60 + (i + 1) * .45));
-        (wave.material as THREE.MeshBasicMaterial).opacity = (.55 - i * .10) * fly;
-      }
-      for (let i = 0; i < effects.trail.length; i++) {
-        const particle = effects.trail[i]; particle.visible = inFlight && !reducedMotion;
-        const p = clamp(fly - i * .018);
-        particle.position.copy(start).lerp(target, p);
-        particle.position.y += Math.sin(p * Math.PI) * (theme === 3 ? .50 : .18) * modelScale;
-        particle.position.y += Math.sin(t * 12 + i) * .045 * modelScale;
-        particle.position.z += Math.sin(t * 8 + i) * .06;
-        particle.scale.setScalar(modelScale * (1.30 - i / 26));
-        (particle.material as THREE.MeshBasicMaterial).opacity = .78 * (1 - i / 30);
-      }
-      for (const [i, effect] of [effects.hitRing, effects.secondRing, effects.thirdRing].entries()) {
-        effect.visible = t >= .9 && t < 1.45;
-        effect.position.copy(target);
-        effect.scale.setScalar(modelScale * (reducedMotion ? 2 : .75 + burst * (4.5 + i * .35)));
-        (effect.material as THREE.MeshBasicMaterial).opacity = (1 - burst) * .95;
-      }
-      effects.secondRing.position.z -= .15;
-      effects.thirdRing.position.z += .15;
-      effects.impactCore.visible = t >= .9 && t < 1.22 && !reducedMotion;
-      effects.impactCore.position.copy(target);
-      effects.impactCore.scale.setScalar(modelScale * (.7 + Math.sin(burst * Math.PI) * 1.8));
-      (effects.impactCore.material as THREE.MeshBasicMaterial).opacity = .78 * (1 - clamp(burst * 2));
-      for (let i = 0; i < effects.sparks.length; i++) {
-        const spark = effects.sparks[i]; spark.visible = t >= .9 && t < 1.45 && !reducedMotion;
-        const angle = i * Math.PI * 2 / effects.sparks.length;
-        const radius = burst * (1.20 + (i % 3) * .26) * modelScale;
-        spark.position.copy(target);
-        spark.position.x += Math.cos(angle) * radius;
-        spark.position.y += Math.sin(angle) * radius - burst * burst * .28;
-        spark.position.z += Math.sin(i * 1.7) * radius * .42;
-        spark.rotation.set(t * 2, i + t * 3, angle);
-        spark.scale.setScalar(modelScale * (1.1 - burst * .7));
-        (spark.material as THREE.MeshBasicMaterial).opacity = 1 - burst;
-      }
+      effects.update({ time: t, success, ultimate: attack.ultimate, blocked: attack.blocked,
+        start, target, hero: hero.root.position, enemy: enemy.root.position,
+        scale: modelScale, reducedMotion, camera });
+      renderer.domElement.setAttribute('data-spell', String(effects.root.userData.spell));
+      renderer.domElement.setAttribute('data-spell-kind', String(effects.root.userData.kind));
+      renderer.domElement.setAttribute('data-spell-phase', String(effects.root.userData.phase));
       if (success && t >= .9) {
         enemy.glow.emissive.setHex(0xffb64d); enemy.glow.emissiveIntensity = (1 - burst) * .65;
       }
-      if (t > 1.67) { attack = null; effects.root.visible = false; emitPhase('待命'); resize(); }
+      if (t >= (attack.ultimate ? ULTIMATE_CAST_SECONDS : NORMAL_CAST_SECONDS)) { attack = null; effects.clear(); emitPhase('待命'); resize(); }
     } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方退場' : playerHp === 0 ? '伙伴守護中' : '待命');
     if (!attack) {
       hero.updateVisual({ camera, reducedMotion, greeting: cinemaShot === 'hero' || cinemaShot === 'resolve' });
@@ -594,9 +408,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       cinemaShot = next; cinemaStarted = cinemaTime - (cinemaPaused ? 1.3 : 0); resize();
     },
     pauseCinema(paused: boolean) { if (cinemaPaused !== paused) lastFrame = performance.now(); cinemaPaused = paused; dirty = true; },
-    play(success: boolean) {
+    play(success: boolean, ultimate = false, blocked = false) {
       if (!alive) return;
-      attack = { started: performance.now(), success }; dirty = true;
+      attack = { started: performance.now(), success, ultimate: success && ultimate, blocked: !success && blocked }; dirty = true;
     },
     health(enemy: number, player: number) {
       requestedEnemyHp = enemy; requestedPlayerHp = player;
@@ -612,7 +426,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       renderer.domElement.removeEventListener('webglcontextrestored', contextRestored);
       hero.disposeVisual();
       enemy.disposeVisual?.();
-      disposeScene(scene); environment.dispose(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
+      effects.dispose(); disposeScene(scene); environment.dispose(); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove();
     },
   };
 }

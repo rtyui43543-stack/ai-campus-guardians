@@ -36,7 +36,7 @@ function finalProposal(): Progress {
     at: progress.updatedAt, mode: 'advanced', reflection: '',
     decisions: progress.attempts.map(record => {
       const q = getQuestions(12).find(item => item.id === record.questionId)!;
-      return { questionId: record.questionId, action: q.choices[record.action].text, reason: '' };
+      return { questionId: record.questionId, action: q.choices[record.action!].text, reason: '' };
     }),
   });
   return progress;

@@ -183,7 +183,7 @@ describe('direct-answer battle engine', () => {
     const answered = solve(reachSlot(8, 4));
     expect(applySession(createProgress(), answered).active).toEqual(answered);
     expect(answered.records).toHaveLength(3);
-    expect(battleHealth(answered).enemyHp).toBe(20);
+    expect(battleHealth(answered).enemyHp).toBe(10);
   });
 
   it('finishes once, permits a fresh replay and rejects premature completion', () => {

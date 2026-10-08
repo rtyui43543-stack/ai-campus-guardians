@@ -114,7 +114,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
             {onResume && <button type="button" className="story-button story-button-secondary" onClick={() => leave(onResume)}><Play size={20} />繼續原本的挑戰</button>}
             <button type="button" className="story-button story-button-primary" onClick={() => leave(onStart)}>{level ? '開始對戰' : '進入冒險地圖'}<ArrowRight size={22} /></button>
           </div>
-          <span className="story-ready-note"><Check size={18} />不限時作答 · 進度自動儲存</span>
+          <span className="story-ready-note"><Check size={18} />{level?.mode === 'advanced' ? '每題 30 秒 · 集滿三點能量解鎖必殺' : '初階不限時 · 集滿三點能量解鎖必殺'} · 進度自動儲存</span>
         </section>}
       </div>
       {!ready && beat && <section className="story-caption" aria-live="polite" aria-atomic="true">

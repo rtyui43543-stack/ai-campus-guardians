@@ -41,12 +41,19 @@ export interface Level {
   id: number; chapterId: number; title: string; objective: string;
   intro: string; boss: boolean; source: Source; mode: Mode;
 }
-export type LearningStatus = 'first' | 'supported' | 'practice';
+export type LearningStatus = 'first' | 'supported' | 'practice' | 'timeout';
 export interface AttemptRecord {
-  questionId: string; mode: Mode; action: number; reason: number | null;
+  questionId: string; mode: Mode; action: number | null; reason: number | null;
   status: LearningStatus; retries: number; hintUsed: boolean; at: string;
   /** Present on new demo records whose retry count was recorded accurately. */
   demoUsed?: boolean;
+  /** Only new timed attempts include these fields; historical scores stay unchanged. */
+  timed?: boolean;
+  elapsedMs?: number;
+  timedOut?: boolean;
+  ultimateUsed?: boolean;
+  ultimateId?: number;
+  preventedDamage?: boolean;
 }
 export interface Session {
   id: string; levelId: number; mode: Mode; questionIds: string[]; index: number;
@@ -56,10 +63,28 @@ export interface Session {
   demoUsed?: boolean;
   /** Older demonstrations raised retries to two; this marks the new exact counter. */
   demoRetriesKnown?: boolean;
+  /** Battle resources persist within one session and reset for every new run. */
+  energy?: number;
+  ultimateUsed?: boolean;
+  ultimateId?: number;
+  barrier?: boolean;
+  bonusPoints?: number;
+  enemyBonusDamage?: number;
+  /** Timers are opt-in on newly started advanced main missions. */
+  timed?: boolean;
+  remainingMs?: number;
+  elapsedMs?: number;
+  timedOut?: boolean;
+  preventedDamage?: boolean;
 }
 export interface CompletedRun {
   sessionId: string; levelId: number; mode: Mode; review: boolean;
   records: AttemptRecord[]; at: string;
+  /** A finished timed run can have a score without completing the mission. */
+  passed?: boolean;
+}
+export interface UltimateCardUnlock {
+  ultimateId: number; unlockedAt: string; sessionId: string; questionId: string;
 }
 export interface Proposal {
   at: string; mode: Mode; decisions: { questionId: string; action: string; reason: string }[];
@@ -75,4 +100,5 @@ export interface Progress {
   updatedAt: string;
   finishedSessionIds?: string[];
   runs?: CompletedRun[];
+  ultimateCards?: UltimateCardUnlock[];
 }

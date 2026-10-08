@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
-import type { Chapter, CompletedRun, Level, Mode, Progress } from './domain/types';
+import type { Chapter, CompletedRun, Level, Mode, Progress, Session } from './domain/types';
 import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
 import { questionById, presentQuestion } from './content';
-import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
+import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, tickQuestion, useHint } from './domain/engine';
 import { loadProgress, saveProgress } from './domain/storage';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
 import { battleSound, loadAudio, playAudio, stopAudio } from './platform/audio';
@@ -19,6 +19,9 @@ import { LevelScore, ScoreSummary } from './components/Scoring';
 import { StoryCinematic } from './components/StoryCinematic';
 import { getOpeningStory, getLevelStory } from './content/stories';
 import { GameCover } from './components/GameCover';
+import { BattleMechanics, BattleRules } from './components/BattleMechanics';
+import { getUltimateSpell } from './content/ultimateSpells';
+import { QuestionClock } from './platform/questionClock';
 
 const navItems = [
   { id: 'map', label: '冒險地圖', icon: Map }, { id: 'growth', label: '我的成長', icon: Medal },
@@ -29,7 +32,7 @@ const OPENING_SEEN_KEY = 'ai-campus-guardians:opening:v1';
 function hasSeenOpening() { try { return localStorage.getItem(OPENING_SEEN_KEY) === 'seen'; } catch { return false; } }
 function rememberOpening() { try { localStorage.setItem(OPENING_SEEN_KEY, 'seen'); } catch { /* The game remains playable without browser storage. */ } }
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
-export const statusNames = { first: '首次獨立答對', supported: '重試／提示後答對', practice: '看示範後完成' };
+export const statusNames = { first: '首次獨立答對', supported: '重試／提示後答對', practice: '看示範後完成', timeout: '超時未作答' };
 export const chapterIcons = { scan: ScanLine, compass: Compass, search: Search, shield: ShieldCheck, hand: HandHeart, spark: Sparkles };
 
 export function App() {
@@ -45,6 +48,12 @@ export function App() {
   const [hintOpen, setHintOpen] = useState(false);
   const [animating, setAnimating] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [clockPaused, setClockPaused] = useState(document.hidden);
+  const progressRef = useRef<Progress | null>(null);
+  const clockRef = useRef(new QuestionClock());
+  const flushClockRef = useRef<() => void>(() => {});
+  const advanceRef = useRef<() => void>(() => {});
   const attackLock = useRef(false);
   const attackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -54,7 +63,7 @@ export function App() {
     setLoadError('');
     const requested = location.hash;
     void loadProgress().then(p => {
-      setProgress(p);
+      progressRef.current = p; setProgress(p);
       const previous = latestRun(p);
       setScreen(screenFromHash(requested, { battle: Boolean(p.active), results: Boolean(previous) }));
       if (requested === '#results' && previous) setResult(previous);
@@ -76,10 +85,12 @@ export function App() {
       const previous = latestRun(progress);
       const next = screenFromHash(location.hash, { battle: Boolean(progress.active), results: Boolean(previous) });
       if (next === screen) return;
+      flushClockRef.current(); clockRef.current.pause(performance.now());
+      if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
       stopAudio(); stopBattleMusic();
       if (attackTimer.current) clearTimeout(attackTimer.current);
       attackTimer.current = null; attackLock.current = false;
-      setAnimating(false); setCue(''); setIntro(null); setOpening(false); setMobileMenu(false);
+      setAnimating(false); setCue(''); setIntro(null); setOpening(false); setMobileMenu(false); setRulesOpen(false);
       if (next === 'results') setResult(previous);
       setScreen(next);
     };
@@ -108,12 +119,14 @@ export function App() {
     const timeout = setTimeout(() => setNotice(''), 6500);
     return () => clearTimeout(timeout);
   }, [notice]);
-  const commit = (next: Progress) => {
-    setProgress(next);
-    void saveProgress(next).catch(error => setNotice('存檔尚未成功，請先匯出備份。' + (error instanceof Error ? error.message : '')));
+  const commit = (next: Progress, persist = true) => {
+    progressRef.current = next; setProgress(next);
+    if (persist) void saveProgress(next).catch(error => setNotice('存檔尚未成功，請先匯出備份。' + (error instanceof Error ? error.message : '')));
   };
   const playMusicFromGesture = () => { void startBattleMusic().catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
   const navigate = (next: Screen) => {
+    flushClockRef.current(); clockRef.current.pause(performance.now()); setRulesOpen(false);
+    if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
     stopAudio();
     setIntro(null); setOpening(false);
     if (next === 'battle') { setCue(''); if (progress?.settings.music && progress.active && !isDefeated(progress.active)) playMusicFromGesture(); }
@@ -135,30 +148,33 @@ export function App() {
   const openOpening = () => { stopAudio(); stopBattleMusic(); setIntro(null); setOpening(true); };
   const enterAdventure = () => { navigate('map'); if (!hasSeenOpening()) setOpening(true); };
   const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); setIntro(null); };
-  const changeSession = (next: NonNullable<Progress['active']>) => {
-    if (!progress) return;
-    const prior = progress.active;
-    commit(applySession(progress, next));
+  const changeSession = (next: Session, persist = true) => {
+    const snapshot = progressRef.current;
+    if (!snapshot) return;
+    const prior = snapshot.active;
+    commit(applySession(snapshot, next), persist);
     if ((next.step === 'feedback' || next.step === 'defeat') && ((next.success && !prior?.success) || (!next.success && prior?.step !== 'feedback'))) {
       const before = prior ? battleHealth(prior) : {playerHp:100,enemyHp:100};
       const after = battleHealth(next);
       const damage = next.success ? before.enemyHp - after.enemyHp : before.playerHp - after.playerHp;
-      setCue((next.success ? 'success' : 'retry') + '-' + Date.now() + '-' + Math.round(damage));
+      const kind = next.success ? next.ultimateUsed ? 'ultimate' : 'success' : next.preventedDamage ? 'blocked' : 'retry';
+      setCue(kind + '-' + Date.now() + '-' + Math.round(damage));
       attackLock.current = true; setAnimating(true);
       if (attackTimer.current) clearTimeout(attackTimer.current);
-      attackTimer.current = setTimeout(() => { attackLock.current = false; setAnimating(false); }, progress.settings.reducedMotion ? 450 : 1800);
-      if (progress.settings.sound) battleSound(next.success, getLevel(next.levelId).chapterId, progress.settings.reducedMotion);
+      attackTimer.current = setTimeout(() => { attackLock.current = false; setAnimating(false); }, snapshot.settings.reducedMotion ? next.ultimateUsed ? 550 : 450 : next.ultimateUsed ? 3000 : 2050);
+      if (snapshot.settings.sound) battleSound(next.success, getLevel(next.levelId).chapterId, snapshot.settings.reducedMotion);
     }
   };
   const start = (level: Level, review = false) => {
     if (!progress) return;
+    clockRef.current.pause(performance.now()); setRulesOpen(false);
     const session = startSession(level.id, level.mode, review);
     stopAudio();
     attackLock.current = false; setAnimating(false);
     if (attackTimer.current) clearTimeout(attackTimer.current);
     setCue('');
     if (progress.settings.music) playMusicFromGesture();
-    commit(applySession({ ...progress, settings: { ...progress.settings, mode: level.mode } }, session)); setResult(null); setIntro(null);
+    commit(applySession({ ...progress, settings: { ...progress.settings, mode: level.mode } }, session)); setResult(null); setIntro(null); setOpening(false);
     setHintOpen(false); setScreen('battle');
   };
   const restart = () => {
@@ -172,19 +188,20 @@ export function App() {
     setScreen('battle');
   };
   const nextQuestion = () => {
-    if (!progress?.active || attackLock.current) return;
-    const active = progress.active;
+    const snapshot = progressRef.current;
+    if (!snapshot?.active || attackLock.current) return;
+    const active = snapshot.active;
     const next = advanceSession(active);
     stopAudio(); setHintOpen(false);
     if (next.finished) {
-      let finished = finishSession(progress, active);
-      if (active.levelId === 12 && !active.review) {
+      let finished = finishSession(snapshot, active);
+      if (active.levelId === 12 && !active.review && latestRun(finished)?.passed !== false) {
         const records = [...active.records, next.record];
         const proposal = {
           at: new Date().toISOString(), mode: active.mode, reflection: '',
           decisions: records.map(record => {
             const q = presentQuestion(questionById.get(record.questionId)!, record.mode);
-            return { questionId: record.questionId, action: q.choices[record.action].text,
+            return { questionId: record.questionId, action: record.action === null ? '' : q.choices[record.action].text,
               reason: record.reason === null ? '' : q.reasons[record.reason].text };
           }),
         };
@@ -196,6 +213,46 @@ export function App() {
       changeSession(next.session);
     }
   };
+  const flushClock = () => {
+    const session = progressRef.current?.active;
+    const delta = clockRef.current.consume(performance.now());
+    if (!session?.timed || session.step !== 'action' || !delta) return;
+    const next = tickQuestion(session, delta);
+    changeSession(next, next.step !== 'action' || Math.ceil((next.remainingMs ?? 0) / 1000) !== Math.ceil((session.remainingMs ?? 0) / 1000));
+  };
+  flushClockRef.current = flushClock;
+  advanceRef.current = nextQuestion;
+  const answer = (index: number) => {
+    if (attackLock.current) return;
+    flushClock();
+    const current = progressRef.current?.active;
+    if (!current || current.step !== 'action') return;
+    stopAudio(); setHintOpen(false);
+    changeSession(submitAction(chooseAction(current, index)));
+  };
+  useEffect(() => {
+    const session = progressRef.current?.active;
+    const eligible = screen === 'battle' && session?.timed && session.step === 'action' && !rulesOpen && !intro && !opening;
+    if (!eligible) { clockRef.current.pause(performance.now()); return; }
+    const updateVisibility = () => {
+      if (document.hidden) { flushClockRef.current(); clockRef.current.pause(performance.now()); if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); }
+      else clockRef.current.resume(performance.now());
+      setClockPaused(document.hidden);
+    };
+    setClockPaused(document.hidden);
+    if (!document.hidden) clockRef.current.resume(performance.now());
+    const timer = setInterval(() => { if (!document.hidden) flushClockRef.current(); }, 250);
+    document.addEventListener('visibilitychange', updateVisibility);
+    const saveOnExit = () => { flushClockRef.current(); if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); };
+    window.addEventListener('pagehide', saveOnExit);
+    return () => { clearInterval(timer); clockRef.current.pause(performance.now()); document.removeEventListener('visibilitychange', updateVisibility); window.removeEventListener('pagehide', saveOnExit); };
+  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timed, rulesOpen, Boolean(intro), opening]);
+  useEffect(() => {
+    const session = progressRef.current?.active;
+    if (screen !== 'battle' || animating || !session?.timedOut || session.step !== 'feedback') return;
+    const timer = setTimeout(() => advanceRef.current(), 350);
+    return () => clearTimeout(timer);
+  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timedOut, animating]);
   if (!progress) return <main className="loading-shell">
     <img src={appAssetUrl('/icon-192.png')} alt="" width="80" height="80" />
     <h1>AI 校園守護隊</h1>
@@ -235,7 +292,7 @@ export function App() {
       <div className="sidebar-bottom"><button className={'offline-chip ' + (offline.state.ready ? 'ready' : '')} onClick={() => navigate('settings')}>
         {offline.state.ready ? <ShieldCheck size={17} /> : offline.state.online ? <Download size={17} /> : <WifiOff size={17} />}
         {offline.state.ready ? '完整離線包已準備好' : '準備離線冒險'}<ChevronRight size={15} />
-      </button><small>不用帳號 · 不限時間 · 原創校園英雄</small></div>
+      </button><small>不用帳號 · 初階不限時 · 原創校園英雄</small></div>
     </aside>
     {mobileMenu && <button className="sidebar-scrim" aria-label="關閉選單" onClick={() => setMobileMenu(false)} />}
     <div className="content-shell">
@@ -264,23 +321,22 @@ export function App() {
           </div>
           <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
             <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button></div></div>
+            <BattleMechanics session={active} paused={clockPaused || rulesOpen || active.step !== 'action'} onRules={() => { flushClock(); clockRef.current.pause(performance.now()); setRulesOpen(true); }} />
             <h1 id="question-title" tabIndex={-1}>{presented.prompt}</h1>
             {active.step === 'action' && !hintOpen && presented.evidence.length > 0 && <div className="duel-evidence">{presented.evidence.map((e,i) => <p key={i}><b>{e.title}：</b>{e.body}</p>)}</div>}
             {hintOpen && active.step === 'action' && <div className="duel-hint"><Lightbulb size={17} /><p>{question.hint}</p><button className="duel-tool" aria-label="聽提示" onClick={() => narrate(audioKey + '.hint')}><Volume2 size={18} /></button></div>}
-            {(active.step === 'feedback' || isDefeated(active)) && <div className={'duel-feedback ' + (active.success ? 'success' : 'retry')} role="status"><strong>{isDefeated(active) ? '血量歸零了' : active.demoUsed ? '伙伴示範，跟著學！' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
+            {(active.step === 'feedback' || isDefeated(active)) && <div className={'duel-feedback ' + (active.timedOut ? 'timeout' : active.success ? 'success' : 'retry')} role="status"><strong>{isDefeated(active) ? '血量歸零了' : active.timedOut ? '時間到，下一題再加油！' : active.demoUsed ? '伙伴示範，跟著學！' : active.ultimateUsed ? '必殺技！收藏卡已解鎖' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success || active.timedOut ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
           </section>
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>
-          {animating && active.success && <div className="duel-attack-name" key={cue}><Sparkles size={18} />{abilityNames[battleLevel.chapterId - 1]}</div>}
-          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.success ? '命中！' : isDefeated(active) ? '血量歸零' : '再試一次'}</span><b>−{Number(cue.split('-').at(-1))}<small> HP</small></b></div>}
+          {animating && active.success && <div className={'duel-attack-name ' + (active.ultimateUsed ? 'is-ultimate' : '')} key={cue}><Sparkles size={18} />{active.ultimateUsed ? getUltimateSpell(battleLevel.chapterId)?.name + ' · 獎勵＋10分' : abilityNames[battleLevel.chapterId - 1]}</div>}
+          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.preventedDamage ? '護盾擋住！' : active.success ? '命中！' : isDefeated(active) ? '血量歸零' : active.timedOut ? '超時攻擊' : '再試一次'}</span><b>{active.preventedDamage ? '防禦' : '−' + Number(cue.split('-').at(-1))}<small>{active.preventedDamage ? '成功' : ' HP'}</small></b></div>}
           <div className="duel-answer-area">
             <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '')} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
-              if (attackLock.current || active.step !== 'action') return;
-              attackLock.current = true; stopAudio(); setHintOpen(false);
-              changeSession(submitAction(chooseAction(active,i)));
+              answer(i);
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
-            <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(active)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
-              <span className="duel-score" aria-label="目前闖關得分">得分 {scoreSession(active).score}／100</span>
-              {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { attackLock.current = false; changeSession(retryQuestion(active)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => changeSession(demonstrate(active))}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
+            <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { flushClock(); const current = progressRef.current?.active; if (current?.step !== 'action') return; setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(current)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
+              <span className="duel-score" aria-label="目前闖關得分">答題 {scoreSession(active).score}／100{scoreSession(active).bonusScore > 0 && <small>必殺＋{scoreSession(active).bonusScore} · 總分 {scoreSession(active).totalScore}</small>}</span>
+              {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.timedOut ? <span className="duel-select-note" role="status">攻擊後，自動進下一題</span> : active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(retryQuestion(current)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(demonstrate(current)); }}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
             </div>
           </div>
           {isDefeated(active) && !animating && <DefeatDialog level={battleLevel} hint={question.hint} onRestart={restart} onHome={() => navigate('cover')} />}
@@ -295,6 +351,7 @@ export function App() {
       <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
     </div>
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
+    {rulesOpen && <Dialog title="必殺技與計分規則" onClose={() => setRulesOpen(false)}><BattleRules timed={active?.timed === true} /></Dialog>}
     {(opening || intro) && <StoryCinematic key={intro?.id ?? 'opening'} level={intro ?? undefined} beats={intro ? getLevelStory(intro.id) : getOpeningStory()} reducedMotion={progress.settings.reducedMotion}
       onClose={closeStory} onStart={() => { if (intro) start(intro); else { closeStory(); navigate('map'); } }} onNarrate={narrate} onStopNarration={stopAudio}
       savedLevelTitle={intro && active ? getLevel(active.levelId).title : undefined} onResume={intro && active ? () => { closeStory(); if (isDefeated(active)) restart(); else navigate('battle'); } : undefined} />}
@@ -352,7 +409,7 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, o
     <OfflineDownloadCard offline={offline} />
     <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">六個生活主題，自由選關挑戰</span></div>
     <div className="chapter-grid">{chapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
-    <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對就攻擊，答錯再試一次。</h3><p>每關五題，點選答案就能出招。初階從生活小事出發，進階多一個要照顧的狀況。沒有倒數，也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
+    <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對集能量，解鎖你的必殺技！</h3><p>每關五題，點選答案就能出招。能量滿三點，下一題答對釋放必殺。初階不限時；進階每題 30 秒，挑戰速度加分。也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
   </>;
 }
 
@@ -382,17 +439,17 @@ function Results({ session, onLevel, onMap, onReview, onProposal }: {
   const summary = sessionSummary(session.records);
   const score = scoreSession(session);
   return <div className="results-page"><section className="results-hero"><span className="results-medal"><ShieldCheck size={42} /></span>
-    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.review ? '練習成功！又學會一個好方法。' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · 第 {level.mode === 'starter' ? level.id : level.id - 6} 關 · {level.title}</p>
+    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.passed === false ? '成績已保存，再挑戰一次！' : session.review ? '練習成功！又學會一個好方法。' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · 第 {level.mode === 'starter' ? level.id : level.id - 6} 關 · {level.title}{session.passed === false ? ' · 有超時題，尚未過關' : ''}</p>
     <div className="result-skill"><Sparkles size={18} />{chapter.skill}<span>學會的事，比勝率更重要</span></div></section>
     <ScoreSummary run={session} />
-    <div className="summary-grid">{(['first', 'supported', 'practice'] as const).map(status => <div className={'summary-card ' + status} key={status}><span>{statusNames[status]}</span><strong>{summary[status]}<small> 題</small></strong><p>{status === 'first' ? '獨立完成的思考' : status === 'supported' ? '再次思考或使用提示後答對' : '看過示範，安排再練習'}</p></div>)}</div>
+    <div className="summary-grid">{(['first', 'supported', 'practice'] as const).map(status => <div className={'summary-card ' + status} key={status}><span>{statusNames[status]}</span><strong>{summary[status]}<small> 題</small></strong><p>{status === 'first' ? '獨立完成的思考' : status === 'supported' ? '再次思考或使用提示後答對' : '看過示範，安排再練習'}</p></div>)}{score.timeouts > 0 && <div className="summary-card timeout"><span>超時未作答</span><strong>{score.timeouts}<small> 題</small></strong><p>這次留下分數，重新挑戰完成每一題</p></div>}</div>
     <section className="surface result-reflection"><h2>逐題得分與回答紀錄</h2><p>{level.objective}</p><div className="record-list">{session.records.map((r, i) => {
       const q = questionById.get(r.questionId)!;
       const text = presentQuestion(q, r.mode);
-      return <details key={q.id}><summary><div className="result-question"><strong>第 {i + 1} 題</strong><b>{text.prompt}</b><small>{describeAttempt(r)}</small></div><span className="result-question-score">{score.rows[i].points}／{score.rows[i].maxPoints} 分</span><ChevronRight size={18} /></summary><p><b>你的答案：</b>{text.choices[r.action].text}<br />{text.explanation}</p></details>;
+      return <details key={q.id}><summary><div className="result-question"><strong>第 {i + 1} 題</strong><b>{text.prompt}</b><small>{describeAttempt(r)}{r.timed ? ' · 作答 ' + ((r.elapsedMs ?? 0) / 1000).toFixed(1) + ' 秒' : ''}</small></div><span className="result-question-score">{score.rows[i].points}／{score.rows[i].maxPoints} 分{score.rows[i].bonusPoints > 0 && <small>必殺＋{score.rows[i].bonusPoints}</small>}</span><ChevronRight size={18} /></summary><p><b>你的答案：</b>{r.action === null ? '超時，未完成作答' : text.choices[r.action].text}<br />{text.explanation}</p></details>;
     })}</div></section>
     <div className="results-actions"><button className="button secondary" onClick={onMap}><Home size={18} />回冒險地圖</button><button className="button secondary" onClick={onReview}><RotateCcw size={18} />試試兩題新情境</button>
-      {level.id === 12 && !session.review ? <button className="button primary" onClick={onProposal}>我的 AI 使用約定<ArrowRight size={18} /></button>
+      {session.passed === false ? <button className="button primary" onClick={() => onLevel(level)}>再挑戰這一關<RotateCcw size={18} /></button> : level.id === 12 && !session.review ? <button className="button primary" onClick={onProposal}>我的 AI 使用約定<ArrowRight size={18} /></button>
         : level.id < 12 && <button className="button primary" onClick={() => onLevel(getLevel(level.id + 1)!)}>前往第 {level.id + 1} 關<ArrowRight size={18} /></button>}</div>
   </div>;
 }

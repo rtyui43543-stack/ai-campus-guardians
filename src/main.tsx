@@ -16,6 +16,7 @@ import './score.css';
 import './student-readability.css';
 import './magic-campus-theme.css';
 import './styles/cover-world.css';
+import './styles/battle-mechanics.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>

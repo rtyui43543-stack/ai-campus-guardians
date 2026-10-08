@@ -9,6 +9,7 @@ import { useOffline } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
 import { chapterIcons, modeNames, statusNames } from '../App';
+import { UltimateCollection } from './UltimateCollection';
 
 export function downloadFile(name: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -26,16 +27,17 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
   const [filter, setFilter] = useState<'all' | 'practice'>('all');
   const latest = new Map<string, (typeof progress.attempts)[number]>();
   progress.attempts.forEach(attempt => latest.set(attempt.questionId + ':' + attempt.mode, attempt));
-  const needsPractice = [...latest.values()].filter(a => a.status === 'practice');
+  const needsPractice = [...latest.values()].filter(a => a.status === 'practice' || a.status === 'timeout');
   const runs = [...(progress.runs ?? [])].reverse();
   return <>
     <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看哪些題目自己答對，哪些用過提示。下次再試一次，學會的好方法就更多了。</Heading>
     <div className="growth-overview"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / 12</small></strong><span>已完成的修復任務</span></div>
       <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>留下思考紀錄的情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>值得再練習的情境</span></div></div>
-    <section className="surface run-history" aria-label="我的闖關成績"><h2>我的闖關成績</h2><p>每次挑戰的分數與回答方式都會保留。點一筆成績，就能查看逐題得分。</p>
+    <UltimateCollection cards={progress.ultimateCards ?? []} />
+    <section className="surface run-history" aria-label="我的闖關成績"><h2>我的闖關成績</h2><p>每次挑戰的答題分、必殺獎勵與回答方式都會保留。點一筆成績，就能查看逐題得分。</p>
       {runs.length ? <div className="run-history-list">{runs.map(run => { const level = levels.find(item => item.id === run.levelId)!; const score = scoreSession(run); return <button key={run.sessionId} onClick={() => onRun(run)}>
-        <span><b>{modeNames[run.mode]} · 第 {run.mode === 'starter' ? run.levelId : run.levelId - 6} 關 · {level.title}{run.review ? '（重玩練習）' : ''}</b><small>{new Date(run.at).toLocaleString('zh-TW')} · {score.perfect ? '首次全對' : '點開查看回答紀錄'}</small></span><strong>{score.score} 分</strong><ChevronRight size={19} /></button>; })}</div> : <p className="empty-score-history">完成一次關卡挑戰後，這裡會顯示分數。舊版的完整回答紀錄也會換算；沒有完整紀錄的關卡可重新挑戰。</p>}
+        <span><b>{modeNames[run.mode]} · 第 {run.mode === 'starter' ? run.levelId : run.levelId - 6} 關 · {level.title}{run.review ? '（重玩練習）' : ''}</b><small>{new Date(run.at).toLocaleString('zh-TW')} · {run.passed === false ? '有超時題，尚未過關' : score.perfect ? '首次全對' : '點開查看回答紀錄'}{score.bonusScore ? ' · 答題 ' + score.score + '＋必殺 ' + score.bonusScore : ''}</small></span><strong>{score.totalScore} 分</strong><ChevronRight size={19} /></button>; })}</div> : <p className="empty-score-history">完成一次關卡挑戰後，這裡會顯示分數。舊版的完整回答紀錄也會換算；沒有完整紀錄的關卡可重新挑戰。</p>}
     </section>
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
@@ -123,7 +125,7 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
       <div className="preference-row"><div><b>戰鬥背景音樂</b><p>對戰時播放緊湊的冒險配樂；也能在題目旁隨時關閉。</p></div><Toggle label="戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
       <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
-      <div className="preference-row"><div><b>挑戰模式</b><p>初階從生活小事開始；進階多一個需要思考的狀況。兩種路線各六關，都能直接選答案。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
+      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六關，都能集能量解鎖必殺技。兩題重玩練習不限時、不充能。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
     </section>
   </>;
 }

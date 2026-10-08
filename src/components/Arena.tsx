@@ -5,6 +5,7 @@ import { appAssetUrl } from '../platform/urls';
 import type { Mode } from '../domain/types';
 import { getBossForTheme } from '../content/missionBosses';
 import { getAdvancedBossArt } from './advancedBossSprite';
+import { normalSpellNames } from './themedSpellEffects';
 
 interface ArenaProps {
   chapter: number;
@@ -19,7 +20,7 @@ interface ArenaProps {
   companion?: boolean;
 }
 
-export const abilityNames = ['個資守護光球', '查證掃描光束', '分類卡片旋風', '真相稜鏡光波', '思考魔法書', '合作星光陣'];
+export const abilityNames = normalSpellNames;
 export const ATTACK_IMPACT_MS = 900;
 
 export function GuardianPortrait({ chapter, mode, className = '' }: { chapter: number; mode: Mode; className?: string }) {
@@ -83,7 +84,8 @@ export function Arena({ chapter, mode, enemyHp, playerHp, reducedMotion, cue, gu
   useEffect(() => {
     if (!cue || cue === lastCue.current) return;
     lastCue.current = cue;
-    scene.current?.play(cue.startsWith('success'));
+    const ultimate = cue.startsWith('ultimate');
+    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'));
   }, [cue]);
   return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
     data-boss={companion ? 'mimi-companion' : getBossForTheme(chapter, mode).id} data-boss-mode={companion ? 'companion' : mode}
