@@ -147,7 +147,7 @@ export function UltimateCollection({ cards, initialMode = 'starter' }: UltimateC
   const selectedRecord = selected ? cards.find(card => getUltimateCardKey(card) === selectedKey) : undefined;
   return <section className="ultimate-collection" aria-labelledby={headingId}>
     <div className="ultimate-collection-heading"><div><span className="ultimate-collection-eyebrow"><Sparkles size={20} />小羽的專屬魔法收藏</span><h2 id={headingId}>我的必殺技收藏卡</h2></div><strong>{total}<span>／12 張</span></strong></div>
-    <p className="ultimate-collection-rule">主要挑戰答對一題集 1 點能量，答錯或超時扣 1 點。集滿 3 點後，下一題答對就會自動施放必殺技，另外加 10 分，解鎖這個主題的收藏卡！</p>
+    <p className="ultimate-collection-rule">主要挑戰答對一題集 1 點能量，答錯保留能量，進階超時扣 1 點。集滿 3 點後，下一題答對就會自動施放必殺技，另外加 10 分，解鎖這個主題的收藏卡！</p>
     <p className="ultimate-collection-note">每關能量從 0 開始；同一張卡只收藏一次，重新挑戰仍能獲得施放獎勵。初階與進階分別收藏，進階不用先集齊初階卡。</p>
     <div className="ultimate-tier-tabs" role="group" aria-label="選擇必殺技等級">{(['starter', 'advanced'] as Mode[]).map(tier => <button type="button" key={tier} aria-pressed={mode === tier} onClick={() => setMode(tier)}><span>{tier === 'starter' ? 'Lv.1 初階魔法' : 'Lv.2 進階升級'}</span><b>{unlockedUltimateIds(cards, tier).size}／6 張</b></button>)}</div>
     <p className="ultimate-tier-summary">{mode === 'advanced' ? '六種魔法升級！進階必殺技展開半屏或全屏演出，完成施放就能收藏升級卡。' : '從六種生活主題學會魔法，在初階挑戰施放必殺技，收集你的第一套魔法卡。'}</p>

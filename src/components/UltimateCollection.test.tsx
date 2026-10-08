@@ -34,7 +34,7 @@ describe('ultimate collection visibility', () => {
   });
   it('explains energy reset, separate reward points, and repeat-cast rewards without presenting an unearned card', () => {
     const html = renderToStaticMarkup(createElement(UltimateCollection, { cards: [] }));
-    expect(html).toContain('答錯或超時扣 1 點');
+    expect(html).toContain('答錯保留能量，進階超時扣 1 點');
     expect(html).toContain('下一題答對');
     expect(html).toContain('另外加 10 分');
     expect(html).toContain('每關能量從 0 開始');

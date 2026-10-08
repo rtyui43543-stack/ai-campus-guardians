@@ -29,4 +29,25 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(markup).toContain('ultimate-phoenix-wing');
     expect(markup).toContain(getUltimateSpell(5, 'advanced')!.name);
   });
+
+  it('sends the enlarged phoenix at the opponent before the full-battlefield fire, without adding input controls', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={5} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(markup).toContain('烈焰鳳變大展翼，飛向右方對手，命中後火焰燃燒全場');
+    const phases = ['data-phase="summon-grow-flight"', 'data-phase="enemy-impact"', 'data-phase="full-battlefield-burn"'];
+    const positions = phases.map(phase => markup.indexOf(phase));
+    expect(positions.every(position => position > -1)).toBe(true);
+    expect(positions[0]).toBeLessThan(positions[1]);
+    expect(positions[1]).toBeLessThan(positions[2]);
+    expect(markup).toContain('ultimate-phoenix-fire-front');
+    expect(markup).not.toContain('ultimate-main-shape ultimate-phoenix');
+    expect(markup).not.toContain('<button');
+  });
+
+  it('does not replace the other five upgraded formations with phoenix impact or flame layers', () => {
+    for (const chapter of [1, 2, 3, 4, 6]) {
+      const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
+      expect(markup).not.toContain('data-phase="enemy-impact"');
+      expect(markup).not.toContain('data-phase="full-battlefield-burn"');
+    }
+  });
 });

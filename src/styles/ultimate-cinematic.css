@@ -8,7 +8,27 @@
 .ultimate-flying-pages,.ultimate-orbit-seals{transform-origin:720px 500px;animation:ultimate-pages-swirl 3s both}.ultimate-paper,.ultimate-sort-piece,.ultimate-mirror,.ultimate-shield,.ultimate-star{transform-box:fill-box;transform-origin:center;animation:ultimate-piece-reveal 3s both;animation-delay:var(--piece-delay,0s)}
 .ultimate-lightning{stroke-dasharray:1300;animation:ultimate-bolt-draw 3s both;filter:drop-shadow(0 0 5px #bbe5ff)}.ultimate-great-book{transform-origin:720px 550px;animation:ultimate-book-open 3s both}.ultimate-vine-path,.ultimate-root-links{stroke-dasharray:2000;animation:ultimate-link-grow 3s both}.ultimate-leaves{transform-origin:720px 650px;animation:ultimate-leaf-rise 3s both}
 .ultimate-false-faces{animation:ultimate-false-collapse 3s both;transform-origin:720px 425px}.ultimate-mirrors{transform-origin:720px 650px;animation:ultimate-mirror-rise 3s both}.ultimate-phoenix-wing{transform-origin:720px 550px}.ultimate-phoenix-wing.left{animation:ultimate-wing-left 3s both}.ultimate-phoenix-wing.right{animation:ultimate-wing-right 3s both}.ultimate-phoenix-body{animation:ultimate-phoenix-rise 3s both;transform-origin:720px 650px}.ultimate-flame-trails{stroke-dasharray:1400;animation:ultimate-link-grow 3s both}.ultimate-tree-crown{transform-origin:720px 480px;animation:ultimate-tree-bloom 3s both}.ultimate-tree-trunk{transform-origin:720px 774px;animation:ultimate-tree-grow 3s both}.ultimate-partner-shields{animation:ultimate-shields-link 3s both;transform-origin:720px 665px}
+/* The phoenix leaves the mage's lane, grows, then contacts the enemy at 30%
+   (900 ms). Only after contact do the impact and full-field fire appear. */
+.ultimate-phoenix{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.ultimate-phoenix-flight{position:absolute;left:32%;top:64%;width:min(88vw,135vh,1150px);aspect-ratio:1.6;transform-origin:50% 61%;transform:translate(-50%,-61%) scale(.23);filter:drop-shadow(0 0 13px #ff982bb3) drop-shadow(0 7px 6px #7b39115e);animation:ultimate-phoenix-projectile 3s both}
+.ultimate-phoenix-flight>svg{display:block;width:100%;height:100%;overflow:visible}
+.ultimate-phoenix-flight .ultimate-phoenix-body{animation:none}
+.ultimate-phoenix-flight .ultimate-phoenix-wing.left{animation:ultimate-flight-wing-left 3s both}.ultimate-phoenix-flight .ultimate-phoenix-wing.right{animation:ultimate-flight-wing-right 3s both}
+.ultimate-phoenix-flight-trail{opacity:0;filter:drop-shadow(0 0 10px #ffb347);animation:ultimate-phoenix-wake 3s both}
+.ultimate-phoenix-impact{position:absolute;left:71%;top:64%;width:clamp(220px,27vw,500px);aspect-ratio:1;opacity:0;transform-origin:center;transform:translate(-50%,-50%) scale(.05);filter:drop-shadow(0 0 21px #ffba48);animation:ultimate-phoenix-hit 3s both}
+.ultimate-phoenix-impact>svg{display:block;width:100%;height:100%;overflow:visible}
+.ultimate-phoenix-screen-blaze{position:absolute;inset:0;opacity:0;transform-origin:71% 64%;background:radial-gradient(ellipse at 71% 64%,#fff8c7cc 0,#ffc05ea3 22%,#e75d359c 49%,#9b292f73 78%,transparent),linear-gradient(0deg,#f2693166,#ffdb7138);animation:ultimate-phoenix-blaze 3s both}
+.ultimate-phoenix-burn{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;animation:ultimate-phoenix-burn-hold 3s both}
+.ultimate-phoenix-fire-front{transform-origin:71% 100%;animation:ultimate-phoenix-spread 3s both;filter:drop-shadow(0 -9px 14px #ffb94b8c)}
+.ultimate-screen-flame{transform-origin:50% 100%;scale:1 var(--flame-height,1)}
+.ultimate-phoenix-fire-embers{animation:ultimate-phoenix-embers 3s both;filter:drop-shadow(0 0 5px #ffb765)}
+.ultimate-theme-5 .ultimate-field-wash{opacity:.15;background:radial-gradient(ellipse at 32% 64%,#ffd58a45,transparent 46%);animation:ultimate-phoenix-summon-wash 3s both}
+.ultimate-theme-5 .ultimate-ground,.ultimate-theme-5 .ultimate-edge-stars{opacity:.38}
 .ultimate-cinematic.is-reduced,.ultimate-cinematic.is-reduced *{animation:none!important}.ultimate-cinematic.is-reduced .ultimate-field-wash{opacity:.4}.ultimate-cinematic.is-reduced .ultimate-false-faces{opacity:0}.ultimate-cinematic.is-reduced .ultimate-tier-banner{top:48%;opacity:1}.ultimate-cinematic.is-reduced .ultimate-field{opacity:.8}
+.ultimate-cinematic.is-reduced .ultimate-phoenix-flight{left:68%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.5)}
+.ultimate-cinematic.is-reduced .ultimate-phoenix-wing{rotate:0deg;scale:1}.ultimate-cinematic.is-reduced .ultimate-phoenix-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}
+.ultimate-cinematic.is-reduced .ultimate-phoenix-screen-blaze{opacity:.3;transform:none}.ultimate-cinematic.is-reduced .ultimate-phoenix-burn{opacity:.35}.ultimate-cinematic.is-reduced .ultimate-phoenix-fire-front{transform:none}
 /* Keep a recognizable opening frame even when a background tab pauses its
    animation clock. Motion grows an already-visible form instead of revealing
    an initially transparent scene. The shared three-second ending is unchanged. */
@@ -29,8 +49,18 @@
 @keyframes ultimate-wing-left{0%{rotate:14deg;scale:.85}34%{rotate:-5deg;scale:1}63%,100%{rotate:0deg;scale:1}}
 @keyframes ultimate-wing-right{0%{rotate:-14deg;scale:.85}34%{rotate:5deg;scale:1}63%,100%{rotate:0deg;scale:1}}
 @keyframes ultimate-phoenix-rise{0%{translate:0 30px;scale:.85}35%,77%{translate:0 0;scale:1}100%{translate:0 -50px;scale:1.05}}
+@keyframes ultimate-phoenix-projectile{0%{left:32%;top:64%;opacity:.9;transform:translate(-50%,-61%) scale(.23) rotate(-7deg)}12%{left:32%;top:61%;opacity:1;transform:translate(-50%,-61%) scale(.82) rotate(-5deg)}16%{left:34%;top:60%;opacity:1;transform:translate(-50%,-61%) scale(.86) rotate(6deg)}24%{left:58%;top:60%;opacity:1;transform:translate(-50%,-61%) scale(.72) rotate(14deg)}30%{left:71%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.66) rotate(18deg)}36%,100%{left:74%;top:65%;opacity:0;transform:translate(-50%,-61%) scale(.3) rotate(28deg)}}
+@keyframes ultimate-flight-wing-left{0%{rotate:32deg;scale:.7}12%{rotate:-9deg;scale:1.1}18%{rotate:16deg;scale:1}24%{rotate:-15deg;scale:1.04}30%,100%{rotate:12deg;scale:1}}
+@keyframes ultimate-flight-wing-right{0%{rotate:-32deg;scale:.7}12%{rotate:9deg;scale:1.1}18%{rotate:-16deg;scale:1}24%{rotate:15deg;scale:1.04}30%,100%{rotate:-12deg;scale:1}}
+@keyframes ultimate-phoenix-wake{0%,16%{opacity:0}21%,29%{opacity:.85}36%,100%{opacity:0}}
+@keyframes ultimate-phoenix-hit{0%,29.8%{opacity:0;transform:translate(-50%,-50%) scale(.05)}30.2%{opacity:1;transform:translate(-50%,-50%) scale(.35)}34%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}44%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.8)}}
+@keyframes ultimate-phoenix-blaze{0%,29.8%{opacity:0;transform:scale(.1)}32%{opacity:.7;transform:scale(.5)}44%,69%{opacity:.8;transform:scale(1.2)}83%{opacity:.42;transform:scale(1.3)}100%{opacity:0;transform:scale(1.4)}}
+@keyframes ultimate-phoenix-burn-hold{0%,29.8%{opacity:0}31%{opacity:.6}45%,75%{opacity:.88}88%{opacity:.5}100%{opacity:0}}
+@keyframes ultimate-phoenix-spread{0%,29.8%{transform:translateY(180px) scale(.08,.4)}32%{transform:translateY(80px) scale(.3,.6)}43%{transform:translateY(0) scale(1.1,1.15)}60%{transform:translateY(-45px) scale(1.23,1.35)}82%{transform:translateY(-75px) scale(1.34,1.5)}100%{transform:translateY(-120px) scale(1.45,1.65)}}
+@keyframes ultimate-phoenix-embers{0%,29.8%{opacity:0;translate:0 40px}40%{opacity:1;translate:0 -45px}74%{opacity:.9;translate:-40px -120px}100%{opacity:0;translate:-70px -230px}}
+@keyframes ultimate-phoenix-summon-wash{0%,15%{opacity:.4}29.8%{opacity:.15}40%,100%{opacity:0}}
 @keyframes ultimate-tree-bloom{0%,10%{scale:.75;opacity:.8}43%,80%{scale:1;opacity:1}100%{opacity:0;scale:1.05}}
 @keyframes ultimate-tree-grow{0%{scale:.85 .82;opacity:.85}30%,84%{scale:1 1;opacity:1}100%{opacity:0}}
 @keyframes ultimate-shields-link{0%,15%{translate:0 15px;opacity:.8}45%,80%{translate:0 0;opacity:1}100%{opacity:0}}
 @media(max-width:600px){.ultimate-cinematic.scope-half .ultimate-field{width:100%;left:0}.ultimate-cinematic.scope-half .ultimate-field-wash{right:0}.ultimate-tier-banner{top:49%;padding:7px 16px 10px;border-radius:12px}.ultimate-cinematic .ultimate-tier-banner>strong{font-size:23px}.ultimate-cinematic .ultimate-tier-banner>span{font-size:12px}.ultimate-field{opacity:.9}}
-@media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}}
+@media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}.ultimate-cinematic .ultimate-phoenix-flight{left:68%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.5)}.ultimate-cinematic .ultimate-phoenix-wing{rotate:0deg;scale:1}.ultimate-cinematic .ultimate-phoenix-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}.ultimate-cinematic .ultimate-phoenix-screen-blaze{opacity:.3;transform:none}.ultimate-cinematic .ultimate-phoenix-burn{opacity:.35}.ultimate-cinematic .ultimate-phoenix-fire-front{transform:none}}

@@ -14,6 +14,53 @@ const star = 'M0-18 5-5 18 0 5 5 0 18-5 5-18 0-5-5Z';
 const leaf = 'M0 0C-45-30-52-90 0-123C52-90 45-30 0 0Z';
 const feather = 'M0 0C-18-35-33-96 0-170C35-96 22-34 0 0Z';
 
+/** Keep the bird's proportions while its HTML anchor travels between the same
+ * left/right actor lanes as the arena. Contact is at 900 ms, when HP changes. */
+function PhoenixProjectile({ id }: { id: string }) {
+  const fire = `url(#${id}-phoenix-fire)`;
+  return <div className="ultimate-phoenix" data-sequence="summon-grow-flight-impact-burn">
+    <div className="ultimate-phoenix-flight" data-phase="summon-grow-flight">
+      <svg viewBox="0 0 1440 900" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-phoenix-fire`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b83928" /><stop offset=".4" stopColor="#f47b37" /><stop offset=".75" stopColor="#ffd269" /><stop offset="1" stopColor="#fff9d7" /></linearGradient></defs>
+        <g className="ultimate-phoenix-flight-trail" fill="none" stroke="#ffc866" strokeWidth="18" strokeLinecap="round">
+          <path d="M665 595C475 525 295 626 36 617M669 639C434 646 237 735 23 695M682 684C475 752 282 798 108 763" />
+        </g>
+        <g className="ultimate-phoenix-wing left" fill={fire} stroke="#b3662d" strokeWidth="3" strokeLinejoin="round">
+          <path d="M720 537C536 532 341 428 133 216C83 395 168 533 630 660Z" />
+          {Array.from({ length: 9 }, (_, i) => <path key={i} d={feather} transform={`translate(${634 - i * 42} ${618 - i * 25}) rotate(${-52 - i * 5}) scale(${1.2 + i * .09})`} />)}
+        </g>
+        <g className="ultimate-phoenix-wing right" fill={fire} stroke="#b3662d" strokeWidth="3" strokeLinejoin="round">
+          <path d="M720 537C904 532 1099 428 1307 216C1357 395 1272 533 810 660Z" />
+          {Array.from({ length: 9 }, (_, i) => <path key={i} d={feather} transform={`translate(${806 + i * 42} ${618 - i * 25}) rotate(${52 + i * 5}) scale(${1.2 + i * .09})`} />)}
+        </g>
+        <g className="ultimate-phoenix-body" fill={fire} stroke="#9b5628" strokeWidth="5">
+          <path d="M720 706C577 589 648 466 690 395C709 363 690 320 718 294C754 332 744 353 765 384L834 416 772 434C814 500 835 591 720 706Z" />
+          {[0, 1, 2, 3, 4].map(i => <path key={i} d={feather} transform={`translate(${690 + i * 15} ${782 + (i % 2) * 28}) rotate(${(i - 2) * 13}) scale(.9 1.25)`} />)}
+          <path d="M715 357 728 363 714 371" fill="#1b4845" stroke="none" />
+        </g>
+      </svg>
+    </div>
+    <div className="ultimate-phoenix-impact" data-phase="enemy-impact">
+      <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
+        <circle className="ultimate-fire-impact-ring" r="102" fill="#fff1a037" stroke="#ffe79b" strokeWidth="12" />
+        <path d="M0-180 31-80 105-141 76-42 185-29 87 14 137 117 40 70 0 188-36 77-133 132-77 34-182-15-83-44-110-144-34-81Z" fill="#ffd887" stroke="#f88937" strokeWidth="10" />
+        <path d="M0-100 20-38 80-27 38 19 47 85-9 47-66 88-46 19-104-22-35-39Z" fill="#fff8d2" />
+      </svg>
+    </div>
+    <div className="ultimate-phoenix-screen-blaze" data-phase="full-battlefield-burn" />
+    <svg className="ultimate-phoenix-burn" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <defs><linearGradient id={`${id}-screen-flame`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b73523" stopOpacity=".72" /><stop offset=".4" stopColor="#f27831" stopOpacity=".86" /><stop offset=".76" stopColor="#ffca67" stopOpacity=".68" /><stop offset="1" stopColor="#fff3b6" stopOpacity=".15" /></linearGradient></defs>
+      <g className="ultimate-phoenix-fire-front" fill={`url(#${id}-screen-flame)`}>
+        {Array.from({ length: 16 }, (_, i) => <path key={i} className="ultimate-screen-flame" style={{ '--flame-height': `${.78 + (i % 4) * .11}` } as CSSProperties}
+          d={`M${i * 96 - 60} 900C${i * 96 - 108} 691 ${i * 96 + 10} 704 ${i * 96 - 5} ${355 + (i % 4) * 66}C${i * 96 + 112} ${542 + (i % 3) * 54} ${i * 96 + 69} 599 ${i * 96 + 100} 680C${i * 96 + 142} 576 ${i * 96 + 162} 669 ${i * 96 + 174} 900Z`} />)}
+      </g>
+      <g className="ultimate-phoenix-fire-embers" fill="#ffe4a2">
+        {Array.from({ length: 25 }, (_, i) => <path key={i} d={feather} transform={`translate(${31 + i * 59} ${790 - (i % 5) * 99}) rotate(${(i % 3 - 1) * 34}) scale(${.07 + (i % 4) * .015})`} />)}
+      </g>
+    </svg>
+  </div>;
+}
+
 /** The advanced form fills the battlefield, under the question and answer UI.
  * The existing 3D staff, projectile and impact still play beneath it. No game
  * state, animation timer or damage is owned by this presentation component. */
@@ -26,9 +73,12 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
   const accent = colors[chapter - 1];
   const fill = (name: string) => `url(#${id}-${name})`;
   const scope = chapter === 1 ? 'half' : 'full';
+  const presentation = chapter === 5
+    ? '烈焰鳳變大展翼，飛向右方對手，命中後火焰燃燒全場'
+    : `${scope === 'half' ? '半屏' : '全場'}魔法展開`;
   const maskFaces = [[315, 405], [720, 435], [1115, 405]];
   return <div className={`ultimate-cinematic ultimate-theme-${chapter} scope-${scope}${reducedMotion ? ' is-reduced' : ''}`}
-    role="img" aria-label={`進階升級必殺技：${spell?.name ?? '主題魔法'}，${scope === 'half' ? '半屏' : '全場'}魔法展開`}
+    role="img" aria-label={`進階升級必殺技：${spell?.name ?? '主題魔法'}，${presentation}`}
     data-ultimate-tier="advanced" data-spell={chapter} data-cue={cue} data-scope={scope}>
     <div className="ultimate-field-wash" style={{ '--ultimate-accent': accent } as CSSProperties} />
     <svg className="ultimate-field" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
@@ -112,24 +162,6 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
           })}
         </g>
       </g>}
-      {chapter === 5 && <g className="ultimate-main-shape ultimate-phoenix">
-        <g className="ultimate-phoenix-wing left" fill={fill('flame')} stroke="#b3662d" strokeWidth="3" strokeLinejoin="round">
-          <path d="M720 537C536 532 341 428 133 216C83 395 168 533 630 660Z" />
-          {Array.from({ length: 9 }, (_, i) => <path key={i} d={feather} transform={`translate(${634 - i * 42} ${618 - i * 25}) rotate(${-52 - i * 5}) scale(${1.2 + i * .09})`} />)}
-        </g>
-        <g className="ultimate-phoenix-wing right" fill={fill('flame')} stroke="#b3662d" strokeWidth="3" strokeLinejoin="round">
-          <path d="M720 537C904 532 1099 428 1307 216C1357 395 1272 533 810 660Z" />
-          {Array.from({ length: 9 }, (_, i) => <path key={i} d={feather} transform={`translate(${806 + i * 42} ${618 - i * 25}) rotate(${52 + i * 5}) scale(${1.2 + i * .09})`} />)}
-        </g>
-        <g className="ultimate-phoenix-body" fill={fill('flame')} stroke="#9b5628" strokeWidth="5">
-          <path d="M720 706C577 589 648 466 690 395C709 363 690 320 718 294C754 332 744 353 765 384L834 416 772 434C814 500 835 591 720 706Z" />
-          {[0, 1, 2, 3, 4].map(i => <path key={i} d={feather} transform={`translate(${690 + i * 15} ${782 + (i % 2) * 28}) rotate(${(i - 2) * 13}) scale(.9 1.25)`} />)}
-          <path d="M715 357 728 363 714 371" fill="#1b4845" stroke="none" />
-        </g>
-        <g className="ultimate-flame-trails" fill="none" stroke={fill('gold')} strokeWidth="7">
-          <path d="M54 746C75 555 327 530 480 600M1386 746C1365 555 1113 530 960 600" /><path d="M177 774C218 651 395 654 527 685M1263 774C1222 651 1045 654 913 685" />
-        </g>
-      </g>}
       {chapter === 6 && <g className="ultimate-main-shape ultimate-world-tree">
         <path className="ultimate-tree-trunk" d="M546 773C678 641 649 572 672 492L464 367 500 329 698 403 682 237 734 225 753 410 944 302 979 348 778 509C818 598 759 685 896 773Z" fill={fill('trunk')} stroke="#164b44" strokeWidth="8" strokeLinejoin="round" />
         <path d="M642 769 712 629 725 456 716 277M719 459 519 350M749 464 933 333" fill="none" stroke="#e5df98" strokeWidth="6" opacity=".7" />
@@ -146,6 +178,7 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
         {Array.from({ length: 18 }, (_, i) => <path key={i} d={star} className="ultimate-star" style={{ '--piece-delay': `${(i % 5) * .035}s` } as CSSProperties} transform={`translate(${45 + i * 80} ${220 + (i % 4) * 130}) scale(${.35 + i % 3 * .14})`} />)}
       </g>
     </svg>
+    {chapter === 5 && <PhoenixProjectile id={id} />}
     <div className="ultimate-tier-banner"><span>技能升級 · 進階必殺</span><strong>{spell?.name}</strong></div>
   </div>;
 }

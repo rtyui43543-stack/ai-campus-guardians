@@ -5,7 +5,7 @@ import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
-import { createThemedSpellEffects, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
+import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -278,6 +278,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     enemy.glow.emissive.setHex(enemyHp === 0 ? 0x1e614d : 0x000000);
     enemy.glow.emissiveIntensity = enemyHp === 0 ? .18 : 0;
     hero.glow.emissiveIntensity = .65;
+    hero.glow.emissive.setHex(heroSpellColors[theme - 1]);
     // Keep the helper clear of the cover actor's wider hat, hair and face.
     drone.position.set(heroX - modelScale * 1.45, modelScale * (3.30 + (reducedMotion ? 0 : Math.sin(idle * 3) * .08)), -.1);
     drone.rotation.y = reducedMotion ? 0 : Math.sin(idle * 1.5) * .12;
@@ -332,9 +333,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       // Scale only the effect clock; ordinary motion contacts at 900 ms.
       const t = effectClock;
       const success = attack.success;
+      const phoenixCast = success && theme === 5;
       emitPhase(attack.ultimate
-        ? t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
+        ? phoenixCast ? t < .42 ? '烈焰鳳召喚' : t < .9 ? '烈焰鳳飛襲' : t < 2.65 ? '烈焰命中燃燒' : '烈焰收勢'
+        : t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
         : attack.blocked && t >= .9 && t < 1.75 ? '守護盾攔截'
+        : phoenixCast ? t < .34 ? '火羽匯聚' : t < .48 ? '揮杖施火' : t < .9 ? '火羽飛襲' : t < 1.75 ? '火焰迸裂' : '收杖'
         : t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.75 ? '法術命中' : '收杖');
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);
       const recovery = 1 - ease((t - 1.2) / .45);
@@ -386,9 +390,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         scale: modelScale, reducedMotion, camera });
       renderer.domElement.setAttribute('data-spell', String(effects.root.userData.spell));
       renderer.domElement.setAttribute('data-spell-kind', String(effects.root.userData.kind));
+      renderer.domElement.setAttribute('data-spell-element', String(effects.root.userData.element));
       renderer.domElement.setAttribute('data-spell-phase', String(effects.root.userData.phase));
       if (success && t >= .9) {
-        enemy.glow.emissive.setHex(0xffb64d); enemy.glow.emissiveIntensity = (1 - burst) * .65;
+        enemy.glow.emissive.setHex(heroSpellColors[theme - 1]); enemy.glow.emissiveIntensity = (1 - burst) * .65;
       }
       if (t >= (attack.ultimate ? ULTIMATE_CAST_SECONDS : NORMAL_CAST_SECONDS)) { attack = null; effects.clear(); emitPhase('待命'); resize(); }
     } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方退場' : playerHp === 0 ? '伙伴守護中' : '待命');

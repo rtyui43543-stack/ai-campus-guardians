@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createThemedSpellEffects, NORMAL_CAST_SECONDS, SPELL_IMPACT_SECONDS, ULTIMATE_CAST_SECONDS,
-  enemySpellNames, normalSpellNames, ultimateSpellNames, type SpellFrame } from './themedSpellEffects';
+  enemySpellNames, heroSpellElements, normalSpellNames, ultimateSpellNames, type SpellFrame } from './themedSpellEffects';
 import { getUltimateSpell } from '../content/ultimateSpells';
 
 const camera = new THREE.PerspectiveCamera(); camera.position.set(0, 5, 15); camera.lookAt(0, 1.8, 0);
@@ -29,7 +29,7 @@ describe('themed spell performances', () => {
     }
   });
   it('constructs six concrete hero silhouettes and six separately recognizable ultimate formations', () => {
-    const normalShapes = ['padlock', 'tracking-arrow', 'classification-card', 'mirror-blade', 'flame-feather', 'growing-branch'];
+    const normalShapes = ['guardian-castle', 'thunder-book-page', 'leaf-puzzle-piece', 'mirror-blade', 'flame-feather', 'growing-branch'];
     const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'wisdom-phoenix', 'faceted-shield'];
     for (let chapter = 1; chapter <= 6; chapter++) {
       const scene = new THREE.Scene(), fx = createThemedSpellEffects(scene, chapter, 'starter');
@@ -48,6 +48,62 @@ describe('themed spell performances', () => {
       expect(visibleMeshes(fx.root).length).toBeGreaterThan(10);
       fx.dispose();
     }
+  });
+
+  it('keeps every ordinary spell in the same element family as its starter and upgraded ultimate', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      fx.update(frame());
+      expect(fx.root.userData.element).toBe(heroSpellElements[chapter - 1]);
+      fx.update(frame({ ultimate: true, time: 1.15 }));
+      expect(fx.root.userData.element).toBe(heroSpellElements[chapter - 1]);
+      fx.dispose();
+    }
+  });
+
+  it('throws only warm flame feathers in the fire chapter and erupts into flames at the enemy on contact', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), 5, mode);
+      const normal = fx.root.getObjectByName('normal-5')!;
+      expect(normal.getObjectByName('open-learning-book')).toBeUndefined();
+      expect(normal.getObjectByName('flaming-feather-projectile')).toBeDefined();
+      expect(normal.getObjectByName('flame-tongue')).toBeDefined();
+      fx.update(frame({ time: .6 }));
+      expect(normal.getObjectByName('normal-impact')!.visible).toBe(false);
+      for (const node of visibleMeshes(normal)) {
+        const value = (node as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        const hue = value.color.getHSL({ h: 0, s: 0, l: 0 });
+        expect(hue.h).toBeGreaterThanOrEqual(0);
+        expect(hue.h).toBeLessThan(.17);
+      }
+      fx.update(frame({ time: SPELL_IMPACT_SECONDS }));
+      const impact = normal.getObjectByName('normal-impact')!;
+      expect(impact.visible).toBe(true);
+      expect(impact.getObjectByName('fire-feather-impact')).toBeDefined();
+      expect(impact.position.x).toBe(frame().target.x);
+      expect(impact.position.y).toBe(frame().target.y);
+      fx.update(frame({ time: 1.3 }));
+      expect(normal.getObjectByName('flaming-feather-projectile')!.visible).toBe(false);
+      expect(visibleMeshes(impact).length).toBeGreaterThan(10);
+      fx.dispose();
+    }
+  });
+
+  it('changes the advanced phoenix into fire on contact instead of leaving a second bird hovering during the cinematic', () => {
+    const fx = createThemedSpellEffects(new THREE.Scene(), 5, 'advanced');
+    const special = fx.root.getObjectByName('ultimate-5')!;
+    expect(special.getObjectByName('open-learning-book')).toBeUndefined();
+    const bird = special.getObjectByName('ultimate-strike')!;
+    const fire = special.getObjectByName('phoenix-fire-impact')!;
+    fx.update(frame({ ultimate: true, time: .6 }));
+    expect(bird.visible).toBe(true); expect(fire.visible).toBe(false);
+    fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
+    expect(fire.visible).toBe(true);
+    expect(fire.position.x).toBe(frame().target.x);
+    fx.update(frame({ ultimate: true, time: 1.1 }));
+    expect(bird.visible).toBe(false); expect(fire.visible).toBe(true);
+    expect(visibleMeshes(fire).length).toBeGreaterThan(10);
+    fx.dispose();
   });
 
   it('matches 12 counterattacks to the boss species instead of firing the hero projectile backward', () => {

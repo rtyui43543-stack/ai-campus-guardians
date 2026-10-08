@@ -38,7 +38,7 @@
       "subtitle": "自己的資料，自己好好照顧",
       "description": "分清楚需要的資料，分享前先想用途和同意。",
       "color": "#3ca9a0",
-      "skill": "個資封印鎖",
+      "skill": "守護城堡封印",
       "guardian": "搜集魔盒",
       "icon": "shield"
     },
@@ -49,7 +49,7 @@
       "subtitle": "AI 說得肯定，也要找線索",
       "description": "看看原本的資料、日期和來源，再決定是否相信。",
       "color": "#e0a24a",
-      "skill": "線索追蹤箭",
+      "skill": "雷霆書頁",
       "guardian": "迷言書靈",
       "icon": "search"
     },
@@ -60,7 +60,7 @@
       "subtitle": "用法不同，需要的幫忙也不同",
       "description": "分一分哪些事適合讓 AI 協助，哪些需要自己或大人判斷。",
       "color": "#758bca",
-      "skill": "分類卡片龍捲",
+      "skill": "森葉分類拼圖",
       "guardian": "混淆機兵",
       "icon": "scan"
     },
@@ -82,7 +82,7 @@
       "subtitle": "讓 AI 幫助理解，保留自己的學習",
       "description": "練習提問、核對和修改，不把 AI 的答案直接當成自己的作業。",
       "color": "#db8166",
-      "skill": "思考火羽",
+      "skill": "烈焰火羽",
       "guardian": "代寫紙龍",
       "icon": "hand"
     },

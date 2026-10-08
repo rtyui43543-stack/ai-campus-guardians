@@ -131,6 +131,33 @@ describe('new campaign storage and backups', () => {
     expect(retryQuestion(checkpoints[0]).step).toBe('action');
   });
 
+  it.each([2, 8])('preserves a legacy depleted checkpoint for mission %i and applies the new rule only to future answers', async levelId => {
+    const storage = await import('./storage');
+    const historicalProgress = complete(createProgress(), levelId);
+    // This checkpoint was created before wrong answers stopped consuming energy.
+    const legacyFeedback = { ...wrong(reachSlot(levelId, 4)), energy: 2 };
+    const legacy = applySession(historicalProgress, legacyFeedback);
+    const originalCards = structuredClone(legacy.ultimateCards);
+    const restored = storage.parseBackup(storage.exportBackup(legacy));
+    expect(restored).toEqual(legacy);
+    expect(restored.active).toMatchObject({ energy: 2, retries: 1, success: false });
+    expect(restored.ultimateCards).toEqual(originalCards);
+    expect(restored.runs).toEqual(historicalProgress.runs);
+    expect(restored.attempts).toEqual(historicalProgress.attempts);
+    await storage.saveProgress(restored);
+    expect(await storage.loadProgress()).toEqual(restored);
+
+    const nextMistake = wrong(retryQuestion(restored.active!));
+    expect(nextMistake).toMatchObject({ energy: 2, retries: 2, ultimateUsed: false });
+    const recharged = solve(retryQuestion(nextMistake));
+    expect(recharged).toMatchObject({ energy: 3, ultimateUsed: false });
+    const fifth = solve(advanceSession(recharged).session!);
+    expect(fifth).toMatchObject({ energy: 0, ultimateUsed: true, bonusPoints: 10 });
+    const finished = finishSession(restored, fifth);
+    expect(storage.parseBackup(storage.exportBackup(finished))).toEqual(finished);
+    expect(finished.ultimateCards).toEqual(originalCards);
+  });
+
   it.each([0, 1])('preserves %i actual errors for new demonstration feedback and its saved record', async retries => {
     const storage = await import('./storage');
     const demo = demonstrate({ ...startSession(1, 'starter'), retries });

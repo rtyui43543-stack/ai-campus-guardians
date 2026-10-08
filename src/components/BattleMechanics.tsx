@@ -26,7 +26,7 @@ export function BattleMechanics({ session, paused, onRules }: { session: Session
 export function BattleRules({ timed }: { timed: boolean }) {
   return <div className="battle-rule-content">
     <h3>集滿三點，準備必殺技！</h3>
-    <ul><li>自己答對一題，能量＋1；答錯或超時，能量－1，最低為 0。</li>
+    <ul><li>自己答對一題，能量＋1；答錯保留能量。進階超時才扣 1 點，最低為 0。</li>
       <li>集滿 3 點後，下一題答對自動施放。施放後能量歸零，另外獲得 10 分獎勵和專屬收藏卡。</li>
       <li>使用提示後答對仍可充能；伙伴示範與兩題重玩練習不充能、不施放必殺技。</li>
       <li>同一場中途離開可續玩；開始新關或重新挑戰，能量與護盾都歸零。收藏卡會保留。</li>

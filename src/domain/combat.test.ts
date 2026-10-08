@@ -68,33 +68,66 @@ describe('per-run energy and ultimate rewards', () => {
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110, perfect: true });
   });
 
-  it('uses accumulated points rather than an additional consecutive-answer requirement', () => {
+  it('keeps accumulated points after an error and releases on the fourth solved answer', () => {
     let session = reachQuestion(2, 3);
     expect(session.energy).toBe(2);
     const mistake = wrong(session);
-    expect(mistake.energy).toBe(1);
+    expect(mistake.energy).toBe(2);
     session = advanceSession(solve(retryQuestion(mistake))).session!;
-    expect(session.energy).toBe(2);
-    session = advanceSession(solve(session)).session!;
     expect(session.energy).toBe(3);
-    // There has been an error in this run; the fifth correct answer still releases.
+    // Correcting the third answer finishes charging; the fourth answer then releases.
+    const released = solve(session);
+    expect(released).toMatchObject({ ultimateUsed: true, energy: 0, ultimateId: 2, bonusPoints: 10 });
+    session = advanceSession(released).session!;
     const last = solve(session);
-    expect(last).toMatchObject({ ultimateUsed: true, energy: 0, ultimateId: 2, bonusPoints: 10 });
+    expect(last).toMatchObject({ ultimateUsed: false, energy: 1, bonusPoints: 10 });
     expect(scoreSession(last)).toMatchObject({ score: 96, bonusScore: 10, totalScore: 106, wrongAnswers: 1 });
   });
 
-  it('removes a prepared point on an error and does not release while merely recharging', () => {
-    const ready = reachQuestion(2, 4);
-    expect(ready.energy).toBe(3);
-    const mistake = wrong(ready);
-    expect(mistake).toMatchObject({ energy: 2, ultimateUsed: false, bonusPoints: 0 });
-    const corrected = solve(retryQuestion(mistake));
-    expect(corrected).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0 });
-    const final = solve(advanceSession(corrected).session!);
-    expect(final).toMatchObject({ energy: 0, ultimateUsed: true });
-    let depleted = startSession(1, 'starter');
-    for (let i = 0; i < 3; i++) depleted = retryQuestion(wrong(depleted));
-    expect(depleted.energy).toBe(0);
+  it.each([2, 8])('keeps the prepared ultimate through repeated mistakes in mission %i until a correct retry', levelId => {
+    let session = reachQuestion(levelId, 4);
+    expect(session.energy).toBe(3);
+    for (let retries = 1; retries <= 3; retries++) {
+      const mistake = wrong(session);
+      expect(mistake).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0, retries, shield: 100 - retries * 12 });
+      expect(mistake.ultimateId).toBeUndefined();
+      expect(roundTrip(mistake).ultimateCards).toEqual([]);
+      session = roundTrip(retryQuestion(mistake)).active!;
+    }
+    const corrected = solve(session);
+    expect(corrected).toMatchObject({ energy: 0, ultimateUsed: true, ultimateId: 2, bonusPoints: 10, retries: 3 });
+    expect(roundTrip(corrected).ultimateCards).toHaveLength(1);
+    expect(submitAction(corrected)).toBe(corrected);
+    expect(scoreSession(corrected)).toMatchObject({ score: 68, bonusScore: 10, wrongAnswers: 3 });
+  });
+
+  it.each([1, 7])('keeps partial charge and zero charge through wrong answers in mission %i', levelId => {
+    for (const slot of [1, 2, 3]) {
+      let session = reachQuestion(levelId, slot);
+      const earned = slot - 1;
+      for (let retry = 0; retry < 3; retry++) {
+        const mistake = wrong(session);
+        expect(mistake).toMatchObject({ energy: earned, ultimateUsed: false, bonusPoints: 0 });
+        session = retryQuestion(mistake);
+      }
+      expect(solve(session)).toMatchObject({ energy: earned + 1, ultimateUsed: false });
+    }
+  });
+
+  it('still loses one energy point on timeout rather than a wrong answer', () => {
+    const ready = reachQuestion(8, 4);
+    const expired = tickQuestion(ready, 30_000);
+    expect(expired).toMatchObject({ energy: 2, timedOut: true, ultimateUsed: false, shield: 88 });
+    const final = solve(advanceSession(roundTrip(expired).active!).session!);
+    expect(final).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0 });
+  });
+
+  it('keeps prepared energy even on defeat and resets it only when restarting', () => {
+    const ready = { ...reachQuestion(8, 4), shield: 4 };
+    const defeated = wrong(ready);
+    expect(defeated).toMatchObject({ step: 'defeat', shield: 0, energy: 3, ultimateUsed: false });
+    const restarted = restartBattle(roundTrip(defeated));
+    expect(restarted.active).toMatchObject({ step: 'action', shield: 100, energy: 0 });
   });
 
   it('allows hints to charge energy while demonstrations never charge or spend a prepared ultimate', () => {

@@ -31,7 +31,7 @@ const upgrades = [
   { name: '萬卷雷霆陣', upgradeDescription: '雷霆索引升級！查證書頁鋪成巨大的雷霆書陣，從多個方向一同出擊。' },
   { name: '森羅歸位界', upgradeDescription: '萬葉歸位升級！葉片化成整座森林的拼圖，在小羽周圍重新排列、恢復力量。' },
   { name: '千鏡破偽陣', upgradeDescription: '鏡界破偽升級！多面查證鏡展開成大型鏡陣，一起擊碎魔王製造的假象。' },
-  { name: '智慧烈焰鳳', upgradeDescription: '智慧火鳳升級！火鳳展開巨大的雙翼，帶著自己的思考飛越整個戰場。' },
+  { name: '智慧烈焰鳳', upgradeDescription: '智慧火鳳升級！烈焰鳳變大展翼，飛向魔王撞擊；命中後火焰從對手周圍擴散，燃燒整個戰場。' },
   { name: '同心世界樹', upgradeDescription: '伙伴守護樹升級！根、枝與樹冠一起伸展，成為陪伴小羽的巨大守護樹。' },
 ] as const;
 

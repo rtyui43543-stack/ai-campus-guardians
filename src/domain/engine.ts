@@ -80,7 +80,8 @@ function unsuccessful(session: Session, feedback: string): Session {
   const shield = Math.max(0, session.shield - (preventedDamage ? 0 : 12));
   return { ...session, step: shield === 0 ? 'defeat' : 'feedback', success: false,
     feedback, retries: session.retries + 1, shield,
-    energy: session.review ? 0 : Math.max(0, (session.energy ?? 0) - 1), barrier: false, preventedDamage,
+    // A wrong answer damages HP but keeps earned energy, including a prepared ultimate.
+    energy: session.review ? 0 : (session.energy ?? 0), barrier: false, preventedDamage,
     ultimateUsed: false, ultimateId: undefined };
 }
 
