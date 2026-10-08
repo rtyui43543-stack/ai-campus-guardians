@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { ArrowRight, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-react';
 import type { Level, Progress, Session } from '../domain/types';
 import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
@@ -11,6 +11,7 @@ import { getFinalBossArt } from './finalBossSprite';
 import '../styles/final-boss.css';
 
 export function FinalBossChallenge({ progress, onLevel }: { progress: Progress; onLevel: (level: Level) => void }) {
+  const portraitClipId = useId();
   const mode = progress.settings.mode;
   const level = getLevel(mode === 'starter' ? 13 : 14);
   const boss = getMissionBoss(level);
@@ -26,7 +27,7 @@ export function FinalBossChallenge({ progress, onLevel }: { progress: Progress; 
       <button className="button primary final-boss-start" disabled={!unlocked} onClick={() => onLevel(level)}>{unlocked ? <Crown size={23} /> : <LockKeyhole size={23} />}{unlocked ? progress.completed.includes(level.id) ? '再次挑戰最終魔王' : '挑戰最終魔王' : '集齊六張卡，開啟決戰'}{unlocked && <ArrowRight size={22} />}</button>
       <LevelScore progress={progress} levelId={level.id} />
     </div>
-    <div className="final-boss-treasury"><svg className="final-boss-art" style={{ overflow: 'hidden' }} viewBox={`${rect.x} ${rect.y} ${rect.width} ${rect.height}`} role="img" aria-label={boss.name}><image href={appAssetUrl(art.assetPath)} width={art.width} height={art.height} /></svg>
+    <div className="final-boss-treasury"><svg className="final-boss-art" style={{ overflow: 'hidden' }} viewBox={`${rect.x} ${rect.y} ${rect.width} ${rect.height}`} role="img" aria-label={boss.name}><defs><clipPath id={portraitClipId}><rect x={rect.x} y={rect.y} width={rect.width} height={rect.height} /></clipPath></defs><image href={appAssetUrl(art.assetPath)} width={art.width} height={art.height} clipPath={`url(#${portraitClipId})`} /></svg>
       <div className="final-card-seals" aria-label="六種必殺技收藏進度">{[1, 2, 3, 4, 5, 6].map(id => { const spell = getUltimateSpell(id, mode)!; const earned = owned.has(`${mode}:${id}`); return <span key={id} className={earned ? 'earned' : ''} title={spell.name + (earned ? '：已解鎖' : '：尚未解鎖')}><img src={appAssetUrl(spell.artPath)} alt="" /><span>{earned ? <ShieldCheck size={18} /> : <LockKeyhole size={18} />}{spell.name}</span></span>; })}</div>
     </div>
   </section>;
