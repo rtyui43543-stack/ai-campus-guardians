@@ -1,8 +1,15 @@
+import { questionById } from './index';
+import { levels } from './levels';
+import type { Mode } from '../domain/types';
+
 export type UltimateSpellCategory = 'attack' | 'defense' | 'support';
 
 export interface UltimateSpell {
   readonly id: number;
+  readonly mode: Mode;
   readonly name: string;
+  readonly baseName: string;
+  readonly upgradeDescription?: string;
   readonly category: UltimateSpellCategory;
   readonly bonus: number;
   readonly description: string;
@@ -17,8 +24,41 @@ export const ultimateSpells: readonly UltimateSpell[] = Object.freeze([
   { id: 4, name: '鏡界破偽', category: 'attack', bonus: 10, description: '召喚查證鏡陣，擊破假象，額外扣除魔王 10 HP。', artPath: '/art/ultimate-4-v1.webp' },
   { id: 5, name: '智慧火鳳', category: 'attack', bonus: 10, description: '自己的思考化成火鳳，額外扣除魔王 10 HP。', artPath: '/art/ultimate-5-v1.webp' },
   { id: 6, name: '伙伴守護樹', category: 'defense', bonus: 10, description: '召喚伙伴守護樹，擋住下一次魔王攻擊的 12 HP 傷害。', artPath: '/art/ultimate-6-v1.webp' },
-].map((spell) => Object.freeze(spell as UltimateSpell)));
+].map((spell) => Object.freeze({ ...spell, category: spell.category as UltimateSpellCategory, mode: 'starter' as const, baseName: spell.name })));
 
-export function getUltimateSpell(id: number): UltimateSpell | undefined {
-  return ultimateSpells.find((spell) => spell.id === id);
+const upgrades = [
+  { name: '天穹守護城', upgradeDescription: '守護城堡升級！高塔與天空結界一起展開，將小羽包覆在大型守護領域中。' },
+  { name: '萬卷雷霆陣', upgradeDescription: '雷霆索引升級！查證書頁鋪成巨大的雷霆書陣，從多個方向一同出擊。' },
+  { name: '森羅歸位界', upgradeDescription: '萬葉歸位升級！葉片化成整座森林的拼圖，在小羽周圍重新排列、恢復力量。' },
+  { name: '千鏡破偽陣', upgradeDescription: '鏡界破偽升級！多面查證鏡展開成大型鏡陣，一起擊碎魔王製造的假象。' },
+  { name: '智慧烈焰鳳', upgradeDescription: '智慧火鳳升級！火鳳展開巨大的雙翼，帶著自己的思考飛越整個戰場。' },
+  { name: '同心世界樹', upgradeDescription: '伙伴守護樹升級！根、枝與樹冠一起伸展，成為陪伴小羽的巨大守護樹。' },
+] as const;
+
+/** The upgraded forms change presentation, while the familiar combat and score rules stay intact. */
+export const advancedUltimateSpells: readonly UltimateSpell[] = Object.freeze(ultimateSpells.map((spell, index) => Object.freeze({
+  ...spell, ...upgrades[index], mode: 'advanced' as const,
+  artPath: `/art/ultimate-advanced-${spell.id}-v1.webp`,
+})));
+
+export const allUltimateSpells: readonly UltimateSpell[] = Object.freeze([...ultimateSpells, ...advancedUltimateSpells]);
+
+export function getUltimateSpell(id: number, mode: Mode = 'starter'): UltimateSpell | undefined {
+  return (mode === 'advanced' ? advancedUltimateSpells : ultimateSpells).find((spell) => spell.id === id);
+}
+
+export interface UltimateCardIdentity {
+  readonly ultimateId: number;
+  readonly questionId?: string;
+  readonly mode?: Mode;
+}
+
+/** Existing cards already store the source question, so their earned tier is recoverable without a save-format change. */
+export function getUltimateCardMode(card: Pick<UltimateCardIdentity, 'questionId' | 'mode'>): Mode {
+  const question = card.questionId ? questionById.get(card.questionId) : undefined;
+  return (question && levels.find(level => level.id === question.levelId)?.mode) || card.mode || 'starter';
+}
+
+export function getUltimateCardKey(card: UltimateCardIdentity): string {
+  return `${getUltimateCardMode(card)}:${card.ultimateId}`;
 }

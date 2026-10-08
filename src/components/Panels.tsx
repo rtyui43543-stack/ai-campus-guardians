@@ -34,7 +34,7 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
       <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>已練習情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>待練習情境</span></div></div>
     <GrowthDashboard progress={progress} onLevel={onLevel} onRun={onRun} />
-    <UltimateCollection cards={progress.ultimateCards ?? []} />
+    <UltimateCollection cards={progress.ultimateCards ?? []} initialMode={progress.settings.mode} />
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
       const Icon = chapterIcons[chapter.icon];

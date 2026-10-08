@@ -7,6 +7,7 @@ import {
 import { describeAttempt, scoreRecord, scoreSession } from './scoring';
 import { exportBackup, parseBackup, validateProgress } from './storage';
 import type { Progress, Session } from './types';
+import { getUltimateCardKey, getUltimateCardMode } from '../content/ultimateSpells';
 
 function solve(session: Session): Session {
   return submitAction(chooseAction(session, Number(Object.keys(currentQuestion(session).valid)[0])));
@@ -156,6 +157,27 @@ describe('per-run energy and ultimate rewards', () => {
     const anotherLevel = applySession(restarted, startSession(3, 'starter'));
     expect(anotherLevel.active?.energy).toBe(0);
     expect(anotherLevel.ultimateCards).toEqual(saved.ultimateCards);
+  });
+
+  it('unlocks the starter and advanced form independently while keeping repeat releases as one card per tier', () => {
+    const basic = solve(reachQuestion(2, 4));
+    let progress = applySession(createProgress(), basic);
+    const originalCard = progress.ultimateCards![0];
+    const upgraded = solve(reachQuestion(8, 4));
+    progress = roundTrip(upgraded, progress);
+    expect(progress.ultimateCards!.map(getUltimateCardKey)).toEqual(['starter:2', 'advanced:2']);
+    expect(progress.ultimateCards![0]).toEqual(originalCard);
+    const secondAdvanced = solve(reachQuestion(8, 4));
+    expect(applySession(progress, secondAdvanced).ultimateCards).toEqual(progress.ultimateCards);
+    expect(scoreSession(upgraded)).toMatchObject({ score: 80, bonusScore: 10, totalScore: 90 });
+    expect(battleHealth(upgraded).enemyHp).toBe(10);
+    expect(startSession(8, 'advanced').energy).toBe(0);
+  });
+
+  it('lets an advanced-only player earn an upgrade without inventing the unplayed starter card', () => {
+    const progress = roundTrip(solve(reachQuestion(7, 4)));
+    expect(progress.ultimateCards).toHaveLength(1);
+    expect(getUltimateCardMode(progress.ultimateCards![0])).toBe('advanced');
   });
 });
 

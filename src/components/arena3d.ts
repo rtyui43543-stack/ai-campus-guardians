@@ -333,7 +333,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const t = effectClock;
       const success = attack.success;
       emitPhase(attack.ultimate
-        ? t < .42 ? '必殺蓄勢' : t < .9 ? '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
+        ? t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
         : attack.blocked && t >= .9 && t < 1.75 ? '守護盾攔截'
         : t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.75 ? '法術命中' : '收杖');
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);

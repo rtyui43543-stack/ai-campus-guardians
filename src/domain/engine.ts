@@ -1,5 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
+import { getUltimateCardKey } from '../content/ultimateSpells';
 import { reconstructRuns } from './scoring';
 import type { AttemptRecord, LearningStatus, Mode, Progress, Session } from './types';
 
@@ -220,9 +221,9 @@ function unlockCards(progress: Progress, session: Session, at: string) {
   const releases = session.records.filter(record => record.ultimateUsed).map(record => ({ ultimateId: record.ultimateId!, questionId: record.questionId }));
   if (session.ultimateUsed && session.ultimateId) releases.push({ ultimateId: session.ultimateId, questionId: session.questionIds[session.index] });
   for (const release of releases) {
-    if (!cards.some(card => card.ultimateId === release.ultimateId)) cards.push({ ...release, sessionId: session.id, unlockedAt: at });
+    if (!cards.some(card => getUltimateCardKey(card) === getUltimateCardKey(release))) cards.push({ ...release, sessionId: session.id, unlockedAt: at });
   }
-  return cards.sort((a, b) => a.ultimateId - b.ultimateId);
+  return cards.sort((a, b) => a.ultimateId - b.ultimateId || getUltimateCardKey(b).localeCompare(getUltimateCardKey(a)));
 }
 
 export function finishSession(progress: Progress, session: Session): Progress {

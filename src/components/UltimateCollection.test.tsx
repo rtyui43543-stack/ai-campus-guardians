@@ -1,10 +1,12 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { UltimateCollection, createUltimateCardDownloader, unlockedUltimateIds } from './UltimateCollection';
+import { UltimateCollection, UltimateCardTitle, createUltimateCardDownloader, unlockedUltimateIds } from './UltimateCollection';
 import { ultimateSpells } from '../content/ultimateSpells';
+import { composeUltimateCard } from './ultimateCardLayout';
 
 vi.mock('../platform/urls', () => ({ appAssetUrl: (path: string) => `/ai-campus-guardians${path}` }));
+vi.mock('./ultimateCardLayout', async importOriginal => ({ ...await importOriginal<typeof import('./ultimateCardLayout')>(), composeUltimateCard: vi.fn(async () => new Blob(['titled PNG card'], { type: 'image/png' })) }));
 
 describe('ultimate collection visibility', () => {
   it('does not expose locked artwork or download controls before a spell is actually cast', () => {
@@ -38,6 +40,23 @@ describe('ultimate collection visibility', () => {
     expect(html).toContain('每關能量從 0 開始');
     expect(html).toContain('同一張卡只收藏一次');
   });
+  it('keeps each earned tier separate and presents upgrade ancestry without unlocking the other tier', () => {
+    const cards = [{ ultimateId: 2, mode: 'advanced' as const, unlockedAt: '2026-10-08T04:00:00Z' }];
+    expect([...unlockedUltimateIds(cards)]).toEqual([]);
+    expect([...unlockedUltimateIds(cards, 'advanced')]).toEqual([2]);
+    const html = renderToStaticMarkup(createElement(UltimateCollection, { cards, initialMode: 'advanced' }));
+    expect(html).toContain('／12 張');
+    expect(html).toContain('查看收藏卡：萬卷雷霆陣');
+    expect(html).toContain('升級自：雷霆索引');
+    expect(html).toContain('ultimate-advanced-2-v1.webp');
+    expect(html).not.toContain('src="/ai-campus-guardians/art/ultimate-2-v1.webp"');
+  });
+  it('anchors the label in artwork coordinates rather than viewport font size or flow layout', () => {
+    const html = renderToStaticMarkup(createElement(UltimateCardTitle, { name: '萬卷雷霆陣' }));
+    expect(html).toContain('viewBox="0 0 1024 1536"');
+    expect(html).toContain('x="512" y="1446"');
+    expect(html).toContain('text-anchor="middle"');
+  });
 });
 
 describe('offline collectible Blob downloads', () => {
@@ -62,11 +81,13 @@ describe('offline collectible Blob downloads', () => {
     await downloader.download(doc.modal as unknown as HTMLElement);
     expect(fetchImage).toHaveBeenCalledWith('/ai-campus-guardians/art/ultimate-2-v1.webp', { signal: expect.any(AbortSignal) });
     const downloadedBlob = doc.createUrl.mock.calls[0][0] as Blob;
-    expect(await downloadedBlob.text()).toBe('complete offline image bytes');
+    expect(composeUltimateCard).toHaveBeenCalledWith(bytes, '雷霆索引', expect.any(AbortSignal));
+    expect(await downloadedBlob.text()).toBe('titled PNG card');
+    expect(downloadedBlob.type).toBe('image/png');
     expect(doc.modal.appendChild).toHaveBeenCalledWith(doc.anchor);
     expect(doc.body.appendChild).not.toHaveBeenCalled();
     expect(doc.anchor.href).toBe('blob:offline-collectible');
-    expect(doc.anchor.download).toBe('小羽收藏卡-雷霆索引.webp');
+    expect(doc.anchor.download).toBe('小羽收藏卡-初階-雷霆索引.png');
     expect(doc.anchor.click).toHaveBeenCalledTimes(1);
     expect(doc.anchor.remove).toHaveBeenCalledTimes(1);
     expect(doc.revokeUrl).not.toHaveBeenCalled();

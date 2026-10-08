@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Mode } from '../domain/types';
+import { getUltimateSpell } from '../content/ultimateSpells';
 
 export const NORMAL_CAST_SECONDS = 2.05;
 export const ULTIMATE_CAST_SECONDS = 3;
@@ -304,8 +305,10 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
   return { root, update };
 }
 
-function ultimateVariant(parent: THREE.Object3D, theme: number): Variant {
-  const root = group(parent, `ultimate-${theme}`); root.userData.identity = ultimateSpellNames[theme - 1];
+function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Variant {
+  const root = group(parent, `ultimate-${theme}`);
+  root.userData.identity = getUltimateSpell(theme, mode)?.name ?? ultimateSpellNames[theme - 1];
+  root.userData.tier = mode;
   const formation = group(root, 'ultimate-formation'), strike = group(root, 'ultimate-strike');
   let update: Variant['update'];
   if (theme === 1) {
@@ -450,7 +453,7 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
 export function createThemedSpellEffects(scene: THREE.Scene, chapter: number, mode: Mode) {
   const theme = Math.max(1, Math.min(6, Math.round(chapter)));
   const root = group(scene, 'themed-spell-effects'); root.visible = false;
-  const normal = normalVariant(root, theme), ultimate = ultimateVariant(root, theme), enemy = enemyVariant(root, theme, mode);
+  const normal = normalVariant(root, theme), ultimate = ultimateVariant(root, theme, mode), enemy = enemyVariant(root, theme, mode);
   const guard = group(root, 'blocked-defense'); const guardShield = shield(guard, 0x48bba2); guardShield.scale.setScalar(1.55);
   const resources = { geometries: new Set<THREE.BufferGeometry>(), materials: new Set<THREE.Material>() };
   root.traverse(object => { if (object instanceof THREE.Mesh) { resources.geometries.add(object.geometry);

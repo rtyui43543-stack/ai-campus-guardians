@@ -6,6 +6,7 @@ import {
 } from './engine';
 import type { Progress, Session } from './types';
 import { describeAttempt, getLevelRuns, latestRun, scoreSession } from './scoring';
+import { getUltimateCardKey } from '../content/ultimateSpells';
 
 const V1_KEY = 'ai-campus-guardians:progress:v1';
 const V2_KEY = 'ai-campus-guardians:progress:v2';
@@ -182,6 +183,64 @@ describe('new campaign storage and backups', () => {
     expect(storage.parseBackup(JSON.stringify(raw)).runs).toEqual(migrated.runs);
     expect(migrated.completed).toEqual(completed.completed);
     expect(migrated.finishedSessionIds).toEqual(completed.finishedSessionIds);
+  });
+
+  it('recovers a genuinely earned missing advanced card from former shared-card history without changing scores or dates', async () => {
+    const storage = await import('./storage');
+    const finished = complete(complete(createProgress(), 2), 8);
+    const old = structuredClone(finished);
+    old.ultimateCards = [old.ultimateCards![0]];
+    const preservedCard = old.ultimateCards[0];
+    const migrated = storage.validateProgress(old);
+    expect(migrated.ultimateCards!.map(getUltimateCardKey)).toEqual(['starter:2', 'advanced:2']);
+    expect(migrated.ultimateCards![0]).toEqual(preservedCard);
+    const cast = finished.runs![1].records.find(record => record.ultimateUsed)!;
+    expect(migrated.ultimateCards![1]).toEqual({ ultimateId: 2, questionId: cast.questionId,
+      sessionId: finished.runs![1].sessionId, unlockedAt: cast.at });
+    expect(migrated.attempts).toEqual(finished.attempts);
+    expect(migrated.runs).toEqual(finished.runs);
+    expect(migrated.completed).toEqual(finished.completed);
+    expect(storage.parseBackup(storage.exportBackup(migrated))).toEqual(migrated);
+  });
+
+  it('keeps a legacy advanced-source card as advanced and awards no unearned starter form', async () => {
+    const storage = await import('./storage');
+    const old = complete(createProgress(), 7);
+    expect(storage.validateProgress(old).ultimateCards!.map(getUltimateCardKey)).toEqual(['advanced:1']);
+    const noCast = complete(createProgress(), 1);
+    noCast.ultimateCards = [];
+    noCast.attempts = noCast.attempts.map(record => {
+      const copy = { ...record }; delete copy.ultimateId; delete copy.ultimateUsed; return copy;
+    });
+    noCast.runs![0].records = noCast.attempts;
+    expect(storage.validateProgress(noCast).ultimateCards).toEqual([]);
+  });
+
+  it('accepts all twelve independently earned forms and rejects a duplicate inside one tier', async () => {
+    const storage = await import('./storage');
+    let all = createProgress();
+    for (let level = 1; level <= 12; level++) all = complete(all, level);
+    expect(all.ultimateCards).toHaveLength(12);
+    expect(new Set(all.ultimateCards!.map(getUltimateCardKey)).size).toBe(12);
+    expect(storage.parseBackup(storage.exportBackup(all))).toEqual(all);
+    all.ultimateCards!.push({ ...all.ultimateCards![0] });
+    expect(() => storage.validateProgress(all)).toThrow();
+    const duplicate = complete(createProgress(), 1);
+    duplicate.ultimateCards!.push({ ...duplicate.ultimateCards![0] });
+    expect(() => storage.validateProgress(duplicate)).toThrow('重複收藏');
+  });
+
+  it('recovers genuine casts in incomplete legacy history with a stable recovery identifier', async () => {
+    const storage = await import('./storage');
+    const old = complete(createProgress(), 8);
+    old.attempts.pop(); old.runs = []; old.ultimateCards = [];
+    const recovered = storage.validateProgress(old);
+    expect(recovered.runs).toEqual([]);
+    expect(recovered.ultimateCards).toHaveLength(1);
+    expect(recovered.ultimateCards![0]).toMatchObject({ ultimateId: 2, questionId: old.attempts[3].questionId,
+      unlockedAt: old.attempts[3].at });
+    expect(recovered.ultimateCards![0].sessionId).toMatch(/^legacy-ultimate-/);
+    expect(storage.parseBackup(storage.exportBackup(recovered))).toEqual(recovered);
   });
 
   it('leaves incomplete old histories unscored instead of inventing a perfect or zero score', async () => {

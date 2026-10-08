@@ -21,6 +21,7 @@ import { getOpeningStory, getLevelStory } from './content/stories';
 import { GameCover } from './components/GameCover';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
 import { getUltimateSpell } from './content/ultimateSpells';
+import { UltimateCinematic } from './components/UltimateCinematic';
 import { QuestionClock } from './platform/questionClock';
 
 const navItems = [
@@ -313,6 +314,7 @@ export function App() {
           onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} offline={offline} />}
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <Arena chapter={battleLevel.chapterId} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
+          {animating && active.ultimateUsed && <UltimateCinematic key={cue} chapter={battleLevel.chapterId} mode={battleLevel.mode} cue={cue} reducedMotion={progress.settings.reducedMotion} />}
           <div className="duel-hud">
             <button className="duel-back" onClick={() => navigate('cover')} aria-label="回到首頁" title="回到首頁，保留本次挑戰"><Home size={20} /><span>首頁</span></button>
             <DuelMeter label="你 · 小羽" hp={health.playerHp} side="hero" cue={cue} reducedMotion={progress.settings.reducedMotion} />
@@ -328,7 +330,7 @@ export function App() {
             {(active.step === 'feedback' || isDefeated(active)) && <div className={'duel-feedback ' + (active.timedOut ? 'timeout' : active.success ? 'success' : 'retry')} role="status"><strong>{isDefeated(active) ? '血量歸零了' : active.timedOut ? '時間到，下一題再加油！' : active.demoUsed ? '伙伴示範，跟著學！' : active.ultimateUsed ? '必殺技！收藏卡已解鎖' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success || active.timedOut ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
           </section>
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>
-          {animating && active.success && <div className={'duel-attack-name ' + (active.ultimateUsed ? 'is-ultimate' : '')} key={cue}><Sparkles size={18} />{active.ultimateUsed ? getUltimateSpell(battleLevel.chapterId)?.name + ' · 獎勵＋10分' : abilityNames[battleLevel.chapterId - 1]}</div>}
+          {animating && active.success && !(active.ultimateUsed && active.mode === 'advanced') && <div className={'duel-attack-name ' + (active.ultimateUsed ? 'is-ultimate' : '')} key={cue}><Sparkles size={18} />{active.ultimateUsed ? getUltimateSpell(battleLevel.chapterId, battleLevel.mode)?.name + ' · 獎勵＋10分' : abilityNames[battleLevel.chapterId - 1]}</div>}
           {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.preventedDamage ? '護盾擋住！' : active.success ? '命中！' : isDefeated(active) ? '血量歸零' : active.timedOut ? '超時攻擊' : '再試一次'}</span><b>{active.preventedDamage ? '防禦' : '−' + Number(cue.split('-').at(-1))}<small>{active.preventedDamage ? '成功' : ' HP'}</small></b></div>}
           <div className="duel-answer-area">
             <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '')} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {

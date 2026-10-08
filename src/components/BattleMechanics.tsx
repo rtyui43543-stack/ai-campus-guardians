@@ -5,7 +5,7 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 
 export function BattleMechanics({ session, paused, onRules }: { session: Session; paused: boolean; onRules: () => void }) {
   const energy = session.energy ?? 0;
-  const spell = getUltimateSpell(getLevel(session.levelId)!.chapterId);
+  const spell = getUltimateSpell(getLevel(session.levelId)!.chapterId, session.mode);
   return <div className={'battle-mechanics ' + (energy === 3 ? 'is-ready' : '')}>
     <div className="battle-energy" aria-label={`必殺技能量 ${energy}／3${energy === 3 ? '，下一題答對施放' : ''}`}>
       <span className="energy-label"><Sparkles size={17} />{session.review ? '重玩練習 · 不充能' : energy === 3 ? '必殺就緒' : '必殺能量'}</span>
@@ -19,7 +19,7 @@ export function BattleMechanics({ session, paused, onRules }: { session: Session
       </span>}
       <button type="button" className="battle-rules-button" onClick={onRules} aria-label="查看必殺技與計分規則"><HelpCircle size={21} /></button>
     </div>
-    {energy === 3 && <p className="battle-ready-note">下一題答對：{spell?.name ?? '主題必殺技'}！</p>}
+    {energy === 3 && <p className="battle-ready-note">{session.mode === 'advanced' ? '進階升級必殺 · ' : ''}下一題答對：{spell?.name ?? '主題必殺技'}！</p>}
   </div>;
 }
 

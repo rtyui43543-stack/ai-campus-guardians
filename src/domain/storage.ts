@@ -1,5 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
+import { getUltimateCardKey } from '../content/ultimateSpells';
 import { createProgress } from './engine';
 import { reconstructRuns } from './scoring';
 import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session, UltimateCardUnlock } from './types';
@@ -199,6 +200,29 @@ function validateRunHistory(runs: CompletedRun[], attempts: AttemptRecord[]): vo
   }
 }
 
+/** Split the former six shared cards into earned tiers using actual cast records, never completion or scores. */
+function recoverEarnedUltimateCards(existing: UltimateCardUnlock[] | undefined, runs: CompletedRun[], attempts: AttemptRecord[], active: Session | null, updatedAt: string): UltimateCardUnlock[] | undefined {
+  const cards = [...(existing ?? [])];
+  const known = new Set(cards.map(getUltimateCardKey));
+  const add = (record: Pick<AttemptRecord, 'ultimateUsed' | 'ultimateId' | 'questionId' | 'at'>, sessionId: string) => {
+    if (!record.ultimateUsed || !record.ultimateId) return;
+    const key = getUltimateCardKey({ ultimateId: record.ultimateId, questionId: record.questionId });
+    if (known.has(key)) return;
+    cards.push({ ultimateId: record.ultimateId, questionId: record.questionId, sessionId, unlockedAt: record.at });
+    known.add(key);
+  };
+  // Validated reports supply the genuine session ID. Process them in their saved order so the first earned date stays stable.
+  for (const run of runs) for (const record of run.records) add(record, run.sessionId);
+  // Incomplete legacy histories can still contain a genuine cast. Their original session ID is unknown; retain a stable recovery ID.
+  for (const record of attempts) add(record, `legacy-ultimate-${record.questionId}-${record.at}`);
+  if (active) {
+    for (const record of active.records) add(record, active.id);
+    if (active.ultimateUsed && active.ultimateId) add({ ultimateUsed: true, ultimateId: active.ultimateId,
+      questionId: active.questionIds[active.index], at: updatedAt }, active.id);
+  }
+  return existing === undefined && cards.length === 0 ? undefined : cards;
+}
+
 function proposal(value: unknown, path: string): Proposal {
   const raw = object(value, path);
   const selectedMode = mode(raw.mode, `${path}.mode`);
@@ -233,9 +257,11 @@ export function validateProgress(value: unknown): Progress {
   if (new Set(runs.map(run => run.sessionId)).size !== runs.length) reject('runs包含重複挑戰');
   validateRunHistory(runs, attempts);
   const active = activeSession(raw.active);
-  const ultimateCards = raw.ultimateCards === undefined ? undefined : list(raw.ultimateCards, 'ultimateCards', 6).map((value, i) => ultimateCard(value, `ultimateCards[${i}]`));
-  if (ultimateCards && new Set(ultimateCards.map(card => card.ultimateId)).size !== ultimateCards.length) reject('ultimateCards包含重複收藏');
+  const savedUltimateCards = raw.ultimateCards === undefined ? undefined : list(raw.ultimateCards, 'ultimateCards', 12).map((value, i) => ultimateCard(value, `ultimateCards[${i}]`));
+  if (savedUltimateCards && new Set(savedUltimateCards.map(getUltimateCardKey)).size !== savedUltimateCards.length) reject('ultimateCards包含重複收藏');
   if (active && (finishedSessionIds.includes(active.id) || runs.some(run => run.sessionId === active.id))) reject('active挑戰已經完成');
+  const updatedAt = timestamp(raw.updatedAt, 'updatedAt');
+  const ultimateCards = recoverEarnedUltimateCards(savedUltimateCards, runs, attempts, active, updatedAt);
   return {
     schemaVersion: 2, completed,
     attempts, runs, ...(ultimateCards === undefined ? {} : { ultimateCards }),
@@ -245,7 +271,7 @@ export function validateProgress(value: unknown): Progress {
       mode: mode(settings.mode, 'settings.mode'), sound: boolean(settings.sound, 'settings.sound'),
       music: settings.music === undefined ? true : boolean(settings.music, 'settings.music'),
       narration: false, reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
-    }, finishedSessionIds, updatedAt: timestamp(raw.updatedAt, 'updatedAt'),
+    }, finishedSessionIds, updatedAt,
   };
 }
 

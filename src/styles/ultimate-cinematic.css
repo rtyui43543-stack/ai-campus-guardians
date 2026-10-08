@@ -1,0 +1,38 @@
+.ultimate-cinematic{position:absolute;inset:0;z-index:3;overflow:hidden;pointer-events:none;isolation:isolate;animation:ultimate-field-envelope 3s both}
+.ultimate-field-wash{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 62%,color-mix(in srgb,var(--ultimate-accent),transparent 65%),transparent 73%),linear-gradient(180deg,#0d293821,#102b4c8a 55%,#1238472e);animation:ultimate-wash-reveal 3s both}
+.ultimate-field{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 7px 9px #052b4669)}
+.ultimate-cinematic.scope-half .ultimate-field{width:56%;left:0;right:auto;overflow:hidden}.ultimate-cinematic.scope-half .ultimate-field-wash{right:44%;background:radial-gradient(ellipse at 45% 63%,#41dca16b,transparent 72%)}
+.ultimate-main-shape{transform-origin:720px 635px;animation:ultimate-form-reveal 3s both}.ultimate-ground{transform-origin:720px 742px;animation:ultimate-ground-reveal 3s both}.ultimate-canopy{stroke-dasharray:2100;animation:ultimate-canopy-build 3s both}
+.ultimate-tier-banner{position:absolute;top:48%;left:50%;transform:translateX(-50%);max-width:90%;padding:10px 24px 13px;border:2px solid #ffdc88;border-radius:16px;background:linear-gradient(115deg,#143f46f0,#142b4dee);color:#fff4b9;text-align:center;box-shadow:0 5px 22px #071c5266,inset 0 0 18px #b8e1ee20;animation:ultimate-title-reveal 3s both}
+.ultimate-cinematic .ultimate-tier-banner>span{display:block;font-size:clamp(12px,1.05vw,16px);line-height:1.45;font-weight:800;letter-spacing:.1em;color:#c9f8e9}.ultimate-cinematic .ultimate-tier-banner>strong{display:block;font-size:clamp(21px,2.3vw,34px);line-height:1.35;font-weight:900;letter-spacing:.055em;color:#fff2b2;white-space:nowrap;text-shadow:0 2px 2px #0d3142}
+.ultimate-flying-pages,.ultimate-orbit-seals{transform-origin:720px 500px;animation:ultimate-pages-swirl 3s both}.ultimate-paper,.ultimate-sort-piece,.ultimate-mirror,.ultimate-shield,.ultimate-star{transform-box:fill-box;transform-origin:center;animation:ultimate-piece-reveal 3s both;animation-delay:var(--piece-delay,0s)}
+.ultimate-lightning{stroke-dasharray:1300;animation:ultimate-bolt-draw 3s both;filter:drop-shadow(0 0 5px #bbe5ff)}.ultimate-great-book{transform-origin:720px 550px;animation:ultimate-book-open 3s both}.ultimate-vine-path,.ultimate-root-links{stroke-dasharray:2000;animation:ultimate-link-grow 3s both}.ultimate-leaves{transform-origin:720px 650px;animation:ultimate-leaf-rise 3s both}
+.ultimate-false-faces{animation:ultimate-false-collapse 3s both;transform-origin:720px 425px}.ultimate-mirrors{transform-origin:720px 650px;animation:ultimate-mirror-rise 3s both}.ultimate-phoenix-wing{transform-origin:720px 550px}.ultimate-phoenix-wing.left{animation:ultimate-wing-left 3s both}.ultimate-phoenix-wing.right{animation:ultimate-wing-right 3s both}.ultimate-phoenix-body{animation:ultimate-phoenix-rise 3s both;transform-origin:720px 650px}.ultimate-flame-trails{stroke-dasharray:1400;animation:ultimate-link-grow 3s both}.ultimate-tree-crown{transform-origin:720px 480px;animation:ultimate-tree-bloom 3s both}.ultimate-tree-trunk{transform-origin:720px 774px;animation:ultimate-tree-grow 3s both}.ultimate-partner-shields{animation:ultimate-shields-link 3s both;transform-origin:720px 665px}
+.ultimate-cinematic.is-reduced,.ultimate-cinematic.is-reduced *{animation:none!important}.ultimate-cinematic.is-reduced .ultimate-field-wash{opacity:.4}.ultimate-cinematic.is-reduced .ultimate-false-faces{opacity:0}.ultimate-cinematic.is-reduced .ultimate-tier-banner{top:48%;opacity:1}.ultimate-cinematic.is-reduced .ultimate-field{opacity:.8}
+/* Keep a recognizable opening frame even when a background tab pauses its
+   animation clock. Motion grows an already-visible form instead of revealing
+   an initially transparent scene. The shared three-second ending is unchanged. */
+@keyframes ultimate-field-envelope{0%,9%,83%{opacity:1}100%{opacity:0}}
+@keyframes ultimate-wash-reveal{0%{opacity:.28}16%,72%{opacity:1}100%{opacity:0}}
+@keyframes ultimate-form-reveal{0%{opacity:.8;transform:scale(.85) translateY(30px)}21%,78%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(1.06) translateY(-15px)}}
+@keyframes ultimate-ground-reveal{0%{opacity:.7;transform:scale(.75)}20%,78%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
+@keyframes ultimate-canopy-build{0%{stroke-dashoffset:650}35%,100%{stroke-dashoffset:0}}
+@keyframes ultimate-title-reveal{0%,7%{opacity:1;transform:translate(-50%,0) scale(.92)}17%,61%{opacity:1;transform:translate(-50%,0) scale(1)}84%,100%{opacity:0;transform:translate(-50%,-12px) scale(1)}}
+@keyframes ultimate-piece-reveal{0%{opacity:.8;scale:.72}27%,78%{opacity:1;scale:1}100%{opacity:0;scale:1.08}}
+@keyframes ultimate-pages-swirl{0%{rotate:-7deg;scale:.8}42%{rotate:5deg;scale:1}80%,100%{rotate:0deg;scale:1}}
+@keyframes ultimate-bolt-draw{0%,13%{stroke-dashoffset:650;opacity:.7}38%,79%{stroke-dashoffset:0;opacity:1}100%{opacity:0}}
+@keyframes ultimate-book-open{0%{scale:.85 .7;opacity:.9}29%,80%{scale:1 1;opacity:1}100%{scale:1.08 1.08;opacity:0}}
+@keyframes ultimate-link-grow{0%{stroke-dashoffset:650;opacity:.7}45%,80%{stroke-dashoffset:0;opacity:1}100%{opacity:0}}
+@keyframes ultimate-leaf-rise{0%{translate:0 20px;opacity:.8}41%,78%{translate:0 0;opacity:1}100%{translate:0 -32px;opacity:0}}
+@keyframes ultimate-false-collapse{0%,25%{opacity:.95;scale:1}57%,100%{opacity:0;scale:.3}}
+@keyframes ultimate-mirror-rise{0%{translate:0 20px;scale:1 .85;opacity:.85}38%,80%{translate:0 0;scale:1 1;opacity:1}100%{opacity:0}}
+@keyframes ultimate-wing-left{0%{rotate:14deg;scale:.85}34%{rotate:-5deg;scale:1}63%,100%{rotate:0deg;scale:1}}
+@keyframes ultimate-wing-right{0%{rotate:-14deg;scale:.85}34%{rotate:5deg;scale:1}63%,100%{rotate:0deg;scale:1}}
+@keyframes ultimate-phoenix-rise{0%{translate:0 30px;scale:.85}35%,77%{translate:0 0;scale:1}100%{translate:0 -50px;scale:1.05}}
+@keyframes ultimate-tree-bloom{0%,10%{scale:.75;opacity:.8}43%,80%{scale:1;opacity:1}100%{opacity:0;scale:1.05}}
+@keyframes ultimate-tree-grow{0%{scale:.85 .82;opacity:.85}30%,84%{scale:1 1;opacity:1}100%{opacity:0}}
+@keyframes ultimate-shields-link{0%,15%{translate:0 15px;opacity:.8}45%,80%{translate:0 0;opacity:1}100%{opacity:0}}
+@media(max-width:600px){.ultimate-cinematic.scope-half .ultimate-field{width:100%;left:0}.ultimate-cinematic.scope-half .ultimate-field-wash{right:0}.ultimate-tier-banner{top:49%;padding:7px 16px 10px;border-radius:12px}.ultimate-cinematic .ultimate-tier-banner>strong{font-size:23px}.ultimate-cinematic .ultimate-tier-banner>span{font-size:12px}.ultimate-field{opacity:.9}}
+@media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}}
+
+

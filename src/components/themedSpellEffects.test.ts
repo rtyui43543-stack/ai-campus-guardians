@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { createThemedSpellEffects, NORMAL_CAST_SECONDS, SPELL_IMPACT_SECONDS, ULTIMATE_CAST_SECONDS,
   enemySpellNames, normalSpellNames, ultimateSpellNames, type SpellFrame } from './themedSpellEffects';
+import { getUltimateSpell } from '../content/ultimateSpells';
 
 const camera = new THREE.PerspectiveCamera(); camera.position.set(0, 5, 15); camera.lookAt(0, 1.8, 0);
 const frame = (changes: Partial<SpellFrame> = {}): SpellFrame => ({ time: .7, success: true, ultimate: false, blocked: false,
@@ -16,6 +17,17 @@ const visibleMeshes = (object: THREE.Object3D) => nodes(object).filter(node => {
 });
 
 describe('themed spell performances', () => {
+  it('selects the upgraded identity for advanced casts without changing normal attack timing', () => {
+    for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, 'advanced');
+      fx.update(frame({ ultimate: true, time: 1.2 }));
+      expect(fx.root.userData.spell).toBe(getUltimateSpell(chapter, 'advanced')?.name);
+      expect(fx.root.userData.spell).not.toBe(ultimateSpellNames[chapter - 1]);
+      expect(fx.root.getObjectByName(`ultimate-${chapter}`)?.userData.tier).toBe('advanced');
+      fx.update(frame()); expect(fx.root.userData.spell).toBe(normalSpellNames[chapter - 1]);
+      fx.dispose();
+    }
+  });
   it('constructs six concrete hero silhouettes and six separately recognizable ultimate formations', () => {
     const normalShapes = ['padlock', 'tracking-arrow', 'classification-card', 'mirror-blade', 'flame-feather', 'growing-branch'];
     const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'wisdom-phoenix', 'faceted-shield'];
