@@ -182,7 +182,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
   const drone = createDrone(scene);
   let effectTheme = theme;
-  let effects = createThemedSpellEffects(scene, effectTheme, mode);
+  let effects = createThemedSpellEffects(scene, effectTheme, mode, finalBoss);
   const cinemaMagic = new THREE.Group(); scene.add(cinemaMagic);
   const cinemaHalo = ring(cinemaMagic, .95, .025, luminous(0x70f5dd, .65), 0, .05, 0);
   cinemaHalo.rotation.x = Math.PI / 2;
@@ -192,7 +192,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   let framingY = 1.8, framingElevation = 4.7;
   let raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
   let enemyHp = 100, playerHp = 100, requestedEnemyHp = 100, requestedPlayerHp = 100;
-  let attack: { started: number; success: boolean; ultimate: boolean; blocked: boolean; launchOrigin?: THREE.Vector3 } | null = null;
+  let attack: { started: number; success: boolean; ultimate: boolean; blocked: boolean; critical: boolean; missed: boolean; launchOrigin?: THREE.Vector3 } | null = null;
   let reportedPhase = '';
   const start = new THREE.Vector3(), target = new THREE.Vector3(), moving = new THREE.Vector3();
   const baseHeroRotation = .13, baseEnemyRotation = -.15;
@@ -339,7 +339,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const success = attack.success;
       const phoenixCast = success && effectTheme === 5;
       const iceCast = success && effectTheme === 6;
-      emitPhase(attack.ultimate
+      emitPhase(!success && attack.missed && t >= .9 ? '鏡像閃避 · 魔王落空'
+        : !success && attack.critical ? t < .42 ? '魔王追擊必殺蓄勢' : t < .9 ? '魔王追擊必殺飛襲' : t < 1.75 ? '魔王追擊必殺命中' : '魔王追擊收勢'
+        : attack.ultimate
         ? phoenixCast ? t < .42 ? '烈焰鳳召喚' : t < .9 ? '烈焰鳳飛襲' : t < 2.65 ? '烈焰命中燃燒' : '烈焰收勢'
         : iceCast ? t < .42 ? '寒晶凝結' : t < .9 ? mode === 'advanced' ? '極寒冰龍飛襲' : '冰矛飛襲' : t < 2.65 ? '碎冰寒霜蔓延' : '寒霜收勢'
         : t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
@@ -368,10 +370,15 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           enemy.leftArm.rotation.z -= recoil * .55;
           enemy.rightArm.rotation.z += recoil * .55;
         } else {
-          enemy.leftArm.rotation.z = -.26 - 1.65 * cast;
+          enemy.leftArm.rotation.z = -.26 - (attack.critical ? 2.1 : 1.65) * cast;
           enemy.root.rotation.y -= .14 * cast;
-          hero.root.position.x -= recoil * (attack.blocked ? .035 : .19) * modelScale;
-          hero.root.rotation.z += recoil * (attack.blocked ? .025 : .10);
+          if (attack.critical) { enemy.root.position.y += Math.sin(clamp(t / .8) * Math.PI) * .16 * modelScale; enemy.root.scale.setScalar(modelScale * (1 + Math.sin(clamp(t / 1.65) * Math.PI) * .09)); }
+          // A mirror dodge visibly steps aside, without a false hit reaction.
+          if (attack.missed) hero.root.position.x -= ease((t - .35) / .4) * (1 - ease((t - 1.2) / .55)) * .30 * modelScale;
+          else {
+            hero.root.position.x -= recoil * (attack.blocked ? .035 : attack.critical ? .29 : .19) * modelScale;
+            hero.root.rotation.z += recoil * (attack.blocked ? .025 : attack.critical ? .15 : .10);
+          }
           poseMage(hero, { defense: cast });
         }
       }
@@ -392,17 +399,19 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         start.copy(attack.launchOrigin);
       }
       const burst = clamp((t - .9) / .55);
-      effects.update({ time: t, success, ultimate: attack.ultimate, blocked: attack.blocked,
+      effects.update({ time: t, success, ultimate: attack.ultimate, blocked: attack.blocked, enemyCritical: attack.critical, missed: attack.missed,
         start, target, hero: hero.root.position, enemy: enemy.root.position,
         scale: modelScale, reducedMotion, camera });
       renderer.domElement.setAttribute('data-spell', String(effects.root.userData.spell));
       renderer.domElement.setAttribute('data-spell-kind', String(effects.root.userData.kind));
       renderer.domElement.setAttribute('data-spell-element', String(effects.root.userData.element));
       renderer.domElement.setAttribute('data-spell-phase', String(effects.root.userData.phase));
+      renderer.domElement.setAttribute('data-enemy-critical', String(attack.critical));
+      renderer.domElement.setAttribute('data-enemy-missed', String(attack.missed));
       if (success && t >= .9) {
         enemy.glow.emissive.setHex(heroSpellColors[effectTheme - 1]); enemy.glow.emissiveIntensity = (1 - burst) * .65;
       }
-      if (t >= (attack.ultimate ? ULTIMATE_CAST_SECONDS : NORMAL_CAST_SECONDS)) { attack = null; effects.clear(); emitPhase('待命'); resize(); }
+      if (t >= (attack.ultimate ? ULTIMATE_CAST_SECONDS : NORMAL_CAST_SECONDS)) { attack = null; enemy.root.scale.setScalar(modelScale); effects.clear(); emitPhase('待命'); resize(); }
     } else if (!cinemaShot) emitPhase(enemyHp === 0 ? '敵方退場' : playerHp === 0 ? '伙伴守護中' : '待命');
     if (!attack) {
       hero.updateVisual({ camera, reducedMotion, greeting: cinemaShot === 'hero' || cinemaShot === 'resolve' });
@@ -420,11 +429,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       cinemaShot = next; cinemaStarted = cinemaTime - (cinemaPaused ? 1.3 : 0); resize();
     },
     pauseCinema(paused: boolean) { if (cinemaPaused !== paused) lastFrame = performance.now(); cinemaPaused = paused; dirty = true; },
-    play(success: boolean, ultimate = false, blocked = false, spellChapter = theme) {
+    play(success: boolean, ultimate = false, blocked = false, spellChapter = theme, outcome: { critical?: boolean; missed?: boolean } = {}) {
       if (!alive) return;
       const nextTheme = clamp(spellChapter, 1, 6);
-      if (nextTheme !== effectTheme) { scene.remove(effects.root); effects.dispose(); effectTheme = nextTheme; effects = createThemedSpellEffects(scene, effectTheme, mode); }
-      attack = { started: performance.now(), success, ultimate: success && ultimate, blocked: !success && blocked }; dirty = true;
+      if (nextTheme !== effectTheme) { scene.remove(effects.root); effects.dispose(); effectTheme = nextTheme; effects = createThemedSpellEffects(scene, effectTheme, mode, finalBoss); }
+      attack = { started: performance.now(), success, ultimate: success && ultimate, blocked: !success && blocked,
+        critical: !success && !!outcome.critical, missed: !success && !!outcome.missed }; dirty = true;
     },
     health(enemy: number, player: number) {
       requestedEnemyHp = enemy; requestedPlayerHp = player;

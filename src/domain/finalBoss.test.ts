@@ -79,7 +79,7 @@ describe('final mission entry and selected ultimate state', () => {
     const selected = checkpoint(progress, selectUltimate(ready, 5));
     expect(selected.preparedUltimateId).toBe(5);
     const mistake = checkpoint(progress, wrong(selected));
-    expect(mistake).toMatchObject({ energy: 3, preparedUltimateId: 5, shield: 88, ultimateUsed: false });
+    expect(mistake).toMatchObject({ energy: 3, preparedUltimateId: 5, shield: 80, ultimateUsed: false });
     expect(selectUltimate(mistake, 2)).toBe(mistake);
     const answered = checkpoint(progress, solve(retryQuestion(mistake), 5));
     expect(answered).toMatchObject({ energy: 0, ultimateUsed: true, ultimateId: 5, bonusPoints: 10, enemyBonusDamage: 10 });
@@ -94,7 +94,7 @@ describe('final mission entry and selected ultimate state', () => {
   it('clears a selected spell and loses one energy on advanced timeout, then allows a new selection after recharge', () => {
     const { progress, session } = reach('advanced', 3);
     const expired = checkpoint(progress, tickQuestion(selectUltimate(session, 6), 30_000));
-    expect(expired).toMatchObject({ energy: 2, shield: 88, timedOut: true, bonusPoints: 0 });
+    expect(expired).toMatchObject({ energy: 2, shield: 80, timedOut: true, bonusPoints: 0 });
     expect(expired.preparedUltimateId).toBeUndefined();
     expect(submitAction(expired)).toBe(expired);
     const next = advanceSession(expired).session!;
@@ -114,22 +114,22 @@ describe('final mission entry and selected ultimate state', () => {
     let current = advanceSession(castle).session!;
     for (let hit = 0; hit < (mode === 'advanced' ? 2 : 1); hit++) {
       current = wrong(current);
-      expect(current.shield).toBe(100);
+      expect(current.shield).toBe(hit === 0 ? 92 : 74);
       expect(current.preventedDamage).toBe(true);
       current = retryQuestion(checkpoint(progress, current));
     }
     current = wrong(current);
-    expect(current.shield).toBe(88);
+    expect(current.shield).toBe(mode === 'advanced' ? 44 : 62);
     current = retryQuestion(checkpoint(progress, current));
     while (current.index < 7) current = advanceSession(solve(current)).session!;
     const restored = checkpoint(progress, solve(current, 3));
-    expect(restored).toMatchObject({ ultimateId: 3, energy: 0, bonusPoints: 20, shield: 100 });
+    expect(restored).toMatchObject({ ultimateId: 3, energy: 0, bonusPoints: 20, shield: mode === 'advanced' ? 68 : 74 });
     // A separate naturally damaged checkpoint verifies the full 12/24-HP recovery amount.
     let damaged = selectUltimate(reach(mode, 3).session, 3);
     damaged = retryQuestion(wrong(damaged));
     damaged = retryQuestion(wrong(damaged));
     const healed = checkpoint(progress, solve(damaged, 3));
-    expect(healed.shield).toBe(mode === 'advanced' ? 100 : 88);
+    expect(healed.shield).toBe(mode === 'advanced' ? 74 : 62);
   });
 });
 
@@ -189,7 +189,7 @@ describe('final HP, early completion and actual-question scoring', () => {
       session = next.session!;
     }
     expect(session.index).toBe(14);
-    expect(battleHealth(session)).toEqual({ enemyHp: 15, playerHp: 64 });
+    expect(battleHealth(session)).toEqual({ enemyHp: 15, playerHp: 40 });
     const finished = finishSession(progress, session);
     expect(finished.completed).toEqual([]);
     expect(finished.runs![0].passed).toBe(false);

@@ -56,7 +56,7 @@ describe('chapter ultimate collectible definitions', () => {
     expect(getUltimateSpell(6, 'advanced')).toMatchObject({ name: '極寒冰龍', category: 'attack', baseName: '寒晶冰矛' });
     for (const mode of ['starter', 'advanced'] as const) {
       expect(getUltimateSpell(6, mode)?.description).toContain(`魔王 ${mode === 'starter' ? 10 : 15} HP`);
-      expect(getUltimateSpell(6, mode)?.description).not.toContain('護盾');
+      expect(getUltimateSpell(6, mode)?.description).toContain('傷害減半');
     }
   });
   it('separates attack damage from scoring rewards and describes shield before castle counterattack', () => {

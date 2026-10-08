@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { questions, legacyReviewQuestions, presentQuestion, questionBank } from '../src/content';
+import { questions, legacyReviewQuestions, legacyFinalQuestions, presentQuestion, questionBank } from '../src/content';
 import { chapters, levels } from '../src/content/levels';
 import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
@@ -32,12 +32,13 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     const qs = items.filter(q => q.levelId === level.id);
     if (qs.map(q => q.slot).sort((a, b) => a - b).join(',') !== Array.from({ length: 15 }, (_, i) => i + 1).join(',')) errors.push(`最終關${level.id}必須有slot1–15。`);
     if (level.id !== (level.mode === 'starter' ? 13 : 14) || level.chapterId !== 6) errors.push(`最終關${level.id}的難度或設定不符。`);
-    if (new Set(qs.map(q => q.themeId)).size !== 6 || [1,2,3,4,5,6].some(theme => !qs.some(q => q.themeId === theme))) errors.push(`最終關${level.id}必須涵蓋六個生活主題。`);
+    if ([3,3,2,2,2,3].some((count, index) => qs.filter(q => q.themeId === index + 1).length !== count)) errors.push(`最終關${level.id}的六主題題數必須為3、3、2、2、2、3。`);
   }
   const answerPositions = new Set<number>();
   for (const q of items) {
     const prefix = `${q.id}：`;
-    if (q.id !== `V2L${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`) errors.push(prefix + 'ID與关卡/題次不符。');
+    const expectedId = `${q.levelId >= 13 ? 'V3F' : 'V2L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
+    if (q.id !== expectedId) errors.push(prefix + 'ID與關卡/題次不符。');
     if (!q.prompt.trim() || !q.objective.trim() || !q.explanation.trim() || !q.hint.trim()) errors.push(prefix + '題幹、目標、解析或提示缺漏。');
     if (q.prompt.length > 70 || q.hint.length > 60 || q.explanation.length > 100) errors.push(prefix + '超過生活化題目閱讀預算。');
     if (!q.source || !q.source.units.length || !q.source.pages.trim() || !['textbook', 'extension', 'mixed'].includes(q.source.label)) errors.push(prefix + '缺少有效來源。');
@@ -52,9 +53,13 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     if ((q.levelId === 4 || q.levelId === 10 || q.themeId === 4) && q.source.label !== 'extension') errors.push(prefix + '深偽必須標為倫理延伸，不宣稱原教材有深偽內容。');
     if (q.variantOf !== undefined) errors.push(prefix + '現行正式題不可被標為複習變式。');
     if (mission.finalBoss) {
-      const original = items.find(item => item.id === q.copiedFrom);
-      const originalLevel = levels.find(level => level.id === original?.levelId);
-      if (!original || originalLevel?.finalBoss || originalLevel?.mode !== mission.mode || q.themeId !== originalLevel?.chapterId) errors.push(prefix + '最終題需對應同等級的現行主要題和原主題，不可使用封存複習題。');
+      if (q.copiedFrom !== undefined) errors.push(prefix + '最終題必須是獨立新情境，不可沿用主要題。');
+      if (!Number.isInteger(q.themeId) || q.themeId! < 1 || q.themeId! > 6) errors.push(prefix + '最終題需要有效的獨立主題編號。');
+      const normalized = (text: string) => text.replace(/[\s\p{P}\p{S}]/gu, '').toLowerCase();
+      const otherQuestions = items.filter(item => item.id !== q.id);
+      if (otherQuestions.some(item => normalized(item.prompt) === normalized(q.prompt))) errors.push(prefix + '最終題題幹不可與其他正式題重複。');
+      const answers = q.choices.map(choice => normalized(choice.text)).sort().join('|');
+      if (otherQuestions.some(item => item.choices.map(choice => normalized(choice.text)).sort().join('|') === answers)) errors.push(prefix + '最終題不可沿用其他正式題的整組選項。');
     }
     const p = presentQuestion(q, mission.mode);
     if (p.choices.length !== 4) errors.push(prefix + '需要4個可直接選取的選項。');
@@ -75,7 +80,22 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
   if (items.length === 90 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
   if (!items.some(q => q.levelId === 12 && q.slot === 3 && Object.keys(q.valid).length >= 2)) errors.push('最後合作關需接受至少兩個完整合理方案。');
   errors.push(...auditLegacyReview().errors);
-  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+  errors.push(...auditLegacyFinal().errors);
+  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+}
+
+/** The replaced final edition is immutable historical source material, never new-play content. */
+export function auditLegacyFinal(items: readonly Question[] = legacyFinalQuestions): AuditResult {
+  const errors: string[] = [];
+  const ids = new Set(items.map(q => q.id));
+  if (items.length !== 30 || ids.size !== 30) errors.push('歷史最終關封存應保留30個不重複題目ID。');
+  for (const levelId of [13,14]) if (items.filter(q => q.levelId === levelId).map(q => q.slot).sort((a,b) => a-b).join(',') !== Array.from({length:15}, (_,i)=>i+1).join(',')) errors.push(`歷史最終關${levelId}應保留完整15題。`);
+  for (const q of items) {
+    if (q.id !== `V2L${q.levelId}Q${String(q.slot).padStart(2, '0')}` || questions.some(item => item.id === q.id)) errors.push(q.id + '：封存最終題不可進入現行題庫。');
+    const original = questions.find(item => item.id === q.copiedFrom);
+    if (!original || original.prompt !== q.prompt || JSON.stringify(original.choices) !== JSON.stringify(q.choices) || JSON.stringify(original.valid) !== JSON.stringify(q.valid)) errors.push(q.id + '：封存答案應保留原版內容。');
+  }
+  return { errors, summary: { legacyFinals: items.length, uniqueIds: ids.size } };
 }
 
 /** Archived answers remain resolvable without reintroducing a playable review bank. */
@@ -115,7 +135,8 @@ export function expectedAudio() {
   }
   for (const level of levels) add(`level.${level.id}`, level.title + '。' + level.intro + '。這一關，' + level.objective);
   for (const chapter of chapters) add(`chapter.${chapter.id}`, chapter.title + '。' + chapter.description);
-  for (const q of questions) {
+  // Keep old final keys so an already-started saved session still has its original offline narration.
+  for (const q of [...questions, ...legacyFinalQuestions]) {
     const mode = levels.find(level => level.id === q.levelId)!.mode;
     const p = presentQuestion(q, mode);
     const key = `${q.id}.${mode}`;

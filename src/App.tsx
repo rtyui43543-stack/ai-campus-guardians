@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X, Zap } from 'lucide-react';
 import type { Chapter, CompletedRun, Level, Mode, Progress, Session } from './domain/types';
 import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
@@ -24,6 +24,7 @@ import { UltimateCinematic } from './components/UltimateCinematic';
 import { QuestionClock } from './platform/questionClock';
 import { FinalBossChallenge, UltimatePicker, finalBattleTrack, levelLabel } from './components/FinalBossChallenge';
 import './components/adventure-music.css';
+import './styles/combat-status.css';
 
 const navItems = [
   { id: 'map', label: '冒險地圖', icon: Map }, { id: 'growth', label: '我的成長', icon: Medal },
@@ -46,6 +47,7 @@ export function App() {
   const [result, setResult] = useState<CompletedRun | null>(null);
   const [notice, setNotice] = useState('');
   const [cue, setCue] = useState('');
+  const [visibleBurnDamage, setVisibleBurnDamage] = useState(0);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
   const [animating, setAnimating] = useState(false);
@@ -165,8 +167,12 @@ export function App() {
     if ((next.step === 'feedback' || next.step === 'defeat') && ((next.success && !prior?.success) || (!next.success && prior?.step !== 'feedback'))) {
       const before = prior ? battleHealth(prior) : {playerHp:100,enemyHp:100};
       const after = battleHealth(next);
-      const damage = next.success ? before.enemyHp - after.enemyHp : before.playerHp - after.playerHp;
-      const kind = next.success ? next.ultimateUsed ? 'ultimate' : 'success' : next.preventedDamage ? 'blocked' : 'retry';
+      const directEnemyDamage = next.success ? (getLevel(next.levelId).finalBoss ? 20 : 100 / next.questionIds.length)
+        + (next.enemyBonusDamage ?? 0) - (prior?.enemyBonusDamage ?? 0) : 0;
+      const burnDamage = Math.min(next.lastTurnBurnDamage ?? 0, Math.max(0, before.enemyHp - directEnemyDamage));
+      setVisibleBurnDamage(burnDamage);
+      const damage = next.success ? before.enemyHp - after.enemyHp - burnDamage : next.lastEnemyDamage ?? before.playerHp - after.playerHp;
+      const kind = next.success ? next.ultimateUsed ? 'ultimate' : 'success' : next.lastEnemyMissed ? 'miss' : next.lastEnemyCritical ? 'enemy-ultimate' : next.preventedDamage && damage === 0 ? 'blocked' : 'retry';
       setCue(kind + '-' + Date.now() + '-' + Math.round(damage));
       attackLock.current = true; setAnimating(true);
       if (attackTimer.current) clearTimeout(attackTimer.current);
@@ -193,7 +199,7 @@ export function App() {
     attackLock.current = false; setAnimating(false); setCue('');
     setHintOpen(false); setResult(null);
     commit(restartBattle(progress));
-    if (progress.settings.music) playMusicFromGesture();
+    if (progress.settings.music) playMusicFromGesture(finalBattleTrack(getLevel(progress.active.levelId)));
     setScreen('battle');
   };
   const nextQuestion = () => {
@@ -325,7 +331,8 @@ export function App() {
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
           onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} />}
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (battleLevel.finalBoss ? 'final-duel-stage ' : '') + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
-          <Arena chapter={battleLevel.chapterId} spellChapter={spellChapter} finalBoss={battleLevel.finalBoss} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
+          <Arena chapter={battleLevel.chapterId} spellChapter={spellChapter} finalBoss={battleLevel.finalBoss} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion}
+            combatStatus={active} attackOutcome={{damage:active.lastEnemyDamage,critical:active.lastEnemyCritical,missed:active.lastEnemyMissed,burnDamage:visibleBurnDamage,healing:active.lastTurnHealing}} />
           {animating && active.ultimateUsed && <UltimateCinematic key={cue} chapter={spellChapter} mode={battleLevel.mode} cue={cue} reducedMotion={progress.settings.reducedMotion} />}
           <div className="duel-hud">
             <button className="duel-back" onClick={() => navigate('cover')} aria-label="回到首頁" title="回到首頁，保留本次挑戰"><Home size={20} /><span>首頁</span></button>
@@ -343,11 +350,11 @@ export function App() {
           </section>
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>
           {animating && active.success && !(active.ultimateUsed && active.mode === 'advanced') && <div className={'duel-attack-name ' + (active.ultimateUsed ? 'is-ultimate' : '')} key={cue}><Sparkles size={18} />{active.ultimateUsed ? getUltimateSpell(spellChapter, battleLevel.mode)?.name + ' · 獎勵＋10分' : abilityNames[spellChapter - 1]}</div>}
-          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.preventedDamage ? '護盾擋住！' : active.success ? '命中！' : isDefeated(active) ? '血量歸零' : active.timedOut ? '超時攻擊' : '再試一次'}</span><b>{active.preventedDamage ? '防禦' : '−' + Number(cue.split('-').at(-1))}<small>{active.preventedDamage ? '成功' : ' HP'}</small></b></div>}
+          {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero') + (active.lastEnemyCritical && !active.success ? ' is-enemy-ultimate' : '')} key={'damage-' + cue}><span>{active.success ? '命中！' : active.lastEnemyMissed ? '鏡界閃避，攻擊落空！' : active.preventedDamage ? '魔法減輕傷害' : active.lastEnemyCritical ? '連錯追擊！魔王必殺技' : active.timedOut ? '超時攻擊' : '魔王反擊'}</span><b>{!active.success && (active.lastEnemyMissed || (active.lastEnemyDamage ?? Number(cue.split('-').at(-1))) === 0) ? '免傷' : '−' + Number(cue.split('-').at(-1))}<small>{!active.success && (active.lastEnemyMissed || (active.lastEnemyDamage ?? Number(cue.split('-').at(-1))) === 0) ? '成功' : ' HP'}</small></b></div>}
           <div className="duel-answer-area">
-            <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '')} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
+            <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '') + (active.lightningHintChoices?.includes(i) ? ' lightning-clue' : '')} title={active.lightningHintChoices?.includes(i) ? '雷霆線索：兩個發光選項中，至少一個是答案。' : undefined} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
               answer(i);
-            }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
+            }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.lightningHintChoices?.includes(i) && <Zap className="lightning-clue-icon" size={23} aria-label="雷霆線索" />}{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
             <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { flushClock(); const current = progressRef.current?.active; if (current?.step !== 'action') return; setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(current)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
               <span className="duel-score" aria-label="目前闖關得分"><span className="duel-answer-score"><span>答題</span><b>{scoreSession(active).score}</b><span>／100</span></span>{scoreSession(active).bonusScore > 0 && <small className="duel-bonus-score"><span>必殺＋{scoreSession(active).bonusScore}</span><span className="duel-total-score"><span>總分</span><b>{scoreSession(active).totalScore}</b></span></small>}</span>
               {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.timedOut ? <span className="duel-select-note" role="status">攻擊後，自動進下一題</span> : active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 || battleLevel.finalBoss && health.enemyHp === 0 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(retryQuestion(current)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(demonstrate(current)); }}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}

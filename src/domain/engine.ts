@@ -44,6 +44,10 @@ export function startSession(levelId: number, mode: Mode, review = false, progre
     energy: 0, ultimateUsed: false, barrier: false, barrierCharges: 0, bonusPoints: 0, enemyBonusDamage: 0,
     timed: curriculumMode === 'advanced' && !review,
     remainingMs: QUESTION_TIME_MS, elapsedMs: 0, timedOut: false, preventedDamage: false,
+    combatRulesVersion: 2, wrongStreak: 0, enemyBurning: false, enemyBurnDamage: 0,
+    playerRegeneration: false, frostGuard: false, mirrorGuard: false,
+    lightningHintQueued: false, lightningHintChoices: [], lastEnemyDamage: 0,
+    lastEnemyCritical: false, lastEnemyMissed: false, lastTurnBurnDamage: 0, lastTurnHealing: 0,
   };
 }
 
@@ -63,7 +67,7 @@ export function battleHealth(session: Session): { playerHp: number; enemyHp: num
   const finalBoss = levels.find(level => level.id === session.levelId)?.finalBoss;
   const enemyMaxHp = finalBoss ? 300 : 100;
   const currentDamage = session.step === 'feedback' && session.success ? finalBoss ? 20 : 100 / session.questionIds.length : 0;
-  return { playerHp: session.shield, enemyHp: Math.max(0, enemyMaxHp - session.repaired - currentDamage - (session.enemyBonusDamage ?? 0)) };
+  return { playerHp: session.shield, enemyHp: Math.max(0, enemyMaxHp - session.repaired - currentDamage - (session.enemyBonusDamage ?? 0) - (session.enemyBurnDamage ?? 0)) };
 }
 
 export function isDefeated(session: Session): boolean {
@@ -75,10 +79,41 @@ export function remainingBarrierCharges(session: Pick<Session, 'barrier' | 'barr
   return session.barrierCharges ?? (session.barrier ? 1 : 0);
 }
 
-function consumeBarrier(session: Session) {
+/** Mirror consumes its one chance; ice and castle charges are spent only on a hit. */
+function enemyAttack(session: Session, consecutiveWrong: boolean): Partial<Session> & Pick<Session, 'shield'> {
+  const finalBoss = levels.find(level => level.id === session.levelId)?.finalBoss === true;
+  const wrongStreak = consecutiveWrong ? (session.wrongStreak ?? 0) + 1 : 0;
+  const lastEnemyCritical = finalBoss && consecutiveWrong && wrongStreak >= 2;
+  const rawDamage = (finalBoss ? 20 : 12) + (lastEnemyCritical ? 10 : 0);
+  const lastEnemyMissed = session.mirrorGuard === true && Math.random() < 0.5;
+  if (lastEnemyMissed) return { combatRulesVersion: 2, wrongStreak, mirrorGuard: false,
+    shield: session.shield, preventedDamage: true, lastEnemyDamage: 0, lastEnemyCritical, lastEnemyMissed: true };
+  const afterIce = session.frostGuard ? Math.ceil(rawDamage / 2) : rawDamage;
   const charges = remainingBarrierCharges(session);
+  const calculatedDamage = Math.max(0, afterIce - (charges > 0 ? 12 : 0));
+  const damage = Math.min(session.shield, calculatedDamage);
   const barrierCharges = Math.max(0, charges - 1);
-  return { barrier: barrierCharges > 0, barrierCharges, preventedDamage: charges > 0 };
+  return { combatRulesVersion: 2, wrongStreak, mirrorGuard: false, frostGuard: false,
+    shield: Math.max(0, session.shield - damage), barrier: barrierCharges > 0, barrierCharges,
+    preventedDamage: calculatedDamage < rawDamage, lastEnemyDamage: damage, lastEnemyCritical, lastEnemyMissed: false };
+}
+
+/** A turn ends only on a completed question; retries never duplicate status ticks. */
+function settleTurn(updated: Session, before: Session): Session {
+  if (updated.resolvedTurnIndex === updated.index) return updated;
+  const lastTurnBurnDamage = before.enemyBurning && updated.shield > 0 ? 4 : 0;
+  const lastTurnHealing = before.playerRegeneration && updated.shield > 0 ? Math.min(4, 100 - updated.shield) : 0;
+  return { ...updated, combatRulesVersion: 2, resolvedTurnIndex: updated.index,
+    enemyBurnDamage: (updated.enemyBurnDamage ?? 0) + lastTurnBurnDamage,
+    shield: updated.shield + lastTurnHealing, lastTurnBurnDamage, lastTurnHealing };
+}
+
+function attackFeedback(attack: Partial<Session>, timedOut = false): string {
+  const prefix = timedOut ? '時間到了！' : '';
+  if (attack.lastEnemyMissed) return `${prefix}鏡界讓魔王這次攻擊落空，沒有損失 HP。`;
+  const critical = attack.lastEnemyCritical ? '連續答錯，魔王施放必殺技！' : '魔王攻擊！';
+  const defense = attack.preventedDamage ? '寒冰／城堡減輕了傷害，' : '';
+  return `${prefix}${critical}${defense}扣 ${attack.lastEnemyDamage} HP。`;
 }
 
 /** Start the same challenge again without erasing completed campaign progress. */
@@ -108,13 +143,12 @@ export function chooseAction(session: Session, index: number): Session {
 }
 
 function unsuccessful(session: Session, feedback: string): Session {
-  const protection = consumeBarrier(session);
-  const { preventedDamage } = protection;
-  const shield = Math.max(0, session.shield - (preventedDamage ? 0 : 12));
+  const attack = enemyAttack(session, true);
+  const { shield } = attack;
   return { ...session, step: shield === 0 ? 'defeat' : 'feedback', success: false,
-    feedback, retries: session.retries + 1, shield,
+    feedback: `${feedback}\n${attackFeedback(attack)}`, retries: session.retries + 1, ...attack,
     // A wrong answer damages HP but keeps earned energy, including a prepared ultimate.
-    energy: session.review ? 0 : (session.energy ?? 0), ...protection,
+    energy: session.review ? 0 : (session.energy ?? 0),
     ultimateUsed: false, ultimateId: undefined };
 }
 
@@ -131,37 +165,41 @@ export function tickQuestion(session: Session, elapsedMsDelta: number): Session 
 /** Expiration is idempotent and prevents a late answer from racing a zero-second timer. */
 export function expireQuestion(session: Session): Session {
   if (!session.timed || session.step !== 'action' || isDefeated(session) || session.timedOut) return session;
-  const protection = consumeBarrier(session);
-  const { preventedDamage } = protection;
-  const shield = Math.max(0, session.shield - (preventedDamage ? 0 : 12));
-  return {
+  const attack = enemyAttack(session, false);
+  const { shield } = attack;
+  return settleTurn({
     ...session, step: shield === 0 ? 'defeat' : 'feedback', selected: null, reason: null,
     success: false, timedOut: true, elapsedMs: QUESTION_TIME_MS, remainingMs: 0,
-    energy: session.review ? 0 : Math.max(0, (session.energy ?? 0) - 1), ...protection,
+    energy: session.review ? 0 : Math.max(0, (session.energy ?? 0) - 1), ...attack,
     ultimateUsed: false, ultimateId: undefined, preparedUltimateId: undefined, shield,
-    feedback: preventedDamage ? '時間到了！守護結界擋住這次攻擊；這題記為超時，下一題再試。' : '時間到了！魔王攻擊扣 12 HP；這題記為超時，下一題再試。',
-  };
+    feedback: `${attackFeedback(attack, true)}這題記為超時，下一題再試。`,
+  }, session);
 }
 
 function successful(session: Session, feedback: string): Session {
   const prepared = (session.energy ?? 0) === 3 && !session.review;
-  if (!prepared) return { ...session, step: 'feedback', feedback, success: true,
+  if (!prepared) return settleTurn({ ...session, step: 'feedback', feedback, success: true, wrongStreak: 0,
     energy: session.review ? 0 : Math.min(3, (session.energy ?? 0) + 1), ultimateUsed: false,
-    ultimateId: undefined, preventedDamage: false };
+    ultimateId: undefined, preventedDamage: false, lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false }, session);
   const level = levels.find(level => level.id === session.levelId)!;
   const ultimateId = level.finalBoss ? session.preparedUltimateId! : level.chapterId;
   const spell = getUltimateSpell(ultimateId, session.mode)!;
   const defensive = ultimateId === 1;
   const recovery = ultimateId === 3;
   const barrierCharges = defensive ? session.mode === 'advanced' ? 2 : 1 : remainingBarrierCharges(session);
-  return {
+  return settleTurn({
     ...session, step: 'feedback', feedback, success: true, energy: 0, ultimateUsed: true, ultimateId, preparedUltimateId: undefined,
     bonusPoints: (session.bonusPoints ?? 0) + ULTIMATE_BONUS_POINTS,
     barrier: barrierCharges > 0, barrierCharges,
     shield: recovery ? Math.min(100, session.shield + (session.mode === 'advanced' ? 24 : 12)) : session.shield,
     enemyBonusDamage: (session.enemyBonusDamage ?? 0) + spell.extraDamage,
-    preventedDamage: false,
-  };
+    wrongStreak: 0, enemyBurning: ultimateId === 5 || session.enemyBurning === true,
+    playerRegeneration: recovery || session.playerRegeneration === true,
+    frostGuard: ultimateId === 6 || session.frostGuard === true,
+    mirrorGuard: ultimateId === 4 || session.mirrorGuard === true,
+    lightningHintQueued: ultimateId === 2 || session.lightningHintQueued === true,
+    preventedDamage: false, lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
+  }, session);
 }
 
 export function submitAction(session: Session): Session {
@@ -196,6 +234,7 @@ export function retryQuestion(session: Session): Session {
   return {
     ...session, step: 'action', selected: null, reason: null,
     success: false, feedback: '', preventedDamage: false,
+    lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
   };
 }
 
@@ -206,14 +245,15 @@ export function demonstrate(session: Session): Session {
   const question = currentQuestion(session);
   const selected = Number(Object.keys(question.valid)[0]);
   if (!question.choices[selected] || !question.valid[selected]?.length) throw new Error('題目尚未備妥可用的示範方案。');
-  return {
+  return settleTurn({
     ...session, selected, reason: null,
     step: 'feedback', success: true, hintUsed: true, demoUsed: true,
     ...(session.review ? { energy: 0 } : {}),
     ultimateUsed: false, ultimateId: undefined, preventedDamage: false,
+    wrongStreak: 0, lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
     demoRetriesKnown: true,
     feedback: `伙伴幫你想一想：\n${question.choices[selected].text}\n${question.explanation}\n這題記為「需要再練習」。等一下再試新題。`,
-  };
+  }, session);
 }
 
 function makeRecord(session: Session): AttemptRecord {
@@ -229,6 +269,8 @@ function makeRecord(session: Session): AttemptRecord {
     ...(session.timed ? { timed: true, elapsedMs: session.elapsedMs ?? 0, timedOut: expired } : {}),
     ...(session.ultimateUsed ? { ultimateUsed: true, ultimateId: session.ultimateId } : {}),
     ...(session.preventedDamage ? { preventedDamage: true } : {}),
+    ...(session.combatRulesVersion === 2 ? { combatRulesVersion: 2 as const,
+      turnBurnDamage: session.lastTurnBurnDamage ?? 0, turnHealing: session.lastTurnHealing ?? 0 } : {}),
   };
 }
 
@@ -247,7 +289,17 @@ export function advanceSession(session: Session): { session: Session | null; rec
       : Math.round([...session.records, record].filter(item => item.status !== 'timeout').length / session.questionIds.length * 100),
     ultimateUsed: false, ultimateId: undefined, timedOut: false, preventedDamage: false,
     elapsedMs: 0, remainingMs: QUESTION_TIME_MS,
+    lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
+    lastTurnBurnDamage: 0, lastTurnHealing: 0, lightningHintChoices: [], lightningHintQueued: false,
   };
+  if (session.lightningHintQueued) {
+    const nextQuestion = currentQuestion(nextSession);
+    const correct = Number(Object.keys(nextQuestion.valid)[0]);
+    const incorrect = nextQuestion.choices.findIndex((_, index) => !nextQuestion.valid[index]?.length);
+    const other = incorrect >= 0 ? incorrect : nextQuestion.choices.findIndex((_, index) => index !== correct);
+    nextSession.lightningHintChoices = [correct, other].sort((a, b) => a - b);
+  }
+  delete nextSession.resolvedTurnIndex;
   delete nextSession.demoRetriesKnown;
   return {
     session: nextSession, record, finished: false,

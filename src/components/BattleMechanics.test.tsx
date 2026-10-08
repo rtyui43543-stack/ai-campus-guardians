@@ -25,4 +25,23 @@ describe('battle shield and ultimate status', () => {
     expect(html).toContain('進階城堡可擋兩次攻擊');
     expect(html).toContain('每次護盾抵擋 12 HP');
   });
+  it('shows every active side effect and the final boss consecutive-error warning', () => {
+    const session = { ...startSession(1, 'starter'), levelId: 13, enemyBurning: true, playerRegeneration: true,
+      frostGuard: true, mirrorGuard: true, lightningHintQueued: true, wrongStreak: 1 };
+    const html = renderToStaticMarkup(<BattleMechanics session={session} paused={false} onRules={() => {}} />);
+    for (const text of ['魔王燃燒 · 每題 −4 HP', '持續回復 · 每題 ＋4 HP', '寒冰減傷 · 下次傷害減半', '鏡像閃避 · 下次 50% 落空',
+      '雷光線索 · 下一題提示', '再連錯一次 · 魔王必殺 30 HP']) expect(html).toContain(text);
+    const next = renderToStaticMarkup(<BattleMechanics session={{ ...session, lightningHintQueued: false, lightningHintChoices: [0, 2], wrongStreak: 2 }} paused={false} onRules={() => {}} />);
+    expect(next).toContain('雷光線索 · 兩個選項有正解');
+    expect(next).toContain('連錯追擊 · 魔王必殺 30 HP');
+  });
+  it('explains final boss damage separately from points and gives both tiers the same status effects', () => {
+    for (const timed of [false, true]) {
+      const html = renderToStaticMarkup(<BattleRules timed={timed} finalBoss />);
+      for (const text of ['第一次答錯扣 20 HP', '合計最多 30 HP', '答對後連錯計數歸零', '雷光提示不扣分',
+        '後續每題完成扣 4 HP', '後續每題完成自動再回復 4 HP', '50% 機率落空', 'HP 傷害減半']) expect(html).toContain(text);
+      if (timed) expect(html).toContain('超時不累計連錯');
+    }
+    expect(renderToStaticMarkup(<BattleRules timed />)).toContain('魔王攻擊扣 12 HP');
+  });
 });

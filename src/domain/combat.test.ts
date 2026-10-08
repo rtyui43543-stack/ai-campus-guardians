@@ -206,7 +206,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(submitAction(released)).toBe(released);
     const fifth = roundTrip(advanceSession(released).session!).active!;
     const hit = wrong(fifth);
-    expect(hit).toMatchObject({ shield: 88, preventedDamage: false, barrierCharges: 0 });
+    expect(hit).toMatchObject({ shield: 94, preventedDamage: true, barrierCharges: 0, frostGuard: false });
     expect(roundTrip(hit).ultimateCards).toHaveLength(1);
   });
 

@@ -1,13 +1,13 @@
 {
   "name": "ai-campus-guardians",
-  "version": "2.18.0",
+  "version": "2.19.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && npm run teacher:export && node scripts/notices.mjs && vite build && node scripts/build-offline.mjs && node scripts/check-pages.mjs",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "vitest run src && node --test scripts/preview-pages.test.mjs",
+    "test": "vitest run src --maxWorkers=4 && node --test scripts/preview-pages.test.mjs",
     "pages:check": "node scripts/check-pages.mjs",
     "pages:preview": "node scripts/preview-pages.mjs",
     "content:check": "tsx scripts/check-content.ts",

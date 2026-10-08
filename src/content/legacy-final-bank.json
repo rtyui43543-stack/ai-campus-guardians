@@ -1,0 +1,1296 @@
+{
+  "schemaVersion": 2,
+  "title": "封存：第 2 版最終關題目",
+  "notes": [
+    "只供舊最終關存檔續玩與歷史答案查閱。新開關卡、教師匯出與新題清單不得採用這份題庫。"
+  ],
+  "questions": [
+    {
+      "id": "V2L13Q01",
+      "levelId": 13,
+      "slot": 1,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "AI 想幫你找故事，哪一項和找故事沒有關係？",
+      "choices": [
+        {
+          "text": "喜歡冒險故事",
+          "feedback": "故事興趣可以幫忙推薦。"
+        },
+        {
+          "text": "家裡的完整住址",
+          "feedback": "答對！找故事不需要你家的住址。"
+        },
+        {
+          "text": "想看短一點的故事",
+          "feedback": "故事長度和找故事有關。"
+        },
+        {
+          "text": "喜歡動物主角",
+          "feedback": "主角喜好可以幫忙推薦。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "想一想：找故事需要知道你住哪裡嗎？",
+      "explanation": "只提供任務需要的資料。找故事可以用興趣，不用交出住址。",
+      "objective": "只給任務需要的資料，密碼不交出去。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L01Q01",
+      "themeId": 1
+    },
+    {
+      "id": "V2L13Q02",
+      "levelId": 13,
+      "slot": 2,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "AI 說「蝴蝶有八隻腳」，你會怎麼做？",
+      "choices": [
+        {
+          "text": "直接寫進自然作業",
+          "feedback": "答案可能有錯，先找課本核對。"
+        },
+        {
+          "text": "請 AI 說得更肯定",
+          "feedback": "說得肯定不代表說法正確。"
+        },
+        {
+          "text": "查自然課本或請老師確認",
+          "feedback": "答對！用課本的資料核對 AI 的說法。"
+        },
+        {
+          "text": "覺得句子很順就相信",
+          "feedback": "句子通順不能保證內容正確。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "看看自然課本怎麼介紹昆蟲。",
+      "explanation": "AI 的答案可能有錯。重要知識要和課本或可靠資料核對。",
+      "objective": "先查課本或原公告，再使用 AI 的答案。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L02Q01",
+      "themeId": 2
+    },
+    {
+      "id": "V2L13Q03",
+      "levelId": 13,
+      "slot": 3,
+      "kind": "knowledge",
+      "phase": "notice",
+      "prompt": "哪一個是「用 AI 幫助學習」的做法？",
+      "choices": [
+        {
+          "text": "請 AI 替我交整份作業",
+          "feedback": "把練習全交給 AI，自己可能沒有學會。"
+        },
+        {
+          "text": "請 AI 解釋難懂的詞，再自己造句",
+          "feedback": "答對！用 AI 理解，再自己練習。"
+        },
+        {
+          "text": "複製 AI 答案，說是自己寫的",
+          "feedback": "這沒有保留自己的學習，也不誠實。"
+        },
+        {
+          "text": "考試時偷偷問 AI",
+          "feedback": "應遵守考試規則，不偷偷使用工具。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "想想哪個做法保留了自己的練習。",
+      "explanation": "AI 可以協助理解和練習，自己的思考與完成作業仍很重要。",
+      "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+      "source": {
+        "units": [
+          1,
+          8,
+          13,
+          18
+        ],
+        "pages": "16–17、71–73、135–141、183",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L03Q01",
+      "themeId": 3
+    },
+    {
+      "id": "V2L13Q04",
+      "levelId": 13,
+      "slot": 4,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "影片裡校長說明天放假，但只有陌生帳號轉貼。怎麼辦？",
+      "choices": [
+        {
+          "text": "看起來像校長就相信",
+          "feedback": "影像可能被合成，像本人也要查來源。"
+        },
+        {
+          "text": "立刻傳給所有同學",
+          "feedback": "未確認就轉傳，可能讓更多人誤會。"
+        },
+        {
+          "text": "查學校公告，向老師確認",
+          "feedback": "答對！使用學校原本的管道查證。"
+        },
+        {
+          "text": "叫 AI 猜是不是校長",
+          "feedback": "另一個 AI 的猜測不能代替查證公告。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "影片從哪裡來？學校有正式公告嗎？",
+      "explanation": "AI 可以合成聲音和影像。重要消息應查學校公告或向老師確認。",
+      "objective": "影像和聲音可能被合成，先用原管道查問。",
+      "source": {
+        "units": [
+          3
+        ],
+        "pages": "27–30",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L04Q01",
+      "themeId": 4
+    },
+    {
+      "id": "V2L13Q05",
+      "levelId": 13,
+      "slot": 5,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "遇到不會的數學題，怎樣用 AI 才能幫你學會？",
+      "choices": [
+        {
+          "text": "請它解釋步驟，再自己算",
+          "feedback": "答對！理解方法後，自己試著完成。"
+        },
+        {
+          "text": "只複製最後答案",
+          "feedback": "有答案不代表理解了方法。"
+        },
+        {
+          "text": "叫它替你交作業",
+          "feedback": "交出作業不能代替自己的練習。"
+        },
+        {
+          "text": "把答案背起來就好",
+          "feedback": "遇到不同題目，仍需要理解方法。"
+        }
+      ],
+      "correct": [
+        0
+      ],
+      "hint": "哪個做法讓你自己動腦和練習？",
+      "explanation": "用 AI 理解方法，再自己作答；有疑問也可以找老師。",
+      "objective": "請 AI 解釋或出練習題，最後自己完成。",
+      "source": {
+        "units": [
+          13
+        ],
+        "pages": "135–141",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L05Q01",
+      "themeId": 5
+    },
+    {
+      "id": "V2L13Q06",
+      "levelId": 13,
+      "slot": 6,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "AI 推薦雨天戶外活動，你會怎麼做？",
+      "choices": [
+        {
+          "text": "推薦了就一定照做",
+          "feedback": "建議也要符合天氣和活動需要。"
+        },
+        {
+          "text": "怪同學不想淋雨",
+          "feedback": "不同需要應被尊重，不能責怪同學。"
+        },
+        {
+          "text": "請 AI 保證不下雨",
+          "feedback": "工具不能靠一句保證改變天氣。"
+        },
+        {
+          "text": "看天氣和需要，改選合適活動",
+          "feedback": "答對！用實際條件檢查 AI 的建議。"
+        }
+      ],
+      "correct": [
+        3
+      ],
+      "hint": "看看現在的天氣，再看看活動需要。",
+      "explanation": "AI 的建議是參考，最後要依實際情況和人的需要調整。",
+      "objective": "使用 AI 前想需求，使用後自己檢查。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L06Q01",
+      "themeId": 6
+    },
+    {
+      "id": "V2L13Q07",
+      "levelId": 13,
+      "slot": 7,
+      "kind": "principle",
+      "phase": "evidence",
+      "prompt": "AI 說輸入帳號密碼就送你貼圖，你會怎麼做？",
+      "choices": [
+        {
+          "text": "把密碼打進去",
+          "feedback": "密碼能開啟帳號，不能拿來換貼圖。"
+        },
+        {
+          "text": "問 AI 要送幾張",
+          "feedback": "先處理密碼安全，貼圖數量不重要。"
+        },
+        {
+          "text": "不輸入，請大人幫忙看",
+          "feedback": "答對！先保護密碼，再請可信任的大人協助。"
+        },
+        {
+          "text": "用同學的密碼試試",
+          "feedback": "同學的密碼也要保護，不能代替自己的。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "密碼像家門鑰匙，不能隨便交出去。",
+      "explanation": "不把密碼交給聊天助手或陌生表單，有疑問就找可信任的大人。",
+      "objective": "只給任務需要的資料，密碼不交出去。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L01Q02",
+      "themeId": 1
+    },
+    {
+      "id": "V2L13Q08",
+      "levelId": 13,
+      "slot": 8,
+      "kind": "principle",
+      "phase": "action",
+      "prompt": "課本寫植物要陽光，AI 卻說完全不用，你會怎麼做？",
+      "choices": [
+        {
+          "text": "把課本丟到一旁",
+          "feedback": "資料不同時應核對，不能只因為 AI 新就相信它。"
+        },
+        {
+          "text": "兩個答案都直接抄",
+          "feedback": "互相衝突的說法需要查清楚。"
+        },
+        {
+          "text": "選字數較多的答案",
+          "feedback": "字數不能決定答案對錯。"
+        },
+        {
+          "text": "對照課本，請老師說明差別",
+          "feedback": "答對！找出差別，再請老師協助理解。"
+        }
+      ],
+      "correct": [
+        3
+      ],
+      "hint": "答案衝突時，先找原本的資料。",
+      "explanation": "遇到不同說法，先對照教材和情境，找老師協助確認。",
+      "objective": "先查課本或原公告，再使用 AI 的答案。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L02Q03",
+      "themeId": 2
+    },
+    {
+      "id": "V2L13Q09",
+      "levelId": 13,
+      "slot": 9,
+      "kind": "knowledge",
+      "phase": "transfer",
+      "prompt": "哪件事需要先找老師或家長，不能只聽 AI？",
+      "choices": [
+        {
+          "text": "想一個故事主角名字",
+          "feedback": "創意點子可以先讓 AI 協助，再自己選。"
+        },
+        {
+          "text": "陌生人要你放學去沒去過的地方",
+          "feedback": "答對！先找可信任的大人確認，保護自己的安全。"
+        },
+        {
+          "text": "把練習句子改成問句",
+          "feedback": "語文練習可以使用老師允許的工具。"
+        },
+        {
+          "text": "想三個班級口號",
+          "feedback": "口號點子可以再由同學和老師選擇。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "涉及你的安全，需要誰一起幫忙？",
+      "explanation": "遇到陌生邀請或安全問題，先找可信任的大人，不能讓 AI 代替大人判斷。",
+      "objective": "分清 AI 幫忙、自己練習和請大人協助。",
+      "source": {
+        "units": [
+          1,
+          8,
+          13,
+          18
+        ],
+        "pages": "16–17、71–73、135–141、183",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L03Q05",
+      "themeId": 3
+    },
+    {
+      "id": "V2L13Q10",
+      "levelId": 13,
+      "slot": 10,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "群組傳來同學「偷東西」的合成疑似影片，先做什麼？",
+      "choices": [
+        {
+          "text": "先貼同學名字給大家看",
+          "feedback": "未確認的指控可能傷害同學。"
+        },
+        {
+          "text": "留言罵同學",
+          "feedback": "還沒查清楚，不能用影片定罪。"
+        },
+        {
+          "text": "先不轉傳，請老師協助查清楚",
+          "feedback": "答對！先停止擴散，再讓老師協助。"
+        },
+        {
+          "text": "給影片加上更多笑話",
+          "feedback": "加笑話會讓當事人更受傷。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "先保護被拍的人，也保留查證的時間。",
+      "explanation": "涉及同學的指控先不擴散，交由老師協助查證，不把未確認影片當成事實。",
+      "objective": "影像和聲音可能被合成，先用原管道查問。",
+      "source": {
+        "units": [
+          3
+        ],
+        "pages": "27–30",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L04Q05",
+      "themeId": 4
+    },
+    {
+      "id": "V2L13Q11",
+      "levelId": 13,
+      "slot": 11,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "使用老師允許的 AI 幫忙後，交作業前還要做什麼？",
+      "choices": [
+        {
+          "text": "自己檢查，照規則說明 AI 幫了哪裡",
+          "feedback": "答對！自己負責檢查，也誠實說明協助。"
+        },
+        {
+          "text": "把 AI 的所有內容直接貼上",
+          "feedback": "工具結果也需要核對和自己整理。"
+        },
+        {
+          "text": "假裝完全沒用過工具",
+          "feedback": "應依老師規則誠實說明。"
+        },
+        {
+          "text": "不看內容就按送出",
+          "feedback": "交出之前仍需要自己檢查。"
+        }
+      ],
+      "correct": [
+        0
+      ],
+      "hint": "工具幫忙後，你還要負責什麼？",
+      "explanation": "使用 AI 後要核對、理解和整理內容，並依老師要求說明使用方式。",
+      "objective": "請 AI 解釋或出練習題，最後自己完成。",
+      "source": {
+        "units": [
+          13
+        ],
+        "pages": "135–141",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L05Q05",
+      "themeId": 5
+    },
+    {
+      "id": "V2L13Q12",
+      "levelId": 13,
+      "slot": 12,
+      "kind": "principle",
+      "phase": "action",
+      "prompt": "同學沒有平板，AI 小組活動怎樣安排較好？",
+      "choices": [
+        {
+          "text": "讓他只在旁邊看",
+          "feedback": "沒有設備也應有參加和學習的機會。"
+        },
+        {
+          "text": "說沒有平板就不能加入",
+          "feedback": "設備差異不應排除同學。"
+        },
+        {
+          "text": "輪流使用，讓大家都有任務",
+          "feedback": "答對！共享設備並分工，讓每個人都參與。"
+        },
+        {
+          "text": "把他的作業交給 AI 做",
+          "feedback": "代寫沒有讓他參與學習。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "不用每個人都有平板，也能一起完成嗎？",
+      "explanation": "共享設備、輪流操作或使用紙本，可以讓不同條件的同學一起學習。",
+      "objective": "使用 AI 前想需求，使用後自己檢查。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L06Q03",
+      "themeId": 6
+    },
+    {
+      "id": "V2L13Q13",
+      "levelId": 13,
+      "slot": 13,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "用共用平板和 AI 練習完畢，你會怎麼做？",
+      "choices": [
+        {
+          "text": "讓帳號一直開著",
+          "feedback": "下一位使用者可能看見你的內容。"
+        },
+        {
+          "text": "依老師指示登出並收好平板",
+          "feedback": "答對！登出能避免下一位看到帳號裡的私人內容。"
+        },
+        {
+          "text": "把密碼貼在平板背面",
+          "feedback": "貼出密碼會讓其他人取得帳號。"
+        },
+        {
+          "text": "把聊天畫面留給下一位",
+          "feedback": "聊天裡可能有私人內容，不應直接留給別人。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "下一個使用平板的人，會看到什麼？",
+      "explanation": "共用設備用完要依老師指示登出，也不要把密碼留在設備旁。",
+      "objective": "只給任務需要的資料，密碼不交出去。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L01Q05",
+      "themeId": 1
+    },
+    {
+      "id": "V2L13Q14",
+      "levelId": 13,
+      "slot": 14,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "AI 推薦的書名，在圖書館找不到。你會怎麼做？",
+      "choices": [
+        {
+          "text": "直接告訴同學一定有這本",
+          "feedback": "還沒查到，不能當成已確認的事。"
+        },
+        {
+          "text": "認定圖書館一定弄錯",
+          "feedback": "找不到可能有很多原因，先核對書名。"
+        },
+        {
+          "text": "查書目或請館員幫忙核對",
+          "feedback": "答對！確認書名和作者，不把建議當成保證。"
+        },
+        {
+          "text": "把書名改成更好聽的",
+          "feedback": "改名字不能確認書是否真的存在。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "先確認這本書的名稱和作者。",
+      "explanation": "AI 可能提供錯誤書名。用圖書館書目或館員協助確認後再推薦。",
+      "objective": "先查課本或原公告，再使用 AI 的答案。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L02Q05",
+      "themeId": 2
+    },
+    {
+      "id": "V2L13Q15",
+      "levelId": 13,
+      "slot": 15,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "AI 幫忙完成報告草稿，哪種收尾方式較合適？",
+      "choices": [
+        {
+          "text": "立刻交出，不再看內容",
+          "feedback": "草稿仍可能有錯，交出前需要檢查。"
+        },
+        {
+          "text": "把同學私人資料補進去",
+          "feedback": "報告不需要就不要加入同學私人資料。"
+        },
+        {
+          "text": "說全部是自己寫的",
+          "feedback": "應依規則誠實說明 AI 的協助。"
+        },
+        {
+          "text": "核對內容，用自己的話整理並說明協助",
+          "feedback": "答對！查證、自己理解和誠實說明一起做到。"
+        }
+      ],
+      "correct": [
+        3
+      ],
+      "hint": "想起查證、個資和自己的學習。",
+      "explanation": "交出成果前自己核對和整理，保護私人資料，依老師規則說明工具協助。",
+      "objective": "使用 AI 前想需求，使用後自己檢查。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L06Q05",
+      "themeId": 6
+    },
+    {
+      "id": "V2L14Q01",
+      "levelId": 14,
+      "slot": 1,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "AI 故事助手說要「閱讀程度、興趣、住址」。怎樣提供？",
+      "choices": [
+        {
+          "text": "三項全給，越多越好",
+          "feedback": "更多私人資料不一定讓推薦更好，住址和任務無關。"
+        },
+        {
+          "text": "只給閱讀程度與興趣，不給住址",
+          "feedback": "答對！依用途提供合適資料，省去不必要的住址。"
+        },
+        {
+          "text": "只給住址，不給興趣",
+          "feedback": "住址不能說明閱讀需要，還增加不必要的資料分享。"
+        },
+        {
+          "text": "改給同學的三項資料",
+          "feedback": "同學資料也不能隨便拿來代替。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "哪些資料真的幫得上故事推薦？",
+      "explanation": "資料不是越多越好。依任務用途提供需要的內容，避免不必要的私人資料。",
+      "objective": "分享資料前，確認用途、同意和查看對象。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L07Q01",
+      "themeId": 1
+    },
+    {
+      "id": "V2L14Q02",
+      "levelId": 14,
+      "slot": 2,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "AI 說今天校外教學，卻引用去年的公告。你會怎麼做？",
+      "choices": [
+        {
+          "text": "照去年的日期出發",
+          "feedback": "去年日期不一定適用今年。"
+        },
+        {
+          "text": "只看公告標題，不看年份",
+          "feedback": "年份和更新時間也需要核對。"
+        },
+        {
+          "text": "找今年最新公告，向老師確認",
+          "feedback": "答對！來源是真的，也可能已經過時。"
+        },
+        {
+          "text": "讓 AI 把年份換成今年",
+          "feedback": "改年份不能證明今年安排相同。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "同一個來源，也要看日期是否適用。",
+      "explanation": "查證不只看來源名稱，也要核對日期和目前情境，確認資料仍適用。",
+      "objective": "比較日期和原來源，證據不夠就先保留。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L08Q01",
+      "themeId": 2
+    },
+    {
+      "id": "V2L14Q03",
+      "levelId": 14,
+      "slot": 3,
+      "kind": "knowledge",
+      "phase": "notice",
+      "prompt": "AI 用「男生、女生」分配社團，哪種改法較合適？",
+      "choices": [
+        {
+          "text": "把男生女生的社團互換",
+          "feedback": "互換限制仍是按性別猜興趣。"
+        },
+        {
+          "text": "依每人的興趣和意願分配，再請老師看",
+          "feedback": "答對！用和社團參加真正相關的線索。"
+        },
+        {
+          "text": "用名字長短分配",
+          "feedback": "名字長短也不能說明興趣和意願。"
+        },
+        {
+          "text": "讓 AI 的安排不能更改",
+          "feedback": "不能更改會讓被分錯的人沒有選擇。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "分社團要了解的是什麼？",
+      "explanation": "選合適的任務線索，不用性別等刻板印象分配興趣，也保留老師協助調整。",
+      "objective": "依任務看合適線索，認錯時修正資料和規則。",
+      "source": {
+        "units": [
+          8,
+          13
+        ],
+        "pages": "71–73、136",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L09Q01",
+      "themeId": 3
+    },
+    {
+      "id": "V2L14Q04",
+      "levelId": 14,
+      "slot": 4,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "老師影片要求轉帳，陌生人說「不能問老師」。先做什麼？",
+      "choices": [
+        {
+          "text": "照做，避免老師生氣",
+          "feedback": "催促和禁止查問不能成為相信訊息的理由。"
+        },
+        {
+          "text": "只問傳影片的陌生人",
+          "feedback": "同一個陌生來源不能獨立確認老師的意思。"
+        },
+        {
+          "text": "停止轉帳，用原班級管道找老師",
+          "feedback": "答對！換回原本可信任的管道確認。"
+        },
+        {
+          "text": "影片有老師臉就放心",
+          "feedback": "臉和聲音也可能被合成，不能只靠外觀確認。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "先別照催促行動，換回平常找老師的管道。",
+      "explanation": "逼真影片也需要查證。涉及金錢或急迫要求時，先停下來，用原本管道確認。",
+      "objective": "查原始來源，尊重被合成影像的人。",
+      "source": {
+        "units": [
+          3
+        ],
+        "pages": "27–30",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L10Q01",
+      "themeId": 4
+    },
+    {
+      "id": "V2L14Q05",
+      "levelId": 14,
+      "slot": 5,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "老師允許 AI 解釋，但要求自己寫答案。哪個做法合適？",
+      "choices": [
+        {
+          "text": "請 AI 寫答案，再換幾個字",
+          "feedback": "改幾個字仍可能是讓工具代替自己作答。"
+        },
+        {
+          "text": "請 AI 解釋後，關掉答案自己寫",
+          "feedback": "答對！遵守使用範圍，保留自己的理解和作答。"
+        },
+        {
+          "text": "把整份題目交給 AI 代寫",
+          "feedback": "這超出老師允許的解釋協助。"
+        },
+        {
+          "text": "說沒用 AI，直接貼它的答案",
+          "feedback": "既沒有保留自己的作答，也不誠實。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "老師允許的協助，到哪一步為止？",
+      "explanation": "照老師允許的範圍用 AI。先理解，再自己作答，並按要求說明協助。",
+      "objective": "依老師規則用 AI，交出能自己說明的作業。",
+      "source": {
+        "units": [
+          13
+        ],
+        "pages": "135–141",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L11Q01",
+      "themeId": 5
+    },
+    {
+      "id": "V2L14Q06",
+      "levelId": 14,
+      "slot": 6,
+      "kind": "principle",
+      "phase": "notice",
+      "prompt": "班級想用 AI 推薦故事，哪個資料方案較合適？",
+      "choices": [
+        {
+          "text": "蒐集姓名、住址和全家照片",
+          "feedback": "這些資料超出故事推薦需要。"
+        },
+        {
+          "text": "一定要交出全部借閱紀錄才能參加",
+          "feedback": "應考慮不提供紀錄的同學，不能把過多資料當成唯一門票。"
+        },
+        {
+          "text": "用自選興趣，另備不用個資的書單",
+          "feedback": "答對！資料符合目的，也保留不提供資料的參加方式。"
+        },
+        {
+          "text": "請 AI 猜每個人的私人資料",
+          "feedback": "猜測私人資料既不必要，也不可靠。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "想想用途，也想想不想提供資料的人。",
+      "explanation": "為任務選合適資料，提供不用個資的替代書單，讓不同選擇的人都能參加。",
+      "objective": "有目的、有查證，保留自己的學習和替代方式。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L12Q01",
+      "themeId": 6
+    },
+    {
+      "id": "V2L14Q07",
+      "levelId": 14,
+      "slot": 7,
+      "kind": "principle",
+      "phase": "evidence",
+      "prompt": "全班合照中只有一位同學不同意上傳 AI，你會怎麼做？",
+      "choices": [
+        {
+          "text": "多數同意就直接上傳",
+          "feedback": "多數人的同意不能代替那位同學的選擇。"
+        },
+        {
+          "text": "把那位同學名字拿掉就好",
+          "feedback": "照片仍可能認出本人，去掉名字不等於取得同意。"
+        },
+        {
+          "text": "改成只傳給別的 AI",
+          "feedback": "換工具沒有處理同意問題。"
+        },
+        {
+          "text": "改用不含真人的圖，請老師確認",
+          "feedback": "答對！換合適素材，讓不同意上傳的人也被尊重。"
+        }
+      ],
+      "correct": [
+        3
+      ],
+      "hint": "每位照片中的人，都同意這次用途嗎？",
+      "explanation": "共享照片需要照顧每位當事人的選擇，可以改用非真人素材，不用多數決代替同意。",
+      "objective": "分享資料前，確認用途、同意和查看對象。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L07Q02",
+      "themeId": 1
+    },
+    {
+      "id": "V2L14Q08",
+      "levelId": 14,
+      "slot": 8,
+      "kind": "principle",
+      "phase": "action",
+      "prompt": "AI 給你一個參考網址，點開卻沒有那個說法，怎麼辦？",
+      "choices": [
+        {
+          "text": "有網址就算查過了",
+          "feedback": "網址存在不代表支持這個說法。"
+        },
+        {
+          "text": "把不存在的句子寫進來源",
+          "feedback": "不能把來源沒說過的內容當成引用。"
+        },
+        {
+          "text": "只把網址貼進報告",
+          "feedback": "貼網址不能代替核對內容。"
+        },
+        {
+          "text": "核對原文，找不到就標未確認",
+          "feedback": "答對！證據需要真的支持說法，不能只看有沒有連結。"
+        }
+      ],
+      "correct": [
+        3
+      ],
+      "hint": "這個來源裡，真的找得到那句話嗎？",
+      "explanation": "查證要確認來源內容支持說法，找不到時先標示未確認，不捏造引用。",
+      "objective": "比較日期和原來源，證據不夠就先保留。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L08Q03",
+      "themeId": 2
+    },
+    {
+      "id": "V2L14Q09",
+      "levelId": 14,
+      "slot": 9,
+      "kind": "knowledge",
+      "phase": "transfer",
+      "prompt": "班級想把任務分給 AI 和人，哪個分類較合適？",
+      "choices": [
+        {
+          "text": "AI 決定同學的能力，人只照做",
+          "feedback": "人的學習和分工不應只由工具標籤決定。"
+        },
+        {
+          "text": "AI 提供點子，人核對並做最後決定",
+          "feedback": "答對！分工保留人的理解、查證和責任。"
+        },
+        {
+          "text": "AI 全部代寫，人只按送出",
+          "feedback": "這沒有保留自己的學習和檢查。"
+        },
+        {
+          "text": "人把所有密碼給 AI 保管",
+          "feedback": "密碼不是這個分工任務需要的資料。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "哪些步驟需要人的判斷和負責？",
+      "explanation": "AI 可以提供建議與草稿，人要確認需求、核對結果，並負責最後的決定。",
+      "objective": "依任務看合適線索，認錯時修正資料和規則。",
+      "source": {
+        "units": [
+          8,
+          13
+        ],
+        "pages": "71–73、136",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L09Q05",
+      "themeId": 3
+    },
+    {
+      "id": "V2L14Q10",
+      "levelId": 14,
+      "slot": 10,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "有人要你上傳同學影片到陌生網站查真假，你會怎麼做？",
+      "choices": [
+        {
+          "text": "越多網站上傳越好",
+          "feedback": "反覆上傳會擴大同學影像的分享。"
+        },
+        {
+          "text": "先傳，再問同學同不同意",
+          "feedback": "上傳前就應處理同意和用途。"
+        },
+        {
+          "text": "先不傳，請老師透過原來源查證",
+          "feedback": "答對！查證也要保護當事人的資料。"
+        },
+        {
+          "text": "改用同學名字當搜尋標題公開",
+          "feedback": "公開姓名和疑似影片可能增加傷害。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "查證時，也要保護影片裡的人。",
+      "explanation": "查證不等於可以任意上傳他人影像。先請老師協助，用原來源和合適流程確認。",
+      "objective": "查原始來源，尊重被合成影像的人。",
+      "source": {
+        "units": [
+          3
+        ],
+        "pages": "27–30",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L10Q05",
+      "themeId": 4
+    },
+    {
+      "id": "V2L14Q11",
+      "levelId": 14,
+      "slot": 11,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "小組作業用了允許的 AI，你負責最後繳交，怎麼做？",
+      "choices": [
+        {
+          "text": "交出就好，錯誤都算 AI 的",
+          "feedback": "交出內容的人和小組仍需要核對和負責。"
+        },
+        {
+          "text": "一起核對，說明 AI 協助與每人分工",
+          "feedback": "答對！小組共同理解內容，也誠實說明工具和人的貢獻。"
+        },
+        {
+          "text": "只寫 AI 的名字，不檢查",
+          "feedback": "標示工具不能取代內容核對和自己的學習。"
+        },
+        {
+          "text": "說所有內容都由自己獨力完成",
+          "feedback": "這忽略了同學和工具的實際協助。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "自己、同學和 AI 各做了什麼？",
+      "explanation": "小組使用 AI 後仍要核對與理解，依老師規則交代工具協助和人的分工。",
+      "objective": "依老師規則用 AI，交出能自己說明的作業。",
+      "source": {
+        "units": [
+          13
+        ],
+        "pages": "135–141",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L11Q05",
+      "themeId": 5
+    },
+    {
+      "id": "V2L14Q12",
+      "levelId": 14,
+      "slot": 12,
+      "kind": "tradeoff",
+      "phase": "action",
+      "prompt": "故事活動中有人沒有設備，哪個完整方案可以採用？",
+      "choices": [
+        {
+          "text": "沒有設備就不能參加",
+          "feedback": "設備差異不應成為排除同學的理由。"
+        },
+        {
+          "text": "共用設備輪流操作，老師核對推薦",
+          "feedback": "答對！讓大家參加，也保留對 AI 建議的核對。"
+        },
+        {
+          "text": "全交 AI 決定，不讓同學選",
+          "feedback": "這沒有保留人的選擇和核對。"
+        },
+        {
+          "text": "提供紙本書單，老師協助選書",
+          "feedback": "答對！不使用 AI 也能完成目的，照顧設備差異。"
+        }
+      ],
+      "correct": [
+        1,
+        3
+      ],
+      "hint": "達到找書目的，也照顧不同設備條件。",
+      "explanation": "輪流共用設備並核對推薦，或用紙本書單和老師協助，都能完成目的；合適方法可以不只一種。",
+      "objective": "有目的、有查證，保留自己的學習和替代方式。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L12Q03",
+      "themeId": 6
+    },
+    {
+      "id": "V2L14Q13",
+      "levelId": 14,
+      "slot": 13,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "不小心把同學電話貼到 AI 聊天裡，接下來怎麼做？",
+      "choices": [
+        {
+          "text": "假裝沒發生",
+          "feedback": "隱瞞會讓同學和老師無法協助處理。"
+        },
+        {
+          "text": "停止分享，告訴老師，依協助流程處理",
+          "feedback": "答對！先停止擴散，讓老師協助聯絡和處理。"
+        },
+        {
+          "text": "再貼一次，請 AI 忘記",
+          "feedback": "再貼一次會增加提供的資料，不能保證被刪除。"
+        },
+        {
+          "text": "刪除畫面就保證對方沒留資料",
+          "feedback": "刪掉畫面不等於能保證服務端沒有保留。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "先停下來，讓可信任的大人幫忙處理。",
+      "explanation": "資料誤傳後先停止擴散並通知老師，依工具和學校流程處理；不能保證只刪畫面就完全收回。",
+      "objective": "分享資料前，確認用途、同意和查看對象。",
+      "source": {
+        "units": [
+          7,
+          9,
+          14,
+          17
+        ],
+        "pages": "65、79–84、149、173",
+        "label": "extension"
+      },
+      "copiedFrom": "V2L07Q05",
+      "themeId": 1
+    },
+    {
+      "id": "V2L14Q14",
+      "levelId": 14,
+      "slot": 14,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "報告今天就要交，AI 的一項說法還查不到，怎樣處理？",
+      "choices": [
+        {
+          "text": "因為趕時間就當成事實",
+          "feedback": "時間壓力不能讓缺乏證據的說法變真。"
+        },
+        {
+          "text": "捏造一本課本當來源",
+          "feedback": "捏造來源不誠實，也不能幫人查證。"
+        },
+        {
+          "text": "改用已核對內容，說明未確認的部分",
+          "feedback": "答對！保留可確認內容，清楚交代限制。"
+        },
+        {
+          "text": "把那句話寫得更肯定",
+          "feedback": "更肯定的語氣不能補上證據。"
+        }
+      ],
+      "correct": [
+        2
+      ],
+      "hint": "哪些內容已經有可靠證據？",
+      "explanation": "可以改用已核對的內容，說明仍不確定的部分，而不是勉強把猜測寫成事實。",
+      "objective": "比較日期和原來源，證據不夠就先保留。",
+      "source": {
+        "units": [
+          2,
+          3,
+          4,
+          10
+        ],
+        "pages": "24–30、39、99",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L08Q05",
+      "themeId": 2
+    },
+    {
+      "id": "V2L14Q15",
+      "levelId": 14,
+      "slot": 15,
+      "kind": "principle",
+      "phase": "transfer",
+      "prompt": "AI 寫好活動報告，但你說不出理由，準備交出。怎樣收尾？",
+      "choices": [
+        {
+          "text": "直接交出，錯誤全部算 AI 的",
+          "feedback": "交作業前自己也要理解和核對，不能全部推給工具。"
+        },
+        {
+          "text": "理解並核對，自己整理並說明 AI 協助",
+          "feedback": "答對！讓成果能由自己說明，也誠實交代工具協助。"
+        },
+        {
+          "text": "說全是自己寫的，不必解釋",
+          "feedback": "沒有理解也隱瞞協助，不是誠實的學習成果。"
+        },
+        {
+          "text": "只把字體改漂亮就交",
+          "feedback": "字體漂亮不能代替自己的理解和核對。"
+        }
+      ],
+      "correct": [
+        1
+      ],
+      "hint": "你能說出內容的理由，也說明工具幫了哪裡嗎？",
+      "explanation": "交出成果前要自己理解、核對和整理，並依老師規則說明 AI 協助，保留自己的學習。",
+      "objective": "有目的、有查證，保留自己的學習和替代方式。",
+      "source": {
+        "units": [
+          13,
+          17,
+          18
+        ],
+        "pages": "135–141、172–177、181–185",
+        "label": "mixed"
+      },
+      "copiedFrom": "V2L12Q05",
+      "themeId": 6
+    }
+  ]
+}

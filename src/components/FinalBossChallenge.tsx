@@ -39,7 +39,7 @@ export function UltimatePicker({ session, onSelect, onHome }: { session: Session
   return <dialog className="final-ultimate-picker" ref={ref} aria-labelledby="final-picker-title" onCancel={event => event.preventDefault()}>
     <header><span><Sparkles size={24} />三點能量集滿！</span><h2 id="final-picker-title">下一次答對，要施放哪一招？</h2><p>選好一種必殺技，下次答對就會自動施放。選招時倒數暫停。</p></header>
     <div className="final-spell-grid">{[1, 2, 3, 4, 5, 6].map(id => { const spell = getUltimateSpell(id, session.mode)!; return <button key={id} data-spell-choice type="button" onClick={() => onSelect(id)} aria-label={`選擇必殺技：${spell.name}`}>
-      <img src={appAssetUrl(spell.artPath)} alt="" /><span><strong>{spell.name}</strong><small>{spell.category === 'defense' ? `護盾 ×${session.mode === 'advanced' ? 2 : 1} · 額外 ${spell.extraDamage} HP` : spell.category === 'support' ? `恢復 ${session.mode === 'advanced' ? 24 : 12} HP` : `法術攻擊 · 額外 ${spell.extraDamage} HP`}</small></span>
+      <img src={appAssetUrl(spell.artPath)} alt="" /><span><strong>{spell.name}</strong><small>{spell.category === 'defense' ? `護盾 ×${session.mode === 'advanced' ? 2 : 1} · 額外 ${spell.extraDamage} HP` : spell.category === 'support' ? `恢復 ${session.mode === 'advanced' ? 24 : 12} HP` : `法術攻擊 · 額外 ${spell.extraDamage} HP`}</small><small className="final-spell-effect">{spell.effectDescription}</small></span>
     </button>; })}</div>
     <button className="final-picker-home" type="button" onClick={onHome}>先回冒險地圖，保留能量</button>
   </dialog>;

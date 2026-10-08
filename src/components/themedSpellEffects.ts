@@ -17,6 +17,8 @@ export interface SpellFrame {
   success: boolean;
   ultimate: boolean;
   blocked: boolean;
+  enemyCritical?: boolean;
+  missed?: boolean;
   start: THREE.Vector3;
   target: THREE.Vector3;
   hero: THREE.Vector3;
@@ -300,7 +302,7 @@ function impactWave(parent: THREE.Object3D, name: string, color: number) {
   return result;
 }
 
-function anchor(object: THREE.Group, point: THREE.Vector3, frame: SpellFrame, size = 1) {
+function anchor(object: THREE.Object3D, point: THREE.Vector3, frame: SpellFrame, size = 1) {
   object.position.copy(point); object.position.z = .85;
   object.quaternion.copy(frame.camera.quaternion); object.scale.setScalar(frame.scale * size);
 }
@@ -768,13 +770,73 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
   } };
 }
 
+/** Final bosses cast their own grimoire/dragon magic, independent of the spell
+ * the learner chose. A consecutive-error attack expands that same silhouette. */
+function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
+  const root = group(parent, `final-enemy-${mode}`);
+  root.userData.identity = mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';
+  const summon = ritualRing(root, 'final-boss-summoning-seal', 0xe67aa7, .65);
+  const projectile = group(root, 'final-boss-projectile');
+  if (mode === 'starter') {
+    const book = openBook(projectile); book.scale.setScalar(1.08);
+    const crest = padlock(projectile, .50); crest.position.set(0, -.1, .13);
+  } else {
+    const dragon = iceDragon(projectile); dragon.name = 'spectral-dragon-charge'; dragon.rotation.z = Math.PI;
+    dragon.traverse(node => {
+      if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
+        node.material.color.setHex(0x895bb8); node.material.emissive.setHex(0x895bb8);
+      }
+    });
+  }
+  const fragments = Array.from({ length: 9 }, (_, i) => mode === 'starter' ? card(root, i % 2 ? 0xa95279 : 0x6a518c, i) : flame(root, .46));
+  if (mode === 'advanced') fragments.forEach(part => part.traverse(node => {
+    if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
+      node.material.color.setHex(0xb27af0); node.material.emissive.setHex(0xb27af0);
+    }
+  }));
+  const impact = impactWave(root, 'final-boss-impact-wave', 0xef80ac);
+  const chase = Array.from({ length: 6 }, (_, i) => lightning(root, .5 + i % 2 * .16));
+  chase.forEach((bolt, i) => { bolt.name = 'final-boss-critical-bolt-' + i; });
+  return { root, update(f) {
+    const critical = !!f.enemyCritical;
+    const strength = critical ? 1.65 : 1;
+    root.userData.critical = critical;
+    root.userData.identity = critical ? mode === 'starter' ? '魔典王 · 混沌追擊必殺' : '九頭龍 · 幻焰追擊必殺' : mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';
+    anchor(summon, f.start, f, strength); summon.visible = visibleDuring(f, .02, .60);
+    anchor(projectile, f.reducedMotion ? f.target : path(f), f, strength);
+    projectile.visible = visibleDuring(f, .15, 1.01);
+    const impactAge = smooth((f.time - .9) / .65);
+    anchor(impact, f.target, f, strength * (.65 + impactAge * .9));
+    impact.visible = visibleDuring(f, .9, 1.9);
+    fragments.forEach((part, i) => {
+      const p = (i + .5) / fragments.length, angle = i * 2.4 + (f.reducedMotion ? 0 : f.time);
+      const radius = f.time < .9 ? .18 + p * .45 : .28 + impactAge * (.35 + p * .50);
+      const center = f.time < .9 ? f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i % 3 * .02) : f.target.clone();
+      center.x += Math.cos(angle) * radius * strength * f.scale;
+      center.y += Math.sin(angle) * radius * strength * f.scale;
+      anchor(part, center, f, critical ? .72 : .45);
+      part.visible = visibleDuring(f, .12, 1.88);
+      if (!f.reducedMotion) part.rotateZ(angle * .35);
+    });
+    chase.forEach((bolt, i) => {
+      const angle = i * Math.PI / 3;
+      const center = f.target.clone(); center.x += Math.cos(angle) * (.3 + impactAge * .7) * f.scale;
+      center.y += Math.sin(angle) * (.3 + impactAge * .7) * f.scale;
+      anchor(bolt, center, f, 1.15); bolt.rotation.z = angle;
+      bolt.visible = critical && visibleDuring(f, .9, 1.90);
+    });
+  } };
+}
+
 /** Each cast has a concrete, separately constructed silhouette, flight and outcome.
  * Groups are retained for replay; one final dispose releases every owned resource. */
-export function createThemedSpellEffects(scene: THREE.Scene, chapter: number, mode: Mode) {
+export function createThemedSpellEffects(scene: THREE.Scene, chapter: number, mode: Mode, finalBoss = false) {
   const theme = Math.max(1, Math.min(6, Math.round(chapter)));
   const root = group(scene, 'themed-spell-effects'); root.visible = false;
-  const normal = normalVariant(root, theme), ultimate = ultimateVariant(root, theme, mode), enemy = enemyVariant(root, theme, mode);
+  const normal = normalVariant(root, theme), ultimate = ultimateVariant(root, theme, mode), enemy = finalBoss ? finalEnemyVariant(root, mode) : enemyVariant(root, theme, mode);
   const guard = group(root, 'blocked-defense'); const guardShield = shield(guard, 0x48bba2); guardShield.scale.setScalar(1.55);
+  const mirrorDodge = group(root, 'mirror-dodge');
+  for (const x of [-.33, .33]) { const reflection = mirrorShard(mirrorDodge); reflection.position.x = x; reflection.scale.setScalar(1.4); }
   const resources = { geometries: new Set<THREE.BufferGeometry>(), materials: new Set<THREE.Material>() };
   root.traverse(object => { if (object instanceof THREE.Mesh) { resources.geometries.add(object.geometry);
     (Array.isArray(object.material) ? object.material : [object.material]).forEach(item => resources.materials.add(item)); } });
@@ -788,13 +850,20 @@ export function createThemedSpellEffects(scene: THREE.Scene, chapter: number, mo
       root.visible = frame.time >= 0 && frame.time < end;
       normal.root.visible = selected === normal; ultimate.root.visible = selected === ultimate; enemy.root.visible = selected === enemy;
       root.userData.spell = selected.root.userData.identity;
-      root.userData.kind = frame.success ? frame.ultimate ? 'ultimate' : 'normal' : 'enemy';
+      root.userData.kind = frame.success ? frame.ultimate ? 'ultimate' : 'normal' : frame.enemyCritical ? 'enemy-ultimate' : 'enemy';
       root.userData.element = frame.success ? selected.root.userData.element : 'boss';
       root.userData.phase = frame.time < .42 ? 'prepare' : frame.time < .9 ? 'travel' : 'impact';
-      selected.update(frame);
+      // A missed attack lands beside the learner, rather than visually striking
+      // a character whose HP did not change.
+      const shownFrame = frame.missed && !frame.success ? { ...frame, target: frame.target.clone().add(new THREE.Vector3(-.65 * frame.scale, -.55 * frame.scale, 0)) } : frame;
+      selected.update(shownFrame);
+      root.userData.spell = selected.root.userData.identity;
       guard.visible = frame.blocked && !frame.success && visibleDuring(frame, .35, 1.95);
       anchor(guard, frame.target, frame); guard.position.x += .18 * frame.scale;
       root.userData.blocked = guard.visible;
+      mirrorDodge.visible = !!frame.missed && !frame.success && visibleDuring(frame, .35, 1.95);
+      anchor(mirrorDodge, frame.hero.clone().add(new THREE.Vector3(0, 1.35 * frame.scale, 0)), frame);
+      root.userData.missed = mirrorDodge.visible;
     },
     clear() { root.visible = false; },
     dispose() {

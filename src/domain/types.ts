@@ -58,6 +58,10 @@ export interface AttemptRecord {
   ultimateUsed?: boolean;
   ultimateId?: number;
   preventedDamage?: boolean;
+  /** Damage-over-time is saved per completed question, never recalculated on reload. */
+  combatRulesVersion?: 2;
+  turnBurnDamage?: number;
+  turnHealing?: number;
 }
 export interface Session {
   id: string; levelId: number; mode: Mode; questionIds: string[]; index: number;
@@ -85,6 +89,23 @@ export interface Session {
   elapsedMs?: number;
   timedOut?: boolean;
   preventedDamage?: boolean;
+  /** Versioned additions do not grant old casts new effects retroactively. */
+  combatRulesVersion?: 2;
+  wrongStreak?: number;
+  enemyBurning?: boolean;
+  enemyBurnDamage?: number;
+  playerRegeneration?: boolean;
+  frostGuard?: boolean;
+  mirrorGuard?: boolean;
+  lightningHintQueued?: boolean;
+  lightningHintChoices?: number[];
+  lastEnemyDamage?: number;
+  lastEnemyCritical?: boolean;
+  lastEnemyMissed?: boolean;
+  lastTurnBurnDamage?: number;
+  lastTurnHealing?: number;
+  /** The current question is settled once even if UI callbacks are repeated. */
+  resolvedTurnIndex?: number;
 }
 export interface CompletedRun {
   sessionId: string; levelId: number; mode: Mode; review: boolean;

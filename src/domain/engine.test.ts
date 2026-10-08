@@ -100,7 +100,7 @@ describe('direct-answer battle engine', () => {
     expect(answered).toMatchObject({ step: 'defeat', success: false, shield: 0, selected, index: 2, retries: 1 });
     expect(answered.records).toEqual(session.records);
     expect(answered.questionIds).toEqual(session.questionIds);
-    expect(answered.feedback).toBe(currentQuestion(session).choices[selected].feedback);
+    expect(answered.feedback).toContain(currentQuestion(session).choices[selected].feedback);
     expect(battleHealth(answered)).toEqual({ playerHp: 0, enemyHp: 60 });
     expect(isDefeated(answered)).toBe(true);
     expect(submitAction(answered)).toBe(answered);

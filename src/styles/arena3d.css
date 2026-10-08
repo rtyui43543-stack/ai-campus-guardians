@@ -5,3 +5,17 @@
 .arena3d-fallback{position:absolute;top:36%;left:15%;width:70%;padding:20px;border-radius:20px;background:rgba(255,255,255,.94);text-align:center;color:#164e49;box-shadow:0 8px 30px #153d4920}
 .arena3d-fallback>span{display:block;font-size:48px}.arena3d-fallback strong{display:block;font-size:18px}.arena3d-fallback p{font-size:14px;line-height:1.6;margin:8px 0 0}
 @media(max-width:640px){.arena3d-fallback{left:8%;width:84%;padding:12px}.arena3d-fallback>span{font-size:32px}.arena3d-fallback strong{font-size:15px}.arena3d-fallback p{font-size:12px}}
+.arena-status-auras,.arena-turn-feedback{position:absolute;inset:0;pointer-events:none}
+.arena-status-aura{position:absolute;top:59%;width:12%;height:15%;opacity:.78}
+.enemy-burning{left:66%;height:11%;top:65%}.enemy-burning i{position:absolute;bottom:0;width:22%;height:70%;border-radius:60% 10% 65% 45%;background:linear-gradient(0deg,#ffb83caa,#fa561c77 70%,transparent);transform:rotate(-20deg);animation:combat-ember 1.8s ease-in-out infinite alternate}.enemy-burning i:nth-child(1){left:7%;height:45%}.enemy-burning i:nth-child(2){left:39%;animation-delay:.5s}.enemy-burning i:nth-child(3){left:72%;height:55%;animation-delay:1s}
+.hero-regenerating{left:21%;color:#c9ffd7;font-size:20px;font-weight:900;text-shadow:0 2px 4px #1c6446}.hero-regenerating i{position:absolute;left:10%;top:30%;font-style:normal;animation:combat-mend 2.3s ease-in-out infinite}.hero-regenerating i:nth-child(2){left:68%;top:5%;animation-delay:.75s}.hero-regenerating i:nth-child(3){left:40%;top:70%;animation-delay:1.5s}
+.hero-frost{left:21%;color:#d6faff;font-size:22px;text-shadow:0 0 8px #4987d1}.hero-frost i{font-style:normal;position:absolute;left:7%;top:40%}.hero-frost i:nth-child(2){left:74%;top:12%}
+.hero-mirror{left:22%;width:10%;top:58%;height:17%;border-left:2px solid #e1c9fc;border-right:2px solid #e1c9fc;border-radius:50%;box-shadow:inset 3px 0 12px #b495df33,inset -3px 0 12px #b495df33}
+.arena-turn-pop{position:absolute;top:67%;font-size:clamp(14px,1.6vw,22px);font-weight:900;padding:6px 11px;border:2px solid currentColor;border-radius:12px;box-shadow:0 3px 12px #163b4050;white-space:nowrap;opacity:0;animation:combat-status-pop 2.05s .9s ease both}
+.burn-pop{left:67%;background:#673314ed;color:#ffe2a0}.healing-pop{left:20%;background:#174d39ed;color:#c5ffe4}.critical-pop{left:64%;top:53%;background:#701f36ed;color:#ffe0ae;animation-delay:0s;animation-duration:1.7s}
+@keyframes combat-ember{to{transform:rotate(8deg) scaleY(.7);opacity:.6}}
+@keyframes combat-mend{0%,100%{opacity:.3;transform:translateY(8px)}50%{opacity:.9;transform:translateY(-8px)}}
+@keyframes combat-status-pop{0%,100%{opacity:0;transform:translateY(8px)}12%,72%{opacity:1;transform:translateY(-5px)}}
+.arena3d.reduced-motion .arena-status-aura i{animation:none}.arena3d.reduced-motion .arena-turn-pop{animation:combat-status-pop 1.2s 0s ease both}
+@media(prefers-reduced-motion:reduce){.arena-status-aura i{animation:none}.arena-turn-pop{animation-duration:1.2s;animation-delay:0s}}
+@media(max-width:600px){.arena-status-aura{width:16%}.enemy-burning{left:65%}.hero-regenerating,.hero-frost{left:18%}.hero-mirror{left:19%;width:13%}.arena-turn-pop{font-size:13px;padding:4px 6px}.burn-pop{left:64%}.healing-pop{left:16%}.critical-pop{left:58%}}

@@ -21,6 +21,25 @@ interface ArenaProps {
   cinemaShot?: CinemaShot;
   cinemaPaused?: boolean;
   companion?: boolean;
+  combatStatus?: ArenaCombatStatus;
+  attackOutcome?: ArenaAttackOutcome;
+}
+
+export interface ArenaCombatStatus {
+  enemyBurning?: boolean;
+  playerRegeneration?: boolean;
+  frostGuard?: boolean;
+  mirrorGuard?: boolean;
+  lightningHintQueued?: boolean;
+  lightningHintChoices?: number[];
+}
+
+export interface ArenaAttackOutcome {
+  damage?: number;
+  critical?: boolean;
+  missed?: boolean;
+  burnDamage?: number;
+  healing?: number;
 }
 
 export const abilityNames = normalSpellNames;
@@ -50,7 +69,7 @@ export function GuardianPortrait({ chapter, mode, className = '' }: { chapter: n
   }} />;
 }
 
-export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode, enemyHp, playerHp, reducedMotion, cue, guardian, cinemaShot, cinemaPaused = false, companion = false }: ArenaProps) {
+export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode, enemyHp, playerHp, reducedMotion, cue, guardian, cinemaShot, cinemaPaused = false, companion = false, combatStatus, attackOutcome }: ArenaProps) {
   const host = useRef<HTMLDivElement>(null);
   const scene = useRef<ReturnType<typeof createArenaScene> | null>(null);
   const lastCue = useRef('');
@@ -88,12 +107,29 @@ export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode
     if (!cue || cue === lastCue.current) return;
     lastCue.current = cue;
     const ultimate = cue.startsWith('ultimate');
-    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'), spellChapter);
+    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'), spellChapter, {
+      critical: attackOutcome?.critical ?? cue.startsWith('enemy-ultimate-'),
+      missed: attackOutcome?.missed ?? cue.startsWith('miss-'),
+    });
+    // The outcome belongs to this cue; changing a timer or clearing feedback must
+    // not restart a cast or its one-time HP feedback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cue, spellChapter]);
-  return <div className="arena3d" data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
+  return <div className={'arena3d' + (reducedMotion ? ' reduced-motion' : '')} data-renderer={fallback ? 'unavailable' : 'three-webgl'} data-character="campus-mage" data-animation={phase} data-cinema-shot={cinemaShot}
     data-boss={companion ? 'mimi-companion' : finalBoss ? finalBosses[mode].id : getBossForTheme(chapter, mode).id} data-boss-mode={companion ? 'companion' : mode}
     aria-label={'原創 3D 風格校園魔法師小羽與' + guardian + '的答題對戰'}>
     <div className="arena3d-canvas" ref={host} />
+    {!cinemaShot && <div className="arena-status-auras" aria-hidden="true">
+      {combatStatus?.enemyBurning && <span className="arena-status-aura enemy-burning"><i /><i /><i /></span>}
+      {combatStatus?.playerRegeneration && <span className="arena-status-aura hero-regenerating"><i>＋</i><i>＋</i><i>＋</i></span>}
+      {combatStatus?.frostGuard && <span className="arena-status-aura hero-frost"><i>❄</i><i>❄</i></span>}
+      {combatStatus?.mirrorGuard && <span className="arena-status-aura hero-mirror" />}
+    </div>}
+    {!cinemaShot && cue && <div className="arena-turn-feedback" key={'turn-status-' + cue}>
+      {!!attackOutcome?.burnDamage && <span className="arena-turn-pop burn-pop">燃燒 −{attackOutcome.burnDamage} HP</span>}
+      {!!attackOutcome?.healing && <span className="arena-turn-pop healing-pop">回復 ＋{attackOutcome.healing} HP</span>}
+      {attackOutcome?.critical && <span className="arena-turn-pop critical-pop">魔王追擊必殺！</span>}
+    </div>}
     {fallback && <div className="arena3d-fallback" role="status">
       <span aria-hidden="true">🪄</span>
       <strong>這台裝置無法顯示 3D 對戰場景</strong>

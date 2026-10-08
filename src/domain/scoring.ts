@@ -1,4 +1,4 @@
-import { getQuestions, questionById } from '../content';
+import { getQuestions, getQuestionsForHistory, questionById } from '../content';
 import { levels } from '../content/levels';
 import { getUltimateSpell } from '../content/ultimateSpells';
 import type { AttemptRecord, CompletedRun, Progress, Session } from './types';
@@ -54,6 +54,8 @@ function recordsForScore(value: Session | CompletedRun): AttemptRecord[] {
       ...(value.timed ? { timed: true, elapsedMs: value.elapsedMs ?? 0, timedOut: !!value.timedOut } : {}),
       ...(value.ultimateUsed ? { ultimateUsed: true, ultimateId: value.ultimateId } : {}),
       ...(value.preventedDamage ? { preventedDamage: true } : {}),
+      ...(value.combatRulesVersion === 2 ? { combatRulesVersion: 2 as const,
+        turnBurnDamage: value.lastTurnBurnDamage ?? 0, turnHealing: value.lastTurnHealing ?? 0 } : {}),
     });
   }
   return records;
@@ -88,10 +90,11 @@ export function scoreSession(value: Session | CompletedRun): SessionScore {
   };
 }
 
-/** Final missions have no historical damage variants: each completed non-timeout question hits for 20 HP. */
+/** Saved burn ticks make early completion reproducible without reapplying newer effects to old casts. */
 export function finalBossDamage(records: readonly AttemptRecord[]): number {
   return records.reduce((damage, record) => damage + (record.status === 'timeout' ? 0 : 20)
-    + (record.ultimateUsed ? getUltimateSpell(record.ultimateId!, record.mode)?.extraDamage ?? 0 : 0), 0);
+    + (record.ultimateUsed ? getUltimateSpell(record.ultimateId!, record.mode)?.extraDamage ?? 0 : 0)
+    + (record.turnBurnDamage ?? 0), 0);
 }
 
 /** Recover only exact, contiguous complete sequences; partial history has no score. */
@@ -102,7 +105,7 @@ export function reconstructRuns(attempts: readonly AttemptRecord[]): CompletedRu
     if (!question || (question.slot !== 1 && question.slot !== 6) || levels.find(level => level.id === question.levelId)?.mode !== first.mode) { index++; continue; }
     const finalBoss = levels.find(level => level.id === question.levelId)?.finalBoss;
     const review = !finalBoss && question.slot === 6;
-    const expected = getQuestions(question.levelId, review).map(item => item.id);
+    const expected = getQuestionsForHistory(question.levelId, review, first.questionId).map(item => item.id);
     let count = expected.length;
     if (finalBoss) {
       count = 0;

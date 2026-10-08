@@ -1,0 +1,8 @@
+.duel-choice.lightning-clue{position:relative;border-color:#ffdf7a;outline:2px solid #89e6ff;outline-offset:3px;box-shadow:0 0 10px #78d9ff, inset 0 0 14px #b6eaff35;animation:lightning-clue-pulse 1.65s ease-in-out infinite}
+.lightning-clue-icon{flex-shrink:0;margin-left:auto;color:#ffe380;fill:#ffd44a;filter:drop-shadow(0 0 5px #87e4ff)}
+.duel-damage.is-enemy-ultimate{color:#ffce86;text-shadow:2px 3px 0 #611d1c,0 0 14px #ff723d}
+@media(min-width:601px){.duel-bubble:has(.battle-status-effects){max-height:40%}}
+@keyframes lightning-clue-pulse{0%,100%{outline-color:#8cdfff;box-shadow:0 0 8px #78d9ff,inset 0 0 10px #b6eaff25}50%{outline-color:#ffe8a1;box-shadow:0 0 20px #84daff,inset 0 0 20px #b6eaff45}}
+.duel-static .duel-choice.lightning-clue{animation:none}
+@media(max-width:600px){.lightning-clue-icon{display:none}}
+@media(prefers-reduced-motion:reduce){.duel-choice.lightning-clue{animation:none}}

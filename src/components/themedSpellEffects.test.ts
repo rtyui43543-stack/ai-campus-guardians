@@ -17,6 +17,38 @@ const visibleMeshes = (object: THREE.Object3D) => nodes(object).filter(node => {
 });
 
 describe('themed spell performances', () => {
+  it('gives final bosses their own projectiles and expands the consecutive-error ultimate', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), 5, mode, true);
+      fx.update(frame({ time: .7, success: false }));
+      const projectile = fx.root.getObjectByName('final-boss-projectile')!;
+      expect(projectile).toBeDefined(); expect(projectile.visible).toBe(true);
+      const basicSize = projectile.scale.x;
+      expect(projectile.getObjectByName(mode === 'starter' ? 'open-learning-book' : 'spectral-dragon-charge')).toBeDefined();
+      fx.update(frame({ time: .7, success: false, enemyCritical: true }));
+      expect(projectile.scale.x).toBeGreaterThan(basicSize * 1.5);
+      expect(fx.root.userData.kind).toBe('enemy-ultimate');
+      expect(fx.root.userData.spell).toContain('追擊必殺');
+      fx.update(frame({ time: 1.1, success: false, enemyCritical: true }));
+      expect(fx.root.getObjectByName('final-boss-critical-bolt-0')!.visible).toBe(true);
+      expect(fx.root.getObjectByName('final-boss-impact-wave')!.visible).toBe(true);
+      fx.dispose();
+    }
+  });
+  it('lands a mirrored attack beside the learner while showing mirror fragments, rather than a false hit', () => {
+    const fx = createThemedSpellEffects(new THREE.Scene(), 6, 'advanced', true);
+    const target = frame().target.clone();
+    fx.update(frame({ time: 1, success: false, missed: true }));
+    const impact = fx.root.getObjectByName('final-boss-impact-wave')!;
+    expect(impact.position.x).toBeLessThan(target.x);
+    expect(impact.position.y).toBeLessThan(target.y);
+    expect(fx.root.getObjectByName('mirror-dodge')!.visible).toBe(true);
+    expect(fx.root.userData.missed).toBe(true);
+    fx.update(frame({ time: 1, success: false, missed: false }));
+    expect(impact.position.x).toBe(target.x);
+    expect(fx.root.getObjectByName('mirror-dodge')!.visible).toBe(false);
+    fx.dispose();
+  });
   it('selects the upgraded identity for advanced casts without changing normal attack timing', () => {
     for (let chapter = 1; chapter <= 6; chapter++) {
       const fx = createThemedSpellEffects(new THREE.Scene(), chapter, 'advanced');
