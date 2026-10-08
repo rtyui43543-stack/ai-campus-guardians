@@ -167,4 +167,3 @@ export const FINAL_BOSS_ART = [
     }
   }
 ] as const satisfies readonly FinalBossArtMetadata[];
-

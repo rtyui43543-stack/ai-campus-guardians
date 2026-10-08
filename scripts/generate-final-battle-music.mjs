@@ -170,4 +170,3 @@ console.log(JSON.stringify({
   output, seconds, bpm, bars, rate, channels: 2, bytes: wav.length,
   peak: .84, rms: Math.sqrt(sumSquares / (frames * 2)), seam
 }, null, 2));
-

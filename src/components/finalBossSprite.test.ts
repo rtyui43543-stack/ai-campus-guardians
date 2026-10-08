@@ -107,4 +107,3 @@ describe.each(['starter', 'advanced'] as const)('final %s boss rendering', mode 
     expect(onReady).toHaveBeenCalledTimes(1);
   });
 });
-
