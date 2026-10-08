@@ -3,6 +3,7 @@ import { ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Compass, Flag, 
 import type { Level } from '../domain/types';
 import type { StoryBeat } from '../content/stories';
 import { getChapter } from '../content/levels';
+import { getMissionBoss } from '../content/missionBosses';
 import { Arena } from './Arena';
 import '../styles/story-cinematic.css';
 
@@ -40,6 +41,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
   stopNarration.current = onStopNarration;
   const beat = beats[Math.min(index, beats.length - 1)];
   const chapter = getChapter(level?.chapterId ?? 1);
+  const boss = level ? getMissionBoss(level) : null;
   const durationMs = beat?.durationMs ?? 6000;
   const progress = Math.min(1, elapsedMs / durationMs);
   const shot = ready ? 'resolve' : level ? (index === 0 ? 'wide' : index === 1 ? 'enemy' : 'hero') : (index === 0 ? 'wide' : index === 1 ? 'enemy' : index === 2 ? 'hero' : 'resolve');
@@ -98,7 +100,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
         <button type="button" className="story-close" onClick={() => leave(onClose)} aria-label="關閉故事"><X size={24} /></button>
       </header>
       <div className={'story-stage story-stage-' + (beat?.scene ?? 'campus')} data-story-shot={shot}>
-        <Arena chapter={chapter.id} guardian={level ? chapter.guardian : '米米'} companion={!level} playerHp={100} enemyHp={100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
+        <Arena chapter={chapter.id} mode={level?.mode ?? 'starter'} guardian={boss?.name ?? '米米'} companion={!level} playerHp={100} enemyHp={100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
         <div className="story-stage-vignette" />
         {!ready && beat && <div className="story-stage-moment" key={beat.id}><StoryProps scene={beat.scene} /></div>}
         {!ready && <div className="story-scene-number">第 {index + 1} 幕 / {beats.length} 幕</div>}

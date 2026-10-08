@@ -58,6 +58,9 @@ export interface CoverHeroSpriteOptions {
   /** Injectable local loading boundary for lifecycle tests; production uses TextureLoader/appAssetUrl. */
   loadTexture?: HeroSpriteTextureLoader;
   resolveAssetUrl?: (path: string) => string;
+  /** Allows other local actors to use the same calibrated rendering and lifecycle boundary. */
+  assetPath?: string;
+  identity?: string;
 }
 export interface CoverHeroSpriteRig extends CoverHeroRig {
   updateVisual: (state: HeroSpriteState) => void;
@@ -133,8 +136,9 @@ export function createCoverHeroSprite(options: CoverHeroSpriteOptions = {}): Cov
   validateCalibration(calibration);
   let disposed = false, pose: HeroSpritePose = 'idle', lastCamera: THREE.Camera | null = null;
   let atlasWidth = calibration.atlasWidth ?? 2048, atlasHeight = calibration.atlasHeight ?? 2048;
-  const root = new THREE.Group(); root.name = 'original-campus-mage';
-  root.userData.design = 'cover-hero-sprite-v3'; root.userData.spriteStatus = 'loading'; root.userData.pose = pose;
+  const root = new THREE.Group(); root.name = options.identity ?? 'original-campus-mage';
+  root.userData.design = options.identity ? 'cover-matched-boss-sprite-v1' : 'cover-hero-sprite-v3';
+  root.userData.spriteStatus = 'loading'; root.userData.pose = pose;
   const head = new THREE.Group(); head.position.y = 2.2; root.add(head);
   head.name = 'cover-sprite-logical-head';
   const makeArm = (side: number) => {
@@ -255,7 +259,7 @@ export function createCoverHeroSprite(options: CoverHeroSpriteOptions = {}): Cov
   };
   try {
     const load = options.loadTexture ?? ((url, loaded, error) => new THREE.TextureLoader().load(url, loaded, undefined, error));
-    const texture = load((options.resolveAssetUrl ?? appAssetUrl)('/art/hero-poses-v3.webp'), ready, failed);
+    const texture = load((options.resolveAssetUrl ?? appAssetUrl)(options.assetPath ?? '/art/hero-poses-v3.webp'), ready, failed);
     if (texture) { if (disposed) disposeTexture(texture); else managedTextures.add(texture); }
   } catch (error) { failed(error); }
   return rig;

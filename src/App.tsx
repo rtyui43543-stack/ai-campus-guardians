@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
 import type { Chapter, CompletedRun, Level, Mode, Progress } from './domain/types';
 import { chapters, levels, getChapter, getLevel } from './content/levels';
+import { getBossForTheme, getMissionBoss } from './content/missionBosses';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finishSession, isDefeated, restartBattle, retryQuestion, sessionSummary, startSession, submitAction, useHint } from './domain/engine';
 import { loadProgress, saveProgress } from './domain/storage';
@@ -206,6 +207,7 @@ export function App() {
   const health = active ? battleHealth(active) : {playerHp:100,enemyHp:100};
   const battleLevel = active ? getLevel(active.levelId)! : null;
   const battleChapter = battleLevel ? getChapter(battleLevel.chapterId)! : null;
+  const battleBoss = battleLevel ? getMissionBoss(battleLevel) : null;
   const question = active ? questionById.get(active.questionIds[active.index])! : null;
   const presented = question && active ? presentQuestion(question, active.mode) : null;
   const audioKey = question && active ? question.id + '.' + active.mode : '';
@@ -252,13 +254,13 @@ export function App() {
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
           onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} offline={offline} />}
-        {screen === 'battle' && active && battleLevel && battleChapter && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
-          <Arena chapter={battleLevel.chapterId} guardian={battleChapter.guardian} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
+        {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
+          <Arena chapter={battleLevel.chapterId} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
           <div className="duel-hud">
             <button className="duel-back" onClick={() => navigate('cover')} aria-label="回到首頁" title="回到首頁，保留本次挑戰"><Home size={20} /><span>首頁</span></button>
             <DuelMeter label="你 · 小羽" hp={health.playerHp} side="hero" cue={cue} reducedMotion={progress.settings.reducedMotion} />
             <div className="duel-round"><span>{modeNames[active.mode]} · 第 {active.mode === 'starter' ? battleLevel.id : battleLevel.id - 6} 關</span><b>第 {active.index + 1} 題 / {active.questionIds.length}</b></div>
-            <DuelMeter label={battleChapter.guardian} hp={health.enemyHp} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
+            <DuelMeter label={battleBoss.name} hp={health.enemyHp} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
           </div>
           <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
             <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button></div></div>
@@ -267,7 +269,7 @@ export function App() {
             {hintOpen && active.step === 'action' && <div className="duel-hint"><Lightbulb size={17} /><p>{question.hint}</p><button className="duel-tool" aria-label="聽提示" onClick={() => narrate(audioKey + '.hint')}><Volume2 size={18} /></button></div>}
             {(active.step === 'feedback' || isDefeated(active)) && <div className={'duel-feedback ' + (active.success ? 'success' : 'retry')} role="status"><strong>{isDefeated(active) ? '血量歸零了' : active.demoUsed ? '伙伴示範，跟著學！' : active.success ? '答對了！' : '再想想，還能再試！'}</strong><p>{active.feedback}</p><button className="duel-tool" aria-label="聽解說" onClick={() => narrate(audioKey + (active.success ? '.explanation' : '.choice.' + active.selected))}><Volume2 size={18} /></button></div>}
           </section>
-          <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleChapter.guardian}</b></div>
+          <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>
           {animating && active.success && <div className="duel-attack-name" key={cue}><Sparkles size={18} />{abilityNames[battleLevel.chapterId - 1]}</div>}
           {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero')} key={'damage-' + cue}><span>{active.success ? '命中！' : isDefeated(active) ? '血量歸零' : '再試一次'}</span><b>−{Number(cue.split('-').at(-1))}<small> HP</small></b></div>}
           <div className="duel-answer-area">
@@ -359,10 +361,11 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
 }) {
   const Icon = chapterIcons[chapter.icon];
   const missions = levels.filter(l => l.chapterId === chapter.id && l.mode === progress.settings.mode);
+  const boss = getBossForTheme(chapter.id, progress.settings.mode);
   return <article className="chapter-card" style={{ '--chapter-color': chapter.color } as React.CSSProperties}>
     <div className="chapter-card-header"><div className="chapter-icon"><Icon size={23} /></div><span className="chapter-number">{modeNames[progress.settings.mode]} 0{chapter.id}</span>
       <span className={'chapter-status ' + (missions.every(l => progress.completed.includes(l.id)) ? 'complete' : '')}>{missions.every(l => progress.completed.includes(l.id)) ? <><Check size={13} />已完成</> : '尚未挑戰'}</span></div>
-    <div className="chapter-card-body"><div><h3>{chapter.title}</h3><p>{chapter.subtitle}</p><span className="skill-label"><Sparkles size={13} />解鎖能力：{chapter.skill}</span></div><GuardianPortrait chapter={chapter.id} /></div>
+    <div className="chapter-card-body"><div><h3>{chapter.title}</h3><p>{chapter.subtitle}</p><p className="chapter-boss-name" style={{ color: '#164b40', fontWeight: 700, fontSize: '16px' }}>挑戰魔王：{boss.name}</p><span className="skill-label"><Sparkles size={13} />解鎖能力：{chapter.skill}</span></div><GuardianPortrait chapter={chapter.id} mode={progress.settings.mode} /></div>
     <div className="level-list">{missions.map(level => <div className="level-entry" key={level.id}><button className={'level-row ' + (progress.completed.includes(level.id) ? 'completed' : '') + (nextLevel === level.id ? ' recommended' : '')} aria-label={(progress.completed.includes(level.id) ? '再次挑戰：' : '開始闖關：') + level.title} onClick={() => onLevel(level)}>
       <span className="level-play" aria-hidden="true"><Play size={23} fill="currentColor" /></span>
       <span className="level-action"><strong>{progress.completed.includes(level.id) ? '再次挑戰' : '開始闖關'}</strong><span className="level-title">{level.title}</span></span>

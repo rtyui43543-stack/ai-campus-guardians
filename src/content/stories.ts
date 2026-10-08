@@ -12,7 +12,7 @@ export interface StoryBeat {
 export const openingStory: readonly StoryBeat[] = [
   {
     id: 'opening-1', speaker: '旁白', scene: 'campus', durationMs: 8750,
-    text: '校園裡的 AI 幫手突然忙亂起來，奇怪的推薦與消息，讓大家不知道該怎麼辦。',
+    text: '校園開始試用新的 AI 服務，使用時遇到的混亂，化成了不同的搗蛋魔王。',
   },
   {
     id: 'opening-2', speaker: '米米', scene: 'campus', durationMs: 8750,
@@ -106,7 +106,7 @@ export const levelStories: Readonly<Record<number, readonly StoryBeat[]>> = {
     },
     {
       id: 'level-06-2', speaker: '米米', scene: 'team', durationMs: 8500,
-      text: '前面學過的本領都派得上用場！可是計畫再漂亮，如果有人跟不上，該怎麼辦呢？',
+      text: '班級合作需要大家一起想！可是計畫再漂亮，如果有人跟不上，該怎麼辦呢？',
     },
     {
       id: 'level-06-3', speaker: '小羽', scene: 'team', durationMs: 8500,
@@ -116,7 +116,7 @@ export const levelStories: Readonly<Record<number, readonly StoryBeat[]>> = {
   7: [
     {
       id: 'level-07-1', speaker: '旁白', scene: 'privacy', durationMs: 8500,
-      text: '校園相簿準備開張，搜集魔盒把活動照片排得整整齊齊，卻沒發現有人面露擔心。',
+      text: '校園新開了活動相簿，窺密蛛后把照片和資料織成網，連沒同意的同學也被圈住。',
     },
     {
       id: 'level-07-2', speaker: '米米', scene: 'privacy', durationMs: 8500,
@@ -124,77 +124,77 @@ export const levelStories: Readonly<Record<number, readonly StoryBeat[]>> = {
     },
     {
       id: 'level-07-3', speaker: '小羽', scene: 'privacy', durationMs: 8500,
-      text: '這次我要多想一步，看看分享會影響哪些人！跟我一起出發，讓相簿帶來安心的回憶。',
+      text: '我的魔法要解開這張資料網！一起想想分享會影響誰，讓校園相簿留下安心的回憶。',
     },
   ],
   8: [
     {
       id: 'level-08-1', speaker: '旁白', scene: 'library', durationMs: 8500,
-      text: '迷言書靈翻出新舊公告，做出兩份完全不同的建議。同學討論半天，還是拿不定主意。',
+      text: '校園準備新的活動，倒時沙漏精把新舊公告混在一起，讓同學不知道該相信哪一份。',
     },
     {
       id: 'level-08-2', speaker: '米米', scene: 'library', durationMs: 8500,
-      text: '兩邊都說自己是對的，光看一眼好像不夠。哪些線索，才能幫我們看清楚事情呢？',
+      text: '兩份公告說法不同，日期和來源也不一樣。小羽，哪些線索能幫我們確認最新消息？',
     },
     {
       id: 'level-08-3', speaker: '小羽', scene: 'library', durationMs: 8500,
-      text: '小偵探要升級了！讓我們比較更多線索，在還不確定的時候，也能做出穩妥的選擇。',
+      text: '讓我們找出可靠的線索，解除公告的混亂！還不確定時，也能先做出穩妥的選擇。',
     },
   ],
   9: [
     {
       id: 'level-09-1', speaker: '旁白', scene: 'sorting', durationMs: 8500,
-      text: '混淆機兵幫社團分組，一些同學卻找不到自己的位置。大家的興趣，並沒有被好好看見。',
+      text: '新社團開始招募，偏心藤怪只用一條規則分組，把不同興趣的同學綁在同一枝上。',
     },
     {
       id: 'level-09-2', speaker: '米米', scene: 'sorting', durationMs: 8500,
-      text: '同學明明有不同的喜好，它卻把幾個人當成一樣。這樣的分類，會不會讓人委屈？',
+      text: '每個人的興趣都不一樣，它卻沒問大家就分好了。這樣的安排，會不會讓人委屈？',
     },
     {
       id: 'level-09-3', speaker: '小羽', scene: 'sorting', durationMs: 8500,
-      text: '我想聽見每位同學的想法！一起找出分類裡的盲點，讓服務能看見更多人的需要。',
+      text: '我想聽見每位同學的想法！一起解開偏心的藤蔓，讓社團看見每個人的興趣。',
     },
   ],
   10: [
     {
       id: 'level-10-1', speaker: '旁白', scene: 'media', durationMs: 8500,
-      text: '幻影面具帶來更逼真的聲音和影片，消息一下子傳開，有位同學卻急得快哭出來。',
+      text: '班級新建了分享區，偽聲狐狸模仿同學的聲音做影片，讓被冒名的同學很著急。',
     },
     {
       id: 'level-10-2', speaker: '米米', scene: 'media', durationMs: 8500,
-      text: '大家都在猜是真是假，可是影片裡的人也需要被照顧。小羽，我們還能想到什麼？',
+      text: '大家忙著猜影片是真是假，被冒名的同學卻很難過。小羽，我們也要照顧他的感受。',
     },
     {
       id: 'level-10-3', speaker: '小羽', scene: 'media', durationMs: 8500,
-      text: '這次不只要找出線索，也要留意身邊的伙伴！一起破解訊息難題，減少不必要的傷害。',
+      text: '讓我們查清影片的來歷，解除假訊息的混亂！也要陪著受影響的伙伴，減少傷害。',
     },
   ],
   11: [
     {
       id: 'level-11-1', speaker: '旁白', scene: 'study', durationMs: 8500,
-      text: '代寫紙龍做出精彩的報告，老師問起準備過程時，同學卻不知道哪些想法是自己的。',
+      text: '新報告任務開始了，捷徑墨魚噴出滿滿答案，卻把思考過程藏在一團墨水裡。',
     },
     {
       id: 'level-11-2', speaker: '米米', scene: 'study', durationMs: 8500,
-      text: '看起來完成了，不一定真的學會。讓工具幫忙的時候，我們怎麼留下自己的努力呢？',
+      text: '報告看起來很漂亮，同學卻說不出自己的想法。小羽，怎麼讓幫手陪我們真正學會？',
     },
     {
       id: 'level-11-3', speaker: '小羽', scene: 'study', durationMs: 8500,
-      text: '我想交出能親口說明的成果！一起挑戰學習任務，讓幫手陪我們成長，也保留誠實。',
+      text: '我想交出能親口說明的成果！一起撥開捷徑的墨水，讓學習看得見自己的努力。',
     },
   ],
   12: [
     {
       id: 'level-12-1', speaker: '旁白', scene: 'team', durationMs: 8500,
-      text: '全能齒輪王要升級全校的 AI 服務，大家提出好多願望，也發現不能只顧最快完成。',
+      text: '全校準備新的 AI 服務，急速雲巨人只顧快速完成，忽略了資料和設備的不同需要。',
     },
     {
       id: 'level-12-2', speaker: '米米', scene: 'team', durationMs: 8500,
-      text: '有人在意資料，有人需要別的參加方式。走過這些任務，我們能不能一起想得更周到？',
+      text: '有人在意資料，有人需要別的參加方式。計畫再快，也不能把這些伙伴留在後面。',
     },
     {
       id: 'level-12-3', speaker: '小羽', scene: 'team', durationMs: 8500,
-      text: '最後挑戰到了！帶上我們學會的本領，一起完成守護約定，讓校園的 AI 幫手更可靠。',
+      text: '讓我們化解只求快的混亂，一起訂下守護約定！讓校園的 AI 幫手照顧更多人的需要。',
     },
   ],
 };
