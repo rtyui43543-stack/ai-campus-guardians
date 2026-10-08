@@ -34,5 +34,3 @@
 @keyframes ultimate-shields-link{0%,15%{translate:0 15px;opacity:.8}45%,80%{translate:0 0;opacity:1}100%{opacity:0}}
 @media(max-width:600px){.ultimate-cinematic.scope-half .ultimate-field{width:100%;left:0}.ultimate-cinematic.scope-half .ultimate-field-wash{right:0}.ultimate-tier-banner{top:49%;padding:7px 16px 10px;border-radius:12px}.ultimate-cinematic .ultimate-tier-banner>strong{font-size:23px}.ultimate-cinematic .ultimate-tier-banner>span{font-size:12px}.ultimate-field{opacity:.9}}
 @media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}}
-
-

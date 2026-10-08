@@ -149,4 +149,3 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
     <div className="ultimate-tier-banner"><span>技能升級 · 進階必殺</span><strong>{spell?.name}</strong></div>
   </div>;
 }
-
