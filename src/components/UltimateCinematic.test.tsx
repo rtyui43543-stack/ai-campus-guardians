@@ -5,9 +5,12 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 
 describe('upgraded ultimate battlefield presentation', () => {
   it('keeps beginner and ordinary counterattack cues out of the advanced cinematic', () => {
-    expect(renderToStaticMarkup(<UltimateCinematic chapter={1} mode="starter" cue="ultimate-1-20" reducedMotion={false} />)).toBe('');
+    for (let chapter = 1; chapter <= 5; chapter++) {
+      expect(renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-1-20" reducedMotion={false} />)).toBe('');
+    }
     for (const cue of ['', 'success-1-20', 'retry-2-12', 'blocked-3-0']) {
       expect(renderToStaticMarkup(<UltimateCinematic chapter={1} mode="advanced" cue={cue} reducedMotion={false} />)).toBe('');
+      expect(renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue={cue} reducedMotion={false} />)).toBe('');
     }
   });
 
@@ -76,5 +79,30 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(markup).toContain('ultimate-ice-dragon-horns');
     expect(markup).toContain('ultimate-ice-spike-front');
     expect(markup).toContain(getUltimateSpell(6, 'advanced')!.name);
+  });
+
+  it('reserves a crystal array, single colossal lance, shattering impact and frost wave for the starter ice ultimate', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(markup).toContain('data-ultimate-tier="starter"');
+    expect(markup).toContain(`初階必殺技：${getUltimateSpell(6, 'starter')!.name}`);
+    expect(markup).toContain('ultimate-colossal-ice-lance');
+    expect(markup).toContain('ultimate-lance-orbit-crystals');
+    expect(markup).toContain('ultimate-frost-lance-fragments');
+    const phases = ['data-phase="crystal-array"', 'data-phase="colossal-ice-lance-flight"', 'data-phase="colossal-lance-shatter"', 'data-phase="frost-wave"'];
+    const positions = phases.map(phase => markup.indexOf(phase));
+    expect(positions.every(position => position > -1)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(markup.match(/class="ultimate-colossal-ice-lance"/g)).toHaveLength(1);
+    expect(markup).not.toContain('ultimate-ice-dragon');
+    expect(markup).not.toContain('ultimate-tier-banner');
+    expect(markup).not.toContain('<button');
+  });
+
+  it('preserves the colossal starter lance and frost wave as recognizable static forms in reduced motion', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue="ultimate-9-30" reducedMotion />);
+    expect(markup).toContain('is-reduced');
+    expect(markup).toContain('ultimate-colossal-ice-lance');
+    expect(markup).toContain('ultimate-frost-lance-wave');
+    expect(markup).toContain(getUltimateSpell(6, 'starter')!.name);
   });
 });

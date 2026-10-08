@@ -23,7 +23,7 @@ export const ultimateSpells: readonly UltimateSpell[] = Object.freeze([
   { id: 3, name: '萬葉歸位', category: 'support', bonus: 10, description: '葉片拼圖找回自己的位置，恢復 12 HP，最多回到 100 HP。', artPath: '/art/ultimate-3-v1.webp' },
   { id: 4, name: '鏡界破偽', category: 'attack', bonus: 10, description: '召喚查證鏡陣，擊破假象，額外扣除魔王 10 HP。', artPath: '/art/ultimate-4-v1.webp' },
   { id: 5, name: '智慧火鳳', category: 'attack', bonus: 10, description: '自己的思考化成火鳳，額外扣除魔王 10 HP。', artPath: '/art/ultimate-5-v1.webp' },
-  { id: 6, name: '寒晶冰矛', category: 'attack', bonus: 10, description: '凝結寒冰長矛，飛向魔王造成碎冰衝擊，額外扣除魔王 10 HP。', artPath: '/art/ultimate-6-ice-v2.webp' },
+  { id: 6, name: '寒晶冰矛', category: 'attack', bonus: 10, description: '召喚冰晶陣，凝結巨型冰矛飛向魔王，命中後爆出碎冰與霜浪，額外扣除魔王 10 HP。', artPath: '/art/ultimate-6-ice-v2.webp' },
 ].map((spell) => Object.freeze({ ...spell, category: spell.category as UltimateSpellCategory, mode: 'starter' as const, baseName: spell.name })));
 
 const upgrades = [

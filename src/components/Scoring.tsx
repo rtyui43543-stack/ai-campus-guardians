@@ -7,7 +7,11 @@ export function ScoreSummary({ run }: { run: CompletedRun }) {
   return <section className="score-summary" aria-label="本次闖關成績">
     <div className="score-heading"><div><span>本次得分</span><h2>{result.perfect ? '首次全對，滿分過關！' : '每次思考，都看得見進步'}</h2></div><Award size={34} aria-hidden="true" /></div>
     <div className="score-total"><strong>{result.score}</strong><span>／100 答題分</span><b>{run.review ? '兩題重玩練習' : '五題關卡挑戰'}</b></div>
-    <div className="score-bonus"><Sparkles size={24} /><span>必殺獎勵 <b>＋{result.bonusScore} 分</b> · 釋放 {result.ultimateUses} 次</span><strong>總分 {result.totalScore} 分</strong></div>
+    <div className="score-bonus">
+      <span className="score-bonus-gain"><Sparkles size={24} aria-hidden="true" /><span>必殺獎勵</span><b className="score-bonus-number">＋{result.bonusScore}</b><span>分</span></span>
+      <span className="score-bonus-uses">釋放 <b>{result.ultimateUses}</b> 次</span>
+      <strong className="score-bonus-total"><span>總分</span><b className="score-bonus-number">{result.totalScore}</b><span>分</span></strong>
+    </div>
     <div className="score-stats">
       <div><CheckCircle2 size={21} /><span>首次獨立答對</span><strong>{result.firstTryCorrect}<small>／{result.questionCount} 題</small></strong></div>
       <div><RotateCcw size={21} /><span>{result.unknownWrongAnswers ? '已知答錯' : '答錯次數'}</span><strong>{result.wrongAnswers}<small> 次</small></strong></div>

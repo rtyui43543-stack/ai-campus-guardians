@@ -142,6 +142,33 @@ describe('themed spell performances', () => {
     }
   });
 
+  it('makes the starter ice ultimate visibly larger than ordinary spears and expands a frost wave only on contact', () => {
+    const fx = createThemedSpellEffects(new THREE.Scene(), 6, 'starter');
+    fx.update(frame({ time: .7 })); fx.root.updateMatrixWorld(true);
+    const ordinary = fx.root.getObjectByName('normal-6')!.getObjectByName('frost-crystal-spear')!;
+    const ordinaryWidth = new THREE.Box3().setFromObject(ordinary).getSize(new THREE.Vector3()).x;
+    const special = fx.root.getObjectByName('ultimate-6')!;
+    fx.update(frame({ ultimate: true, time: .1 }));
+    expect(special.getObjectByName('ultimate-formation')!.visible).toBe(true);
+    expect(special.getObjectByName('frost-crystal-summoning-array')).toBeDefined();
+    expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+    fx.update(frame({ ultimate: true, time: .7 })); fx.root.updateMatrixWorld(true);
+    const lance = special.getObjectByName('colossal-frost-lance')!;
+    expect(lance).toBeDefined();
+    const ultimateWidth = new THREE.Box3().setFromObject(lance).getSize(new THREE.Vector3()).x;
+    expect(ultimateWidth).toBeGreaterThan(ordinaryWidth * 3);
+    const wave = special.getObjectByName('colossal-lance-frost-wave')!;
+    expect(wave.visible).toBe(false);
+    fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
+    expect(wave.visible).toBe(true);
+    const contactScale = wave.scale.x;
+    fx.update(frame({ ultimate: true, time: 1.6 }));
+    expect(wave.scale.x).toBeGreaterThan(contactScale * 1.8);
+    expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+    expect(visibleMeshes(special.getObjectByName('frost-shatter-impact')!).length).toBeGreaterThan(50);
+    fx.dispose();
+  });
+
   it('matches 12 counterattacks to the boss species instead of firing the hero projectile backward', () => {
     const silhouettes = {
       starter: ['chain-link', 'classification-card', 'classification-stamp', 'false-mask', 'paper-wing', 'gear-fragment'],

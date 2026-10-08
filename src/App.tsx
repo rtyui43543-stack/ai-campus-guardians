@@ -12,7 +12,6 @@ import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
 import { screenFromHash, type Screen } from './platform/navigation';
-import { OfflineDownloadCard } from './components/OfflineDownloadCard';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
 import { GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
 import { LevelScore, ScoreSummary } from './components/Scoring';
@@ -319,7 +318,7 @@ export function App() {
       </header>
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
-          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} offline={offline} />}
+          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} />}
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <Arena chapter={battleLevel.chapterId} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion} />
           {animating && active.ultimateUsed && <UltimateCinematic key={cue} chapter={battleLevel.chapterId} mode={battleLevel.mode} cue={cue} reducedMotion={progress.settings.reducedMotion} />}
@@ -345,7 +344,7 @@ export function App() {
               answer(i);
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
             <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { flushClock(); const current = progressRef.current?.active; if (current?.step !== 'action') return; setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(current)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
-              <span className="duel-score" aria-label="目前闖關得分">答題 {scoreSession(active).score}／100{scoreSession(active).bonusScore > 0 && <small>必殺＋{scoreSession(active).bonusScore} · 總分 {scoreSession(active).totalScore}</small>}</span>
+              <span className="duel-score" aria-label="目前闖關得分"><span className="duel-answer-score"><span>答題</span><b>{scoreSession(active).score}</b><span>／100</span></span>{scoreSession(active).bonusScore > 0 && <small className="duel-bonus-score"><span>必殺＋{scoreSession(active).bonusScore}</span><span className="duel-total-score"><span>總分</span><b>{scoreSession(active).totalScore}</b></span></small>}</span>
               {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.timedOut ? <span className="duel-select-note" role="status">攻擊後，自動進下一題</span> : active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(retryQuestion(current)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(demonstrate(current)); }}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
             </div>
           </div>
@@ -393,8 +392,8 @@ function DuelMeter({ label, hp, side, cue, reducedMotion }: { label: string; hp:
   return <div className={'duel-meter ' + side}><div><span>{label}</span><b>{Math.round(displayHp)}<small> HP</small></b></div><progress value={displayHp} max={100} aria-label={side === 'hero' ? '我方血量' : '敵方血量'} /></div>;
 }
 
-function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, offline }: {
-  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void; offline: ReturnType<typeof useOffline>;
+function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory }: {
+  progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void;
 }) {
   const mainRuns = (progress.runs ?? []).filter(run => !run.review);
   const highestScore = mainRuns.length ? Math.max(...mainRuns.map(run => scoreSession(run).score)) : null;
@@ -416,7 +415,6 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory, o
     </section>
     <div className="journey-strip"><div><span className="journey-icon"><Compass size={21} /></span><span><b>初階六關，進階六關</b><small>從生活小事，練習怎麼安心使用 AI</small></span></div>
       <span className="journey-offline-note"><WifiOff size={16} />下載後，斷網也能玩</span></div>
-    <OfflineDownloadCard offline={offline} />
     <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">六個生活主題，自由選關挑戰</span></div>
     <div className="chapter-grid">{chapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
     <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對集能量，解鎖你的必殺技！</h3><p>每關五題，點選答案就能出招。能量滿三點，下一題答對釋放必殺。初階不限時；進階每題 30 秒，挑戰速度加分。也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>

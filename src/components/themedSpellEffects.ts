@@ -484,13 +484,41 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       });
     };
   } else {
-    const crystals = Array.from({ length: 7 }, () => iceShard(formation, .65));
-    crystals.forEach((piece, i) => { piece.position.set((i - 3) * .12, .08 + Math.sin(i * 1.7) * .22, .04); piece.rotation.z = (i - 3) * .18; });
+    const crystals = Array.from({ length: mode === 'starter' ? 12 : 7 }, () => iceShard(formation, .65));
+    crystals.forEach((piece, i) => {
+      if (mode === 'starter') {
+        const a = i * Math.PI * 2 / crystals.length;
+        piece.position.set(Math.cos(a) * .8, Math.sin(a) * .8, .04); piece.rotation.z = a - Math.PI / 2;
+      } else { piece.position.set((i - 3) * .12, .08 + Math.sin(i * 1.7) * .22, .04); piece.rotation.z = (i - 3) * .18; }
+    });
+    let crystalArray: THREE.Group | null = null;
+    if (mode === 'starter') {
+      crystalArray = group(formation, 'frost-crystal-summoning-array');
+      const ring = Array.from({ length: 13 }, (_, i) => [Math.cos(i * Math.PI / 6) * .76, Math.sin(i * Math.PI / 6) * .76, .02]);
+      tube(crystalArray, ring, .035, 0xb9f4ff);
+      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, b = a + Math.PI * 2 / 3;
+        tube(crystalArray, [[Math.cos(a) * .62, Math.sin(a) * .62, .03], [Math.cos(b) * .62, Math.sin(b) * .62, .03]], .018, 0x81d0ed); }
+    }
     const dragon = mode === 'advanced' ? iceDragon(strike) : null;
-    const spears = mode === 'starter' ? Array.from({ length: 9 }, () => iceSpear(root, .86)) : [];
-    const shatter = iceBurst(root, 20);
+    const lance = mode === 'starter' ? group(strike, 'colossal-frost-lance') : null;
+    if (lance) {
+      const main = iceSpear(lance, 1.85); main.position.x = -1.515;
+      const collar = iceShard(lance, .72); collar.position.set(-1.20, 0, .12); collar.rotation.z = -Math.PI / 2;
+      for (const side of [-1, 1]) {
+        const fin = iceShard(lance, .72); fin.position.set(-.83, side * .24, .12); fin.rotation.z = side * .60 - Math.PI / 2;
+      }
+    }
+    const shatter = iceBurst(root, mode === 'starter' ? 30 : 20);
+    const frostWave = mode === 'starter' ? group(root, 'colossal-lance-frost-wave') : null;
+    if (frostWave) {
+      for (let i = 0; i < 3; i++) {
+        const points = Array.from({ length: 13 }, (_, n) => [Math.cos(n * Math.PI / 6) * (.54 + i * .17), Math.sin(n * Math.PI / 6) * (.20 + i * .035), .025]);
+        tube(frostWave, points, .035, i % 2 ? 0xcdf8ff : 0x78cdeb);
+      }
+    }
     update = f => {
       anchor(formation, f.start, f, 1.15); formation.visible = visibleDuring(f, .03, .7);
+      if (crystalArray) crystalArray.rotation.z = f.reducedMotion ? 0 : f.time * .9;
       if (dragon) {
         const center = f.reducedMotion ? f.target.clone() : path(f);
         anchor(strike, center, f, 1.45); strike.visible = visibleDuring(f, .18, 1.08);
@@ -498,15 +526,19 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
           wing.rotation.x = f.reducedMotion ? 0 : Math.sin(f.time * 8) * (i ? -.18 : .18);
         });
       } else {
-        strike.visible = false;
-        spears.forEach((piece, i) => { piece.visible = visibleDuring(f, .15 + i * .018, 1.06);
-          const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i % 3 * .025);
-          point.y += (i % 3 - 1) * .27 * f.scale; point.x -= Math.floor(i / 3) * .22 * f.scale;
-          anchor(piece, point, f, .86); });
+        anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.25);
+        if (!f.reducedMotion) strike.scale.multiplyScalar(.45 + .55 * smooth((f.time - .24) / .18));
+        strike.visible = visibleDuring(f, .24, 1.08);
       }
-      anchor(shatter.root, f.target, f, mode === 'advanced' ? 1.25 : 1.1);
+      anchor(shatter.root, f.target, f, mode === 'advanced' ? 1.25 : 1.45);
       shatter.root.visible = visibleDuring(f, .9, 2.8);
-      shatter.update(f.reducedMotion ? .65 : smooth((f.time - .9) / .65), f.reducedMotion);
+      const spread = f.reducedMotion ? .65 : smooth((f.time - .9) / .65);
+      shatter.update(spread, f.reducedMotion);
+      if (frostWave) {
+        const ground = f.target.clone(); ground.y -= .45 * f.scale;
+        anchor(frostWave, ground, f, 1.1 + spread * 1.15);
+        frostWave.visible = visibleDuring(f, .9, 2.8);
+      }
     };
   }
   return { root, update };

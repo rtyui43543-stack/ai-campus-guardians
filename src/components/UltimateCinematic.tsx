@@ -120,14 +120,67 @@ function IceDragonProjectile({ id }: { id: string }) {
   </div>;
 }
 
-/** The advanced form fills the battlefield, under the question and answer UI.
+function StarterFrostLance({ id, name, cue, reducedMotion }: { id: string; name: string; cue: string; reducedMotion: boolean }) {
+  const ice = `url(#${id}-lance-ice)`;
+  return <div className={`ultimate-cinematic ultimate-theme-6 ultimate-starter-frost scope-full${reducedMotion ? ' is-reduced' : ''}`}
+    role="img" aria-label={`初階必殺技：${name}，召喚冰晶陣，投出巨型冰矛，命中後大片碎冰與霜浪展開`}
+    data-ultimate-tier="starter" data-spell="6" data-cue={cue} data-scope="full" data-sequence="crystal-array-colossal-lance-shatter-frost-wave">
+    <div className="ultimate-frost-lance-array" data-phase="crystal-array">
+      <svg viewBox="-250 -250 500 500" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-array-ice`} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#3292bd" /><stop offset=".48" stopColor="#9ce8f7" /><stop offset="1" stopColor="#f1fdff" /></linearGradient></defs>
+        <g fill="none" stroke="#bcefff" strokeWidth="6" strokeLinejoin="round"><path d="M0-155 134-77 134 77 0 155-134 77-134-77Z" /><path d="M0-124 107 62-107 62ZM0 124-107-62H107Z" strokeWidth="3" /></g>
+        <g className="ultimate-lance-orbit-crystals" fill={`url(#${id}-array-ice)`} stroke="#377fab" strokeWidth="3">
+          {Array.from({ length: 12 }, (_, i) => <g key={i} transform={`rotate(${i * 30}) translate(0 -195)`}><path d="M0-42 15-8 9 30-8 19-15-8Z" /><path d="M0-42 0 24 9 30 15-8Z" fill="#e4faff" stroke="none" /></g>)}
+        </g>
+      </svg>
+    </div>
+    <div className="ultimate-frost-lance-flight" data-phase="colossal-ice-lance-flight">
+      <svg viewBox="0 0 1200 340" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-lance-ice`} x1="0" y1="1" x2=".7" y2="0"><stop stopColor="#26729e" /><stop offset=".34" stopColor="#6fcfea" /><stop offset=".62" stopColor="#b6f5ff" /><stop offset="1" stopColor="#f4fdff" /></linearGradient></defs>
+        <g className="ultimate-colossal-ice-lance" fill={ice} stroke="#327b9f" strokeWidth="5" strokeLinejoin="round">
+          <path d="M52 147 625 139 771 79 1150 170 771 261 625 201 52 194 8 170Z" />
+          <path d="M8 170H1150L771 79 625 139 52 147Z" fill="#dbfaff" stroke="none" />
+          <path d="M625 139 690 47 823 97 737 150 798 171 737 194 823 244 690 291 625 201Z" />
+          <path d="M625 139 690 47 690 158 798 171H52M690 291V184L798 171" fill="none" stroke="#eafbff" strokeWidth="7" />
+          <path d="M823 97 920 146 771 170 921 194 823 244M771 170 1150 170" fill="none" stroke="#69b9d9" strokeWidth="4" />
+          {[0, 1, 2, 3].map(i => <path key={i} d={`M${182 + i * 85} 140 ${221 + i * 85} 169 ${182 + i * 85} 202 ${162 + i * 85} 170Z`} fill="#8ed9ee" />)}
+        </g>
+        <g className="ultimate-lance-flight-crystals" fill="#d7f7ff" stroke="#4e9ec2" strokeWidth="2">
+          {Array.from({ length: 8 }, (_, i) => <path key={i} d="M0-26 11-6 7 22-7 16-12-5Z" transform={`translate(${90 + i * 111} ${i % 2 ? 270 : 77}) rotate(${i * 31}) scale(${.7 + i % 3 * .12})`} />)}
+        </g>
+      </svg>
+    </div>
+    <div className="ultimate-frost-lance-impact" data-phase="colossal-lance-shatter">
+      <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
+        <g fill="#b3edff" stroke="#4b9fc3" strokeWidth="4">
+          {Array.from({ length: 15 }, (_, i) => <g key={i} transform={`rotate(${i * 24})`}><path d="M-10 7-22-74 0-209 22-74 10 7Z" /><path d="M0-209V7L22-74Z" fill="#edfcff" stroke="none" /></g>)}
+        </g>
+        <path d="M0-86 28-24 94-36 44 23 53 94-11 49-72 94-43 18-95-26-29-30Z" fill="#f4fdff" stroke="#78d5ee" strokeWidth="5" />
+      </svg>
+    </div>
+    <div className="ultimate-frost-lance-wave" data-phase="frost-wave">
+      <svg viewBox="-500 -125 1000 250" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="#bcefff" strokeWidth="9"><ellipse rx="425" ry="81" /><ellipse rx="330" ry="56" strokeWidth="5" /><path d="M-425 0-346-17-308 6-244-20-160 4-111-15M111-15 160 4 244-20 308 6 346-17 425 0" stroke="#e9fcff" strokeWidth="5" /></g>
+      </svg>
+    </div>
+    <svg className="ultimate-frost-lance-fragments" viewBox="0 0 1440 900" preserveAspectRatio="none" data-phase="large-frost-fragments" aria-hidden="true" focusable="false">
+      <g fill="#caefff" stroke="#478fb4" strokeWidth="3">
+        {Array.from({ length: 30 }, (_, i) => <g key={i} transform={`translate(${80 + i * 45} ${746 - i % 6 * 83}) rotate(${i * 29})`}><path d="M0-44 17-12 11 35-13 19-19-14Z" /><path d="M0-44V27L11 35 17-12Z" fill="#effdff" stroke="none" /></g>)}
+      </g>
+    </svg>
+    <div className="ultimate-frost-lance-mist" />
+  </div>;
+}
+
+/** Advanced forms and the starter ice lance fill the battlefield below the UI.
  * The existing 3D staff, projectile and impact still play beneath it. No game
  * state, animation timer or damage is owned by this presentation component. */
 export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: UltimateCinematicProps) {
   const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
-  if (mode !== 'advanced' || !cue.startsWith('ultimate') || chapter < 1 || chapter > 6) return null;
+  if (!cue.startsWith('ultimate') || chapter < 1 || chapter > 6 || (mode === 'starter' && chapter !== 6)) return null;
   const spell = getUltimateSpell(chapter, mode);
   const id = 'ultimate-field-' + instanceId;
+  if (mode === 'starter') return <StarterFrostLance id={id} name={spell?.name ?? '寒晶冰矛'} cue={cue} reducedMotion={reducedMotion} />;
   const colors = ['#54e9c0', '#8edcff', '#a1e27c', '#dab2ff', '#ffbb5a', '#a7eaff'];
   const accent = colors[chapter - 1];
   const fill = (name: string) => `url(#${id}-${name})`;
