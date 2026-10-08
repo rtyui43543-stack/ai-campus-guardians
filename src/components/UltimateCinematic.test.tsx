@@ -12,7 +12,7 @@ describe('upgraded ultimate battlefield presentation', () => {
   });
 
   it('offers six recognizable upgraded forms and labels the half/full battlefield presentation', () => {
-    const forms = ['ultimate-castle', 'ultimate-book-storm', 'ultimate-sorting-forest', 'ultimate-mirror-hall', 'ultimate-phoenix', 'ultimate-world-tree'];
+    const forms = ['ultimate-castle', 'ultimate-book-storm', 'ultimate-sorting-forest', 'ultimate-mirror-hall', 'ultimate-phoenix', 'ultimate-ice-dragon'];
     for (let chapter = 1; chapter <= 6; chapter++) {
       const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-1-30" reducedMotion={false} />);
       expect(markup).toContain(`data-scope="${chapter === 1 ? 'half' : 'full'}"`);
@@ -49,5 +49,32 @@ describe('upgraded ultimate battlefield presentation', () => {
       expect(markup).not.toContain('data-phase="enemy-impact"');
       expect(markup).not.toContain('data-phase="full-battlefield-burn"');
     }
+  });
+
+  it('sends a horned ice dragon before crystal impact and frost, replacing every world-tree formation', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(markup).toContain('有角與冰晶翼的巨大冰龍飛向對手，命中碎冰炸裂，寒霜蔓延全場');
+    expect(markup).toContain('ultimate-ice-dragon-horns');
+    expect(markup).toContain('ultimate-ice-dragon-wing front');
+    expect(markup).toContain('ultimate-ice-dragon-wing rear');
+    expect(markup).toContain('ultimate-ice-spike-front');
+    expect(markup).toContain('ultimate-ice-ground-cracks');
+    const phases = ['data-phase="ice-dragon-flight"', 'data-phase="ice-shatter-impact"', 'data-phase="full-battlefield-frost"'];
+    const positions = phases.map(phase => markup.indexOf(phase));
+    expect(positions.every(position => position > -1)).toBe(true);
+    expect(positions[0]).toBeLessThan(positions[1]);
+    expect(positions[1]).toBeLessThan(positions[2]);
+    expect(markup).not.toContain('ultimate-world-tree');
+    expect(markup).not.toContain('ultimate-tree-crown');
+    expect(markup).not.toContain('ultimate-partner-shields');
+    expect(markup).not.toContain('<button');
+  });
+
+  it('retains the ice dragon and crystals in reduced motion', () => {
+    const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="advanced" cue="ultimate-9-30" reducedMotion />);
+    expect(markup).toContain('is-reduced');
+    expect(markup).toContain('ultimate-ice-dragon-horns');
+    expect(markup).toContain('ultimate-ice-spike-front');
+    expect(markup).toContain(getUltimateSpell(6, 'advanced')!.name);
   });
 });

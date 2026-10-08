@@ -61,6 +61,65 @@ function PhoenixProjectile({ id }: { id: string }) {
   </div>;
 }
 
+/** A horned, winged ice dragon crosses the actor lanes before the ice field
+ * spreads. Independent percentage anchors preserve its silhouette on tablets. */
+function IceDragonProjectile({ id }: { id: string }) {
+  const ice = `url(#${id}-dragon-ice)`, edge = '#317da9';
+  return <div className="ultimate-ice-dragon" data-sequence="ice-gather-dragon-flight-impact-frost">
+    <div className="ultimate-ice-dragon-flight" data-phase="ice-dragon-flight">
+      <svg viewBox="0 0 1440 900" aria-hidden="true" focusable="false">
+        <defs><linearGradient id={`${id}-dragon-ice`} x1="0" y1="1" x2=".6" y2="0"><stop stopColor="#287aaf" /><stop offset=".36" stopColor="#79d6ee" /><stop offset=".68" stopColor="#c8f8ff" /><stop offset="1" stopColor="#f7feff" /></linearGradient></defs>
+        <g className="ultimate-ice-dragon-wake" fill="none" stroke="#c4f4ff" strokeWidth="14" strokeLinecap="round">
+          <path d="M560 576C391 524 247 613 61 594M546 627C337 652 186 746 40 702" />
+        </g>
+        <g className="ultimate-ice-dragon-wing rear" fill={ice} stroke={edge} strokeWidth="5" strokeLinejoin="round">
+          <path d="M676 545 962 164 899 306 1124 245 1000 397 1134 428 853 521 792 653Z" />
+          <path d="M676 545 962 164M676 545 1124 245M676 545 1134 428" fill="none" stroke="#e3fbff" strokeWidth="9" />
+        </g>
+        <g className="ultimate-ice-dragon-body" fill={ice} stroke={edge} strokeWidth="7" strokeLinejoin="round">
+          <path d="M782 479C714 454 643 488 580 553C491 621 387 583 291 607C216 626 137 648 67 587L195 723 326 679C435 653 492 766 642 710C712 685 772 621 816 565Z" />
+          <path d="M322 624 267 562 368 599 394 538 447 617 499 568 545 628 615 568 632 642" fill="#d6faff" />
+          <path d="M610 660 584 756 701 788 711 763 640 735 655 682M756 605 791 716 884 725 892 698 834 682 815 597" />
+          <path d="M688 764 740 778 697 790M874 699 919 715 884 728" fill="#f0fdff" />
+          <path d="M741 486 756 389 813 344 892 383 914 438 1021 454 973 516 874 558 796 541Z" />
+          <path className="ultimate-ice-dragon-horns" d="M784 376 737 242 833 349M858 373 903 257 902 403" fill="#e1fbff" />
+          <path d="M859 432 899 427 875 450Z" fill="#173754" stroke="none" />
+          <path d="M881 499 958 476M922 490 920 507 935 491 941 504" fill="none" stroke="#275d80" strokeWidth="5" />
+          <path d="M769 452 813 399 861 406M464 649 543 673 614 652 693 596" fill="none" stroke="#f1fdff" strokeWidth="8" opacity=".8" />
+        </g>
+        <g className="ultimate-ice-dragon-wing front" fill={ice} stroke={edge} strokeWidth="5" strokeLinejoin="round">
+          <path d="M640 584 458 132 452 292 272 199 343 382 187 392 494 539 559 670Z" />
+          <path d="M640 584 458 132M640 584 272 199M640 584 187 392" fill="none" stroke="#e8fcff" strokeWidth="10" />
+          <path d="M458 132 452 292 525 359M272 199 343 382 457 442" fill="none" stroke="#a6edfa" strokeWidth="4" />
+        </g>
+      </svg>
+    </div>
+    <div className="ultimate-ice-dragon-impact" data-phase="ice-shatter-impact">
+      <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
+        <g fill="#c1f4ff" stroke="#479cc3" strokeWidth="5" strokeLinejoin="round">
+          {Array.from({ length: 11 }, (_, i) => <path key={i} d="M-18 8-32-65 0-185 32-65 18 8Z" transform={`rotate(${i * 360 / 11})`} />)}
+        </g>
+        <path d="M0-82 19-23 76-29 34 19 44 72-11 44-65 81-39 15-83-29-21-32Z" fill="#f4fdff" stroke="#71ccec" strokeWidth="5" />
+      </svg>
+    </div>
+    <div className="ultimate-ice-frost-wash" data-phase="full-battlefield-frost" />
+    <svg className="ultimate-ice-field" viewBox="0 0 1440 900" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <defs><linearGradient id={`${id}-ice-spike`} x1="0" y1="1" x2=".6" y2="0"><stop stopColor="#216f9c" stopOpacity=".75" /><stop offset=".45" stopColor="#75d7ed" stopOpacity=".85" /><stop offset="1" stopColor="#e8fcff" stopOpacity=".93" /></linearGradient></defs>
+      <g className="ultimate-ice-ground-cracks" fill="none" stroke="#d6faff" strokeWidth="7" strokeLinejoin="round">
+        <path d="M1023 646 932 735 779 722 669 844 513 810 351 884M932 735 849 885M1023 646 1131 706 1118 800 1310 847M1131 706 1322 680 1410 727M779 722 691 681 500 717 388 674 201 728 63 701" />
+      </g>
+      <g className="ultimate-ice-spike-front" fill={`url(#${id}-ice-spike)`} stroke="#a9eeff" strokeWidth="3">
+        {Array.from({ length: 15 }, (_, i) => <g key={i} style={{ '--ice-spike-height': `${.65 + i % 4 * .14}` } as CSSProperties} className="ultimate-field-ice-spike">
+          <path d={`M${i * 101 - 28} 900 ${i * 101 + 25} ${463 + (i % 4) * 62} ${i * 101 + 81} 900Z`} /><path d={`M${i * 101 + 25} ${463 + (i % 4) * 62} ${i * 101 + 25} 900 ${i * 101 + 81} 900Z`} fill="#e4fcff" opacity=".4" />
+        </g>)}
+      </g>
+      <g className="ultimate-ice-shatter-fragments" fill="#d7f8ff" stroke="#66b6d4" strokeWidth="2">
+        {Array.from({ length: 24 }, (_, i) => <path key={i} d="M0-28 12-6 7 25-8 16-12-8Z" transform={`translate(${34 + i * 60} ${658 - i % 5 * 85}) rotate(${i * 31}) scale(${.45 + i % 3 * .13})`} />)}
+      </g>
+    </svg>
+  </div>;
+}
+
 /** The advanced form fills the battlefield, under the question and answer UI.
  * The existing 3D staff, projectile and impact still play beneath it. No game
  * state, animation timer or damage is owned by this presentation component. */
@@ -69,12 +128,14 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
   if (mode !== 'advanced' || !cue.startsWith('ultimate') || chapter < 1 || chapter > 6) return null;
   const spell = getUltimateSpell(chapter, mode);
   const id = 'ultimate-field-' + instanceId;
-  const colors = ['#54e9c0', '#8edcff', '#a1e27c', '#dab2ff', '#ffbb5a', '#87e4ae'];
+  const colors = ['#54e9c0', '#8edcff', '#a1e27c', '#dab2ff', '#ffbb5a', '#a7eaff'];
   const accent = colors[chapter - 1];
   const fill = (name: string) => `url(#${id}-${name})`;
+  const ornament = fill(chapter === 6 ? 'ice' : 'gold');
   const scope = chapter === 1 ? 'half' : 'full';
   const presentation = chapter === 5
     ? '烈焰鳳變大展翼，飛向右方對手，命中後火焰燃燒全場'
+    : chapter === 6 ? '有角與冰晶翼的巨大冰龍飛向對手，命中碎冰炸裂，寒霜蔓延全場'
     : `${scope === 'half' ? '半屏' : '全場'}魔法展開`;
   const maskFaces = [[315, 405], [720, 435], [1115, 405]];
   return <div className={`ultimate-cinematic ultimate-theme-${chapter} scope-${scope}${reducedMotion ? ' is-reduced' : ''}`}
@@ -88,12 +149,12 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
         <linearGradient id={`${id}-page`} x1="0" y1="0" x2=".6" y2="1"><stop stopColor="#fffbea" /><stop offset="1" stopColor="#ddc68e" /></linearGradient>
         <linearGradient id={`${id}-mirror`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#f4f1ff" /><stop offset=".3" stopColor="#aecfff" /><stop offset=".5" stopColor="#e8bbff" /><stop offset="1" stopColor="#705ab2" /></linearGradient>
         <linearGradient id={`${id}-flame`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b83928" /><stop offset=".4" stopColor="#ef7943" /><stop offset=".75" stopColor="#ffc65d" /><stop offset="1" stopColor="#fff7c4" /></linearGradient>
-        <linearGradient id={`${id}-trunk`} x1="0" y1="0" x2="1" y2="0"><stop stopColor="#325d49" /><stop offset=".5" stopColor="#cab05c" /><stop offset="1" stopColor="#184b41" /></linearGradient>
+        <linearGradient id={`${id}-ice`} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#75c6e4" /><stop offset=".6" stopColor="#c1f6ff" /><stop offset="1" stopColor="#f3fdff" /></linearGradient>
         <radialGradient id={`${id}-canopy`}><stop stopColor="#e8ffc1" /><stop offset=".4" stopColor="#8ed9a6" /><stop offset="1" stopColor="#1e6c5d" /></radialGradient>
       </defs>
-      <g className="ultimate-ground" fill="none" stroke={fill('gold')} strokeWidth="5">
+      <g className="ultimate-ground" fill="none" stroke={ornament} strokeWidth="5">
         <ellipse cx="720" cy="742" rx="640" ry="86" /><ellipse cx="720" cy="742" rx="560" ry="58" strokeWidth="2" />
-        {Array.from({ length: 12 }, (_, i) => <path key={i} d={star} transform={`translate(${175 + i * 99} ${730 + (i % 2) * 22}) scale(.6)`} fill={fill('gold')} stroke="none" />)}
+        {Array.from({ length: 12 }, (_, i) => <path key={i} d={star} transform={`translate(${175 + i * 99} ${730 + (i % 2) * 22}) scale(.6)`} fill={ornament} stroke="none" />)}
       </g>
       {chapter === 1 && <g className="ultimate-main-shape ultimate-castle">
         <path className="ultimate-canopy" d="M125 730C165 70 1275 70 1315 730" fill="none" stroke="#a2ffe2" strokeWidth="14" />
@@ -162,23 +223,12 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
           })}
         </g>
       </g>}
-      {chapter === 6 && <g className="ultimate-main-shape ultimate-world-tree">
-        <path className="ultimate-tree-trunk" d="M546 773C678 641 649 572 672 492L464 367 500 329 698 403 682 237 734 225 753 410 944 302 979 348 778 509C818 598 759 685 896 773Z" fill={fill('trunk')} stroke="#164b44" strokeWidth="8" strokeLinejoin="round" />
-        <path d="M642 769 712 629 725 456 716 277M719 459 519 350M749 464 933 333" fill="none" stroke="#e5df98" strokeWidth="6" opacity=".7" />
-        <g className="ultimate-tree-crown" fill={fill('canopy')} stroke="#235c49" strokeWidth="5">
-          {[[358, 455, -65], [505, 352, -33], [715, 264, 0], [928, 350, 33], [1082, 455, 65], [615, 403, -18], [818, 400, 18]].map(([x, y, rotate], i) => <path key={i} d={leaf} transform={`translate(${x} ${y}) rotate(${rotate}) scale(${i < 5 ? 2 : 1.8})`} />)}
-        </g>
-        <path className="ultimate-root-links" d="M87 749C297 580 527 898 720 735C913 898 1143 580 1353 749" fill="none" stroke={fill('gold')} strokeWidth="10" />
-        <g className="ultimate-partner-shields" stroke={fill('gold')} strokeWidth="7">
-          {Array.from({ length: 6 }, (_, i) => <g key={i} className="ultimate-shield" style={{ '--piece-delay': `${i * .035}s` } as CSSProperties} transform={`translate(${220 + i * 200} ${620 + (i % 2) * 64})`}>
-            <path d="M-50-52 0-78 50-52 39 28 0 66-39 28Z" fill={i % 2 ? '#4d938b' : '#6aa269'} /><circle cy="-18" r="13" fill="#fff4bc" stroke="none" /><path d="M-23 26Q-22 1 0 1Q22 1 23 26Z" fill="#fff4bc" stroke="none" /></g>)}
-        </g>
-      </g>}
-      <g className="ultimate-edge-stars" fill={fill('gold')}>
+      <g className="ultimate-edge-stars" fill={ornament}>
         {Array.from({ length: 18 }, (_, i) => <path key={i} d={star} className="ultimate-star" style={{ '--piece-delay': `${(i % 5) * .035}s` } as CSSProperties} transform={`translate(${45 + i * 80} ${220 + (i % 4) * 130}) scale(${.35 + i % 3 * .14})`} />)}
       </g>
     </svg>
     {chapter === 5 && <PhoenixProjectile id={id} />}
+    {chapter === 6 && <IceDragonProjectile id={id} />}
     <div className="ultimate-tier-banner"><span>技能升級 · 進階必殺</span><strong>{spell?.name}</strong></div>
   </div>;
 }

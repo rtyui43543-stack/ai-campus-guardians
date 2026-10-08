@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   demonstrate, expireQuestion, finishSession, restartBattle, retryQuestion, startSession,
-  submitAction, tickQuestion, useHint,
+  remainingBarrierCharges, submitAction, tickQuestion, useHint,
 } from './engine';
 import { describeAttempt, scoreRecord, scoreSession } from './scoring';
 import { exportBackup, parseBackup, validateProgress } from './storage';
@@ -143,7 +143,8 @@ describe('per-run energy and ultimate rewards', () => {
     expect(scoreSession(fifth)).toMatchObject({ score: 80, bonusScore: 10, demos: 1 });
   });
 
-  it.each([1, 6, 7, 12])('uses defensive mission %i to absorb one attack only, including a saved checkpoint', levelId => {
+  it('uses the starter castle to absorb one attack only, including a saved checkpoint', () => {
+    const levelId = 1;
     const released = solve(reachQuestion(levelId, 4));
     let fifth = roundTrip(advanceSession(released).session!).active!;
     const protectedHit = wrong(fifth);
@@ -154,7 +155,45 @@ describe('per-run energy and ultimate rewards', () => {
     expect(secondHit).toMatchObject({ shield: 88, preventedDamage: false, barrier: false, retries: 2 });
   });
 
-  it.each([2, 4, 5, 8, 10, 11])('uses offensive mission %i to add damage without skipping a question', levelId => {
+  it('saves the upgraded castle across questions and blocks two distinct mistakes, not a third', () => {
+    const released = solve(reachQuestion(7, 4));
+    expect(released).toMatchObject({ barrier: true, barrierCharges: 2, bonusPoints: 10, enemyBonusDamage: 0 });
+    const savedRelease = roundTrip(released).active!;
+    let fifth = roundTrip(advanceSession(savedRelease).session!).active!;
+    expect(remainingBarrierCharges(fifth)).toBe(2);
+    for (let hit = 1; hit <= 2; hit++) {
+      const defended = wrong(fifth);
+      expect(defended).toMatchObject({ shield: 100, preventedDamage: true, barrierCharges: 2 - hit, retries: hit });
+      expect(submitAction(defended)).toBe(defended);
+      expect(expireQuestion(defended)).toBe(defended);
+      expect(tickQuestion(defended, 30_000)).toBe(defended);
+      fifth = roundTrip(retryQuestion(defended)).active!;
+    }
+    const third = wrong(fifth);
+    expect(third).toMatchObject({ shield: 88, barrier: false, barrierCharges: 0, preventedDamage: false, retries: 3 });
+    const corrected = solve(retryQuestion(roundTrip(third).active!));
+    expect(corrected).toMatchObject({ shield: 88, barrierCharges: 0 });
+    const finished = finishSession(createProgress(), corrected);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 88, bonusScore: 10, wrongAnswers: 3 });
+    expect(parseBackup(exportBackup(finished))).toEqual(finished);
+  });
+
+  it('spends separate upgraded castle charges on a wrong answer and timeout, even after reload', () => {
+    const released = solve(reachQuestion(7, 4));
+    const fifth = advanceSession(released).session!;
+    const defendedMistake = wrong(fifth);
+    expect(defendedMistake).toMatchObject({ shield: 100, barrierCharges: 1, preventedDamage: true });
+    const retry = roundTrip(retryQuestion(defendedMistake)).active!;
+    const defendedTimeout = tickQuestion(retry, 30_000);
+    expect(defendedTimeout).toMatchObject({ shield: 100, barrier: false, barrierCharges: 0, preventedDamage: true, timedOut: true });
+    expect(expireQuestion(defendedTimeout)).toBe(defendedTimeout);
+    expect(tickQuestion(defendedTimeout, 30_000)).toBe(defendedTimeout);
+    const finished = finishSession(createProgress(), roundTrip(defendedTimeout).active!);
+    expect(finished.runs![0].records[4]).toMatchObject({ status: 'timeout', preventedDamage: true, retries: 1 });
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 80, bonusScore: 10, timeouts: 1 });
+  });
+
+  it.each([2, 4, 5, 6, 8, 10, 11, 12])('uses offensive mission %i to add damage without skipping a question', levelId => {
     const fourth = solve(reachQuestion(levelId, 4));
     expect(fourth).toMatchObject({ enemyBonusDamage: 10, bonusPoints: 10 });
     expect(battleHealth(fourth).enemyHp).toBe(10);
@@ -167,9 +206,24 @@ describe('per-run energy and ultimate rewards', () => {
     expect(final.enemyBonusDamage).toBe(10);
   });
 
-  it.each([3, 9])('uses support mission %i to heal 12 HP up to the 100 HP limit', levelId => {
+  it.each([6, 12])('gives ice mission %i extra attack damage without creating a shield', levelId => {
+    const released = solve(reachQuestion(levelId, 4));
+    expect(released).toMatchObject({ ultimateId: 6, bonusPoints: 10, enemyBonusDamage: 10, barrier: false, barrierCharges: 0 });
+    expect(remainingBarrierCharges(released)).toBe(0);
+    expect(submitAction(released)).toBe(released);
+    const fifth = roundTrip(advanceSession(released).session!).active!;
+    const hit = wrong(fifth);
+    expect(hit).toMatchObject({ shield: 88, preventedDamage: false, barrierCharges: 0 });
+    expect(roundTrip(hit).ultimateCards).toHaveLength(1);
+  });
+
+  it.each([[3, 12], [9, 24]])('uses support mission %i to heal %i HP up to the 100 HP limit', (levelId, recoveredHp) => {
     const ready = reachQuestion(levelId, 4);
-    expect(solve({ ...ready, shield: 76 })).toMatchObject({ shield: 88, enemyBonusDamage: 0, bonusPoints: 10 });
+    const restored = solve({ ...ready, shield: 64 });
+    expect(restored).toMatchObject({ shield: 64 + recoveredHp, enemyBonusDamage: 0, bonusPoints: 10 });
+    expect(submitAction(restored)).toBe(restored);
+    expect(roundTrip(restored).active!.shield).toBe(64 + recoveredHp);
+    expect(advanceSession(restored).session!.shield).toBe(64 + recoveredHp);
     expect(solve({ ...ready, shield: 96 }).shield).toBe(100);
     expect(solve(ready).shield).toBe(100);
   });
@@ -316,7 +370,7 @@ describe('advanced time challenge boundaries and timeout transitions', () => {
   it('consumes defensive protection on timeout, still records zero points and can die on a later timeout', () => {
     const fourth = solve(reachQuestion(7, 4));
     const protectedExpiry = tickQuestion(advanceSession(fourth).session!, 30_000);
-    expect(protectedExpiry).toMatchObject({ shield: 100, barrier: false, preventedDamage: true, timedOut: true });
+    expect(protectedExpiry).toMatchObject({ shield: 100, barrier: true, barrierCharges: 1, preventedDamage: true, timedOut: true });
     expect(advanceSession(protectedExpiry).record.preventedDamage).toBe(true);
     const low = { ...startSession(7, 'advanced'), shield: 4, energy: 2 };
     const defeated = tickQuestion(low, 30_000);
@@ -340,7 +394,7 @@ describe('new combat backup validation and legacy score preservation', () => {
     const oldActive: Session = { ...newSession, records: newSession.records.map(record => {
       const clone = { ...record }; delete clone.timed; delete clone.elapsedMs; delete clone.timedOut; return clone;
     }) };
-    for (const field of ['energy', 'ultimateUsed', 'ultimateId', 'barrier', 'bonusPoints', 'enemyBonusDamage', 'timed', 'remainingMs', 'elapsedMs', 'timedOut', 'preventedDamage'] as const) delete oldActive[field];
+    for (const field of ['energy', 'ultimateUsed', 'ultimateId', 'barrier', 'barrierCharges', 'bonusPoints', 'enemyBonusDamage', 'timed', 'remainingMs', 'elapsedMs', 'timedOut', 'preventedDamage'] as const) delete oldActive[field];
     const oldProgress: Progress = { ...createProgress(), active: oldActive };
     delete oldProgress.ultimateCards;
     const restored = parseBackup(JSON.stringify(oldProgress));
@@ -358,6 +412,7 @@ describe('new combat backup validation and legacy score preservation', () => {
     { energy: 4 }, { timed: true, remainingMs: 0, elapsedMs: 30_000 },
     { timed: true, remainingMs: 30_000, elapsedMs: 20_000 },
     { timedOut: true }, { bonusPoints: 10 }, { enemyBonusDamage: 10 },
+    { barrierCharges: 3 }, { barrierCharges: -1 }, { barrierCharges: 2, barrier: false }, { barrierCharges: 0, barrier: true },
     { ultimateUsed: true, ultimateId: 2, energy: 0 },
   ])('rejects inconsistent active combat state %j before replacing a save', changes => {
     const raw = applySession(createProgress(), startSession(7, 'advanced'));

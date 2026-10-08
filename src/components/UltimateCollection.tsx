@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Download, Flame, HeartHandshake, LockKeyhole, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { Download, Flame, HeartHandshake, LockKeyhole, ShieldCheck, Snowflake, Sparkles, X } from 'lucide-react';
 import { allUltimateSpells, getUltimateCardKey, getUltimateCardMode, type UltimateSpell, type UltimateSpellCategory } from '../content/ultimateSpells';
 import { appAssetUrl } from '../platform/urls';
 import { getChapter } from '../content/levels';
@@ -111,7 +111,7 @@ function CardModal({ spell, unlockedAt, onClose }: {
       if (mounted.current) setDownloadState('error');
     } finally { busy.current = false; }
   };
-  const Icon = categoryIcons[spell.category];
+  const Icon = spell.id === 6 ? Snowflake : categoryIcons[spell.category];
   const date = new Date(unlockedAt);
   return <dialog ref={ref} className="ultimate-card-dialog" aria-labelledby={titleId}
     onCancel={event => { event.preventDefault(); onClose(); }}
@@ -153,7 +153,7 @@ export function UltimateCollection({ cards, initialMode = 'starter' }: UltimateC
     <p className="ultimate-tier-summary">{mode === 'advanced' ? '六種魔法升級！進階必殺技展開半屏或全屏演出，完成施放就能收藏升級卡。' : '從六種生活主題學會魔法，在初階挑戰施放必殺技，收集你的第一套魔法卡。'}</p>
     <div className="ultimate-collection-grid">{visibleSpells.map(spell => {
       const isUnlocked = unlocked.has(spell.id);
-      const Icon = categoryIcons[spell.category];
+      const Icon = spell.id === 6 ? Snowflake : categoryIcons[spell.category];
       return <article className={`ultimate-collection-card ${spell.mode} ${isUnlocked ? 'unlocked' : 'locked'}`} key={`${mode}:${spell.id}`}>
         {isUnlocked ? <button type="button" className="ultimate-card-art-button" onClick={() => setSelectedKey(`${mode}:${spell.id}`)} aria-label={`查看收藏卡：${spell.name}`}>
           <img src={appAssetUrl(spell.artPath)} alt={`小羽施放${spell.name}`} loading="lazy" /><UltimateCardTitle name={spell.name} /><span className="ultimate-card-open-hint">查看收藏卡</span>

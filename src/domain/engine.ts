@@ -29,7 +29,7 @@ export function startSession(levelId: number, mode: Mode, review = false): Sessi
     id: uniqueId(), levelId, mode: curriculumMode, review, questionIds, index: 0, step: 'action',
     selected: null, reason: null, retries: 0, hintUsed: false, demoUsed: false,
     feedback: '', success: false, shield: 100, repaired: 0, records: [],
-    energy: 0, ultimateUsed: false, barrier: false, bonusPoints: 0, enemyBonusDamage: 0,
+    energy: 0, ultimateUsed: false, barrier: false, barrierCharges: 0, bonusPoints: 0, enemyBonusDamage: 0,
     timed: curriculumMode === 'advanced' && !review,
     remainingMs: QUESTION_TIME_MS, elapsedMs: 0, timedOut: false, preventedDamage: false,
   };
@@ -56,6 +56,17 @@ export function isDefeated(session: Session): boolean {
   return session.step === 'defeat' || session.shield <= 0;
 }
 
+/** A legacy enabled shield keeps its original one-hit protection when resumed. */
+export function remainingBarrierCharges(session: Pick<Session, 'barrier' | 'barrierCharges'>): number {
+  return session.barrierCharges ?? (session.barrier ? 1 : 0);
+}
+
+function consumeBarrier(session: Session) {
+  const charges = remainingBarrierCharges(session);
+  const barrierCharges = Math.max(0, charges - 1);
+  return { barrier: barrierCharges > 0, barrierCharges, preventedDamage: charges > 0 };
+}
+
 /** Start the same challenge again without erasing completed campaign progress. */
 export function restartBattle(progress: Progress): Progress {
   if (!progress.active) throw new Error('沒有可重新挑戰的關卡。');
@@ -76,12 +87,13 @@ export function chooseAction(session: Session, index: number): Session {
 }
 
 function unsuccessful(session: Session, feedback: string): Session {
-  const preventedDamage = !!session.barrier;
+  const protection = consumeBarrier(session);
+  const { preventedDamage } = protection;
   const shield = Math.max(0, session.shield - (preventedDamage ? 0 : 12));
   return { ...session, step: shield === 0 ? 'defeat' : 'feedback', success: false,
     feedback, retries: session.retries + 1, shield,
     // A wrong answer damages HP but keeps earned energy, including a prepared ultimate.
-    energy: session.review ? 0 : (session.energy ?? 0), barrier: false, preventedDamage,
+    energy: session.review ? 0 : (session.energy ?? 0), ...protection,
     ultimateUsed: false, ultimateId: undefined };
 }
 
@@ -98,12 +110,13 @@ export function tickQuestion(session: Session, elapsedMsDelta: number): Session 
 /** Expiration is idempotent and prevents a late answer from racing a zero-second timer. */
 export function expireQuestion(session: Session): Session {
   if (!session.timed || session.step !== 'action' || isDefeated(session) || session.timedOut) return session;
-  const preventedDamage = !!session.barrier;
+  const protection = consumeBarrier(session);
+  const { preventedDamage } = protection;
   const shield = Math.max(0, session.shield - (preventedDamage ? 0 : 12));
   return {
     ...session, step: shield === 0 ? 'defeat' : 'feedback', selected: null, reason: null,
     success: false, timedOut: true, elapsedMs: QUESTION_TIME_MS, remainingMs: 0,
-    energy: session.review ? 0 : Math.max(0, (session.energy ?? 0) - 1), barrier: false, preventedDamage,
+    energy: session.review ? 0 : Math.max(0, (session.energy ?? 0) - 1), ...protection,
     ultimateUsed: false, ultimateId: undefined, shield,
     feedback: preventedDamage ? '時間到了！守護結界擋住這次攻擊；這題記為超時，下一題再試。' : '時間到了！魔王攻擊扣 12 HP；這題記為超時，下一題再試。',
   };
@@ -115,13 +128,14 @@ function successful(session: Session, feedback: string): Session {
     energy: session.review ? 0 : Math.min(3, (session.energy ?? 0) + 1), ultimateUsed: false,
     ultimateId: undefined, preventedDamage: false };
   const ultimateId = levels.find(level => level.id === session.levelId)!.chapterId;
-  const defensive = ultimateId === 1 || ultimateId === 6;
+  const defensive = ultimateId === 1;
   const recovery = ultimateId === 3;
+  const barrierCharges = defensive ? session.mode === 'advanced' ? 2 : 1 : remainingBarrierCharges(session);
   return {
     ...session, step: 'feedback', feedback, success: true, energy: 0, ultimateUsed: true, ultimateId,
     bonusPoints: (session.bonusPoints ?? 0) + ULTIMATE_BONUS_POINTS,
-    barrier: defensive ? true : !!session.barrier,
-    shield: recovery ? Math.min(100, session.shield + 12) : session.shield,
+    barrier: barrierCharges > 0, barrierCharges,
+    shield: recovery ? Math.min(100, session.shield + (session.mode === 'advanced' ? 24 : 12)) : session.shield,
     enemyBonusDamage: (session.enemyBonusDamage ?? 0) + (defensive || recovery ? 0 : 10),
     preventedDamage: false,
   };

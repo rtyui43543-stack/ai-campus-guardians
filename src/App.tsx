@@ -8,7 +8,7 @@ import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, 
 import { loadProgress, saveProgress } from './domain/storage';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
 import { battleSound, loadAudio, playAudio, stopAudio } from './platform/audio';
-import { startBattleMusic, stopBattleMusic } from './platform/music';
+import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/music';
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
 import { screenFromHash, type Screen } from './platform/navigation';
@@ -23,6 +23,7 @@ import { BattleMechanics, BattleRules } from './components/BattleMechanics';
 import { getUltimateSpell } from './content/ultimateSpells';
 import { UltimateCinematic } from './components/UltimateCinematic';
 import { QuestionClock } from './platform/questionClock';
+import './components/adventure-music.css';
 
 const navItems = [
   { id: 'map', label: '冒險地圖', icon: Map }, { id: 'growth', label: '我的成長', icon: Medal },
@@ -88,7 +89,7 @@ export function App() {
       if (next === screen) return;
       flushClockRef.current(); clockRef.current.pause(performance.now());
       if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
-      stopAudio(); stopBattleMusic();
+      stopAudio(); stopMusic();
       if (attackTimer.current) clearTimeout(attackTimer.current);
       attackTimer.current = null; attackLock.current = false;
       setAnimating(false); setCue(''); setIntro(null); setOpening(false); setMobileMenu(false); setRulesOpen(false);
@@ -106,15 +107,20 @@ export function App() {
   }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step]);
   useEffect(() => {
     const updateMusic = (event: Event) => setMusicPlaying((event as CustomEvent<{ playing: boolean }>).detail.playing);
-    window.addEventListener('battle-music-status', updateMusic);
-    return () => { window.removeEventListener('battle-music-status', updateMusic); stopBattleMusic(); stopAudio(); };
+    window.addEventListener(MUSIC_EVENT, updateMusic);
+    return () => { window.removeEventListener(MUSIC_EVENT, updateMusic); stopMusic(); stopAudio(); };
   }, []);
   useEffect(() => {
-    if (screen === 'battle' && progress?.active && (!isDefeated(progress.active) || animating) && progress.settings.music) {
-      // A restored page can require a user gesture. The music button remains available.
-      void startBattleMusic().catch(() => setMusicPlaying(false));
-    } else { stopBattleMusic(); setMusicPlaying(false); }
-  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating]);
+    if (progress?.settings.music && screen !== 'cover' && !opening && !intro) {
+      const track = screen === 'battle' ? 'battle' : 'adventure';
+      if (track === 'adventure' || (progress.active && (!isDefeated(progress.active) || animating))) {
+        // Restored pages can require a gesture; the visible music control can retry playback.
+        void startMusic(track).catch(() => setMusicPlaying(false));
+        return;
+      }
+    }
+    stopMusic(); setMusicPlaying(false);
+  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating, opening, intro]);
   useEffect(() => {
     if (!notice) return;
     const timeout = setTimeout(() => setNotice(''), 6500);
@@ -124,15 +130,16 @@ export function App() {
     progressRef.current = next; setProgress(next);
     if (persist) void saveProgress(next).catch(error => setNotice('存檔尚未成功，請先匯出備份。' + (error instanceof Error ? error.message : '')));
   };
-  const playMusicFromGesture = () => { void startBattleMusic().catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
-  const navigate = (next: Screen) => {
+  const playMusicFromGesture = (track: MusicTrack = 'battle') => { void startMusic(track).catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
+  const navigate = (next: Screen, allowMusic = true) => {
     flushClockRef.current(); clockRef.current.pause(performance.now()); setRulesOpen(false);
     if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
     stopAudio();
     setIntro(null); setOpening(false);
     if (next === 'battle') { setCue(''); if (progress?.settings.music && progress.active && !isDefeated(progress.active)) playMusicFromGesture(); }
     else {
-      stopBattleMusic();
+      if (allowMusic && next !== 'cover' && progress?.settings.music) playMusicFromGesture('adventure');
+      else stopMusic();
       if (attackTimer.current) clearTimeout(attackTimer.current);
       attackTimer.current = null; attackLock.current = false;
       setAnimating(false); setCue('');
@@ -141,14 +148,14 @@ export function App() {
   };
   const toggleMusic = () => {
     if (!progress) return;
-    if (musicPlaying) { stopBattleMusic(); commit({ ...progress, settings: { ...progress.settings, music: false } }); }
-    else { playMusicFromGesture(); commit({ ...progress, settings: { ...progress.settings, music: true } }); }
+    if (musicPlaying) { stopMusic(); commit({ ...progress, settings: { ...progress.settings, music: false } }); }
+    else { playMusicFromGesture(screen === 'battle' ? 'battle' : 'adventure'); commit({ ...progress, settings: { ...progress.settings, music: true } }); }
   };
   const narrate = (key: string) => { void playAudio(key).catch(error => setNotice(error.message)); };
-  const openLevelStory = (level: Level) => { stopAudio(); stopBattleMusic(); setOpening(false); setIntro(level); };
-  const openOpening = () => { stopAudio(); stopBattleMusic(); setIntro(null); setOpening(true); };
-  const enterAdventure = () => { navigate('map'); if (!hasSeenOpening()) setOpening(true); };
-  const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); setIntro(null); };
+  const openLevelStory = (level: Level) => { stopAudio(); stopMusic(); setOpening(false); setIntro(level); };
+  const openOpening = () => { stopAudio(); stopMusic(); setIntro(null); setOpening(true); };
+  const enterAdventure = () => { const showOpening = !hasSeenOpening(); navigate('map', !showOpening); if (showOpening) setOpening(true); };
+  const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); setIntro(null); if (progress?.settings.music && screen !== 'cover') playMusicFromGesture(screen === 'battle' ? 'battle' : 'adventure'); };
   const changeSession = (next: Session, persist = true) => {
     const snapshot = progressRef.current;
     if (!snapshot) return;
@@ -305,6 +312,7 @@ export function App() {
           <button key={mode} className={progress.settings.mode === mode ? 'selected' : ''} aria-pressed={progress.settings.mode === mode}
             disabled={screen === 'battle'} onClick={() => commit({ ...progress, settings: { ...progress.settings, mode }, updatedAt: new Date().toISOString() })}>{modeNames[mode]}<span>{mode === 'starter' ? '3–4 年級' : '5–6 年級'}</span></button>)}</div>
           <button className="icon-button" title="回到首頁" aria-label="回到首頁" onClick={() => navigate('cover')}><Home size={21} /></button>
+          <button className="main-music-button" title={musicPlaying ? '關閉冒險音樂' : '播放冒險音樂'} aria-label={musicPlaying ? '關閉冒險音樂' : '播放冒險音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={21} /> : <VolumeX size={21} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button>
           <button className="icon-button" title="停止朗讀" aria-label="停止朗讀" onClick={stopAudio}><Volume2 size={21} /></button>
           <span className={'connection-dot ' + (offline.state.online ? '' : 'offline')} title={offline.state.online ? '目前連線中' : '目前沒有網路'}>{offline.state.online ? <Wifi size={16} /> : <WifiOff size={16} />}</span>
         </div>
@@ -348,7 +356,7 @@ export function App() {
         {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'growth' && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={openLevelStory} onNotice={setNotice} />}
-        {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={commit} onNotice={setNotice} onMap={() => navigate('map')} />}
+        {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={next => { if (next.settings.music !== progress.settings.music) { if (next.settings.music) playMusicFromGesture('adventure'); else stopMusic(); } commit(next); }} onNotice={setNotice} onMap={() => navigate('map')} />}
       </main>
       <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
     </div>

@@ -25,10 +25,30 @@
 .ultimate-phoenix-fire-embers{animation:ultimate-phoenix-embers 3s both;filter:drop-shadow(0 0 5px #ffb765)}
 .ultimate-theme-5 .ultimate-field-wash{opacity:.15;background:radial-gradient(ellipse at 32% 64%,#ffd58a45,transparent 46%);animation:ultimate-phoenix-summon-wash 3s both}
 .ultimate-theme-5 .ultimate-ground,.ultimate-theme-5 .ultimate-edge-stars{opacity:.38}
+/* Ice dragon: a recognizable horned silhouette flies between the actor lanes;
+   crystal impact begins at 900 ms, followed by cracks and a spreading frost. */
+.ultimate-ice-dragon{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.ultimate-ice-dragon-flight{position:absolute;left:32%;top:64%;width:min(88vw,135vh,1150px);aspect-ratio:1.6;transform-origin:62.5% 53%;transform:translate(-62.5%,-53%) scale(.23);filter:drop-shadow(0 0 11px #74dbf58f) drop-shadow(0 6px 7px #19547f70);animation:ultimate-ice-dragon-flight 3s both}
+.ultimate-ice-dragon-flight>svg{display:block;width:100%;height:100%;overflow:visible}
+.ultimate-ice-dragon-wing{transform-origin:640px 584px}.ultimate-ice-dragon-wing.front{animation:ultimate-ice-wing-front 3s both}.ultimate-ice-dragon-wing.rear{animation:ultimate-ice-wing-rear 3s both}
+.ultimate-ice-dragon-wake{opacity:0;animation:ultimate-ice-wake 3s both;filter:drop-shadow(0 0 6px #b3edff)}
+.ultimate-ice-dragon-impact{position:absolute;left:71%;top:64%;width:clamp(220px,30vw,520px);aspect-ratio:1;opacity:0;transform:translate(-50%,-50%) scale(.05);filter:drop-shadow(0 0 13px #84d7f2a3);animation:ultimate-ice-shatter 3s both}
+.ultimate-ice-dragon-impact>svg{display:block;width:100%;height:100%;overflow:visible}
+.ultimate-ice-frost-wash{position:absolute;inset:0;opacity:0;transform-origin:71% 64%;background:radial-gradient(ellipse at 71% 64%,#e3fcff96 0,#82d7ee73 24%,#327cb859 55%,#21518230 78%,transparent),linear-gradient(0deg,#a4edff80,transparent 80%);animation:ultimate-ice-frost-spread 3s both}
+.ultimate-ice-field{position:absolute;inset:0;width:100%;height:100%;overflow:visible;opacity:0;animation:ultimate-ice-field-hold 3s both}
+.ultimate-ice-spike-front{transform-origin:71% 100%;animation:ultimate-ice-spikes-rise 3s both;filter:drop-shadow(0 -5px 8px #69c9e788)}
+.ultimate-field-ice-spike{transform-origin:50% 100%;scale:1 var(--ice-spike-height,1)}
+.ultimate-ice-ground-cracks{stroke-dasharray:2000;animation:ultimate-ice-crack-spread 3s both;filter:drop-shadow(0 0 5px #b1efff)}
+.ultimate-ice-shatter-fragments{animation:ultimate-ice-fragments 3s both;filter:drop-shadow(0 3px 4px #397a9955)}
+.ultimate-theme-6 .ultimate-field-wash{opacity:.15;background:radial-gradient(ellipse at 32% 64%,#99e2f94d,transparent 46%);animation:ultimate-phoenix-summon-wash 3s both}
+.ultimate-theme-6 .ultimate-ground,.ultimate-theme-6 .ultimate-edge-stars{opacity:.38}
 .ultimate-cinematic.is-reduced,.ultimate-cinematic.is-reduced *{animation:none!important}.ultimate-cinematic.is-reduced .ultimate-field-wash{opacity:.4}.ultimate-cinematic.is-reduced .ultimate-false-faces{opacity:0}.ultimate-cinematic.is-reduced .ultimate-tier-banner{top:48%;opacity:1}.ultimate-cinematic.is-reduced .ultimate-field{opacity:.8}
 .ultimate-cinematic.is-reduced .ultimate-phoenix-flight{left:68%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.5)}
 .ultimate-cinematic.is-reduced .ultimate-phoenix-wing{rotate:0deg;scale:1}.ultimate-cinematic.is-reduced .ultimate-phoenix-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}
 .ultimate-cinematic.is-reduced .ultimate-phoenix-screen-blaze{opacity:.3;transform:none}.ultimate-cinematic.is-reduced .ultimate-phoenix-burn{opacity:.35}.ultimate-cinematic.is-reduced .ultimate-phoenix-fire-front{transform:none}
+.ultimate-cinematic.is-reduced .ultimate-ice-dragon-flight{left:68%;top:64%;opacity:1;transform:translate(-62.5%,-53%) scale(.5)}
+.ultimate-cinematic.is-reduced .ultimate-ice-dragon-wing{rotate:0deg;scale:1}.ultimate-cinematic.is-reduced .ultimate-ice-dragon-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}
+.ultimate-cinematic.is-reduced .ultimate-ice-frost-wash{opacity:.25;transform:none}.ultimate-cinematic.is-reduced .ultimate-ice-field{opacity:.4}.ultimate-cinematic.is-reduced .ultimate-ice-spike-front{transform:none}
 /* Keep a recognizable opening frame even when a background tab pauses its
    animation clock. Motion grows an already-visible form instead of revealing
    an initially transparent scene. The shared three-second ending is unchanged. */
@@ -59,8 +79,18 @@
 @keyframes ultimate-phoenix-spread{0%,29.8%{transform:translateY(180px) scale(.08,.4)}32%{transform:translateY(80px) scale(.3,.6)}43%{transform:translateY(0) scale(1.1,1.15)}60%{transform:translateY(-45px) scale(1.23,1.35)}82%{transform:translateY(-75px) scale(1.34,1.5)}100%{transform:translateY(-120px) scale(1.45,1.65)}}
 @keyframes ultimate-phoenix-embers{0%,29.8%{opacity:0;translate:0 40px}40%{opacity:1;translate:0 -45px}74%{opacity:.9;translate:-40px -120px}100%{opacity:0;translate:-70px -230px}}
 @keyframes ultimate-phoenix-summon-wash{0%,15%{opacity:.4}29.8%{opacity:.15}40%,100%{opacity:0}}
+@keyframes ultimate-ice-dragon-flight{0%{left:32%;top:64%;opacity:.85;transform:translate(-62.5%,-53%) scale(.23) rotate(-8deg)}12%{left:32%;top:61%;opacity:1;transform:translate(-62.5%,-53%) scale(.83) rotate(-4deg)}16%{left:34%;top:60%;opacity:1;transform:translate(-62.5%,-53%) scale(.87) rotate(3deg)}24%{left:58%;top:61%;opacity:1;transform:translate(-62.5%,-53%) scale(.74) rotate(7deg)}30%{left:71%;top:64%;opacity:1;transform:translate(-62.5%,-53%) scale(.69) rotate(10deg)}36%,100%{left:75%;top:65%;opacity:0;transform:translate(-62.5%,-53%) scale(.33) rotate(16deg)}}
+@keyframes ultimate-ice-wing-front{0%{rotate:18deg;scale:.75}12%{rotate:-5deg;scale:1.06}20%{rotate:9deg;scale:1}27%{rotate:-8deg;scale:1.04}30%,100%{rotate:3deg;scale:1}}
+@keyframes ultimate-ice-wing-rear{0%{rotate:-18deg;scale:.75}12%{rotate:5deg;scale:1.06}20%{rotate:-9deg;scale:1}27%{rotate:8deg;scale:1.04}30%,100%{rotate:-3deg;scale:1}}
+@keyframes ultimate-ice-wake{0%,16%{opacity:0}21%,29%{opacity:.7}36%,100%{opacity:0}}
+@keyframes ultimate-ice-shatter{0%,29.8%{opacity:0;transform:translate(-50%,-50%) scale(.05)}30.2%{opacity:1;transform:translate(-50%,-50%) scale(.4)}36%{opacity:.92;transform:translate(-50%,-50%) scale(1.16)}48%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.75)}}
+@keyframes ultimate-ice-frost-spread{0%,29.8%{opacity:0;transform:scale(.12)}34%{opacity:.55;transform:scale(.6)}47%,74%{opacity:.75;transform:scale(1.2)}87%{opacity:.38;transform:scale(1.35)}100%{opacity:0;transform:scale(1.45)}}
+@keyframes ultimate-ice-field-hold{0%,29.8%{opacity:0}33%{opacity:.5}46%,76%{opacity:.85}89%{opacity:.4}100%{opacity:0}}
+@keyframes ultimate-ice-spikes-rise{0%,29.8%{transform:translateY(130px) scale(.12,.2)}34%{transform:translateY(65px) scale(.5,.5)}47%,70%{transform:translateY(0) scale(1.05,1.08)}85%{transform:translateY(-20px) scale(1.15,1.16)}100%{transform:translateY(-35px) scale(1.25,1.23)}}
+@keyframes ultimate-ice-crack-spread{0%,29.8%{stroke-dashoffset:2000;opacity:0}33%{stroke-dashoffset:1500;opacity:.6}52%,80%{stroke-dashoffset:0;opacity:1}100%{stroke-dashoffset:0;opacity:0}}
+@keyframes ultimate-ice-fragments{0%,29.8%{opacity:0;translate:0 30px}39%{opacity:1;translate:0 -38px}73%{opacity:.8;translate:-30px -100px}100%{opacity:0;translate:-60px -165px}}
 @keyframes ultimate-tree-bloom{0%,10%{scale:.75;opacity:.8}43%,80%{scale:1;opacity:1}100%{opacity:0;scale:1.05}}
 @keyframes ultimate-tree-grow{0%{scale:.85 .82;opacity:.85}30%,84%{scale:1 1;opacity:1}100%{opacity:0}}
 @keyframes ultimate-shields-link{0%,15%{translate:0 15px;opacity:.8}45%,80%{translate:0 0;opacity:1}100%{opacity:0}}
 @media(max-width:600px){.ultimate-cinematic.scope-half .ultimate-field{width:100%;left:0}.ultimate-cinematic.scope-half .ultimate-field-wash{right:0}.ultimate-tier-banner{top:49%;padding:7px 16px 10px;border-radius:12px}.ultimate-cinematic .ultimate-tier-banner>strong{font-size:23px}.ultimate-cinematic .ultimate-tier-banner>span{font-size:12px}.ultimate-field{opacity:.9}}
-@media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}.ultimate-cinematic .ultimate-phoenix-flight{left:68%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.5)}.ultimate-cinematic .ultimate-phoenix-wing{rotate:0deg;scale:1}.ultimate-cinematic .ultimate-phoenix-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}.ultimate-cinematic .ultimate-phoenix-screen-blaze{opacity:.3;transform:none}.ultimate-cinematic .ultimate-phoenix-burn{opacity:.35}.ultimate-cinematic .ultimate-phoenix-fire-front{transform:none}}
+@media(prefers-reduced-motion:reduce){.ultimate-cinematic,.ultimate-cinematic *{animation:none!important}.ultimate-cinematic .ultimate-false-faces{opacity:0}.ultimate-cinematic .ultimate-field-wash{opacity:.4}.ultimate-cinematic .ultimate-phoenix-flight{left:68%;top:64%;opacity:1;transform:translate(-50%,-61%) scale(.5)}.ultimate-cinematic .ultimate-phoenix-wing{rotate:0deg;scale:1}.ultimate-cinematic .ultimate-phoenix-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}.ultimate-cinematic .ultimate-phoenix-screen-blaze{opacity:.3;transform:none}.ultimate-cinematic .ultimate-phoenix-burn{opacity:.35}.ultimate-cinematic .ultimate-phoenix-fire-front{transform:none}.ultimate-cinematic .ultimate-ice-dragon-flight{left:68%;top:64%;opacity:1;transform:translate(-62.5%,-53%) scale(.5)}.ultimate-cinematic .ultimate-ice-dragon-wing{rotate:0deg;scale:1}.ultimate-cinematic .ultimate-ice-dragon-impact{opacity:.65;transform:translate(-50%,-50%) scale(.45)}.ultimate-cinematic .ultimate-ice-frost-wash{opacity:.25;transform:none}.ultimate-cinematic .ultimate-ice-field{opacity:.4}.ultimate-cinematic .ultimate-ice-spike-front{transform:none}.ultimate-cinematic .ultimate-ice-ground-cracks{stroke-dashoffset:0}}

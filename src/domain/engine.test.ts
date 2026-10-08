@@ -221,9 +221,9 @@ describe('direct-answer battle engine', () => {
   it('preserves health between questions and reaches zero enemy health at the last success', () => {
     let session = startSession(12, 'advanced');
     for (let index = 0; index < 5; index++) {
-      expect(battleHealth(session).enemyHp).toBe(100 - index * 20);
+      expect(battleHealth(session).enemyHp).toBe(Math.max(0, 100 - index * 20 - (session.enemyBonusDamage ?? 0)));
       const answered = solve(session);
-      expect(battleHealth(answered)).toEqual({ playerHp: 100, enemyHp: 100 - (index + 1) * 20 });
+      expect(battleHealth(answered)).toEqual({ playerHp: 100, enemyHp: Math.max(0, 100 - (index + 1) * 20 - (answered.enemyBonusDamage ?? 0)) });
       const next = advanceSession(answered);
       expect(next.finished).toBe(index === 4);
       if (next.session) {

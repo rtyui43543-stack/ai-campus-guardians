@@ -8,7 +8,7 @@ describe('chapter ultimate collectible definitions', () => {
   it('gives all six themes distinct spell names and effects with separate bonus points', () => {
     expect(ultimateSpells.map(spell => spell.id)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(new Set(ultimateSpells.map(spell => spell.name)).size).toBe(6);
-    expect(ultimateSpells.map(spell => spell.category)).toEqual(['defense', 'attack', 'support', 'attack', 'attack', 'defense']);
+    expect(ultimateSpells.map(spell => spell.category)).toEqual(['defense', 'attack', 'support', 'attack', 'attack', 'attack']);
     ultimateSpells.forEach(spell => {
       expect(spell.bonus).toBe(10);
       expect(getUltimateSpell(spell.id)).toBe(spell);
@@ -20,7 +20,7 @@ describe('chapter ultimate collectible definitions', () => {
   it('packages twelve different complete lossless portrait files, not one shared image or external URL', () => {
     const hashes = new Set<string>();
     allUltimateSpells.forEach(spell => {
-      expect(spell.artPath).toBe(`/art/ultimate-${spell.mode === 'advanced' ? 'advanced-' : ''}${spell.id}-v1.webp`);
+      expect(spell.artPath).toBe(`/art/ultimate-${spell.mode === 'advanced' ? 'advanced-' : ''}${spell.id}${spell.id === 6 ? '-ice-v2' : '-v1'}.webp`);
       const file = readFileSync(new URL(`../../public${spell.artPath}`, import.meta.url));
       expect(file.subarray(0, 4).toString()).toBe('RIFF');
       expect(file.subarray(8, 16).toString()).toBe('WEBPVP8L');
@@ -32,20 +32,32 @@ describe('chapter ultimate collectible definitions', () => {
     });
     expect(hashes.size).toBe(12);
   });
-  it('defines six genuinely named advanced upgrades with familiar effects and separate art', () => {
+  it('defines six genuinely named advanced upgrades with stronger defense and recovery and separate art', () => {
     expect(allUltimateSpells).toHaveLength(12);
     expect(new Set(allUltimateSpells.map(spell => spell.name)).size).toBe(12);
     expect(new Set(allUltimateSpells.map(spell => spell.artPath)).size).toBe(12);
     advancedUltimateSpells.forEach((spell, index) => {
       const base = ultimateSpells[index];
       expect(spell).toMatchObject({ id: base.id, mode: 'advanced', baseName: base.name,
-        category: base.category, bonus: base.bonus, description: base.description });
+        category: base.category, bonus: base.bonus });
+      if (![1, 3, 6].includes(spell.id)) expect(spell.description).toBe(base.description);
       expect(spell.upgradeDescription).toContain(`${base.name}升級`);
-      expect(spell.artPath).toBe(`/art/ultimate-advanced-${spell.id}-v1.webp`);
+      expect(spell.artPath).toBe(`/art/ultimate-advanced-${spell.id}${spell.id === 6 ? '-ice-v2' : '-v1'}.webp`);
       expect(getUltimateSpell(spell.id, 'advanced')).toBe(spell);
       expect(getUltimateSpell(spell.id)).toBe(base);
       expect(Object.isFrozen(spell)).toBe(true);
     });
+  });
+  it('describes tier-specific defense, healing and ice attacks consistently with combat', () => {
+    expect(getUltimateSpell(1, 'advanced')?.description).toContain('下兩次');
+    expect(getUltimateSpell(3, 'advanced')?.description).toContain('恢復 24 HP');
+    expect(getUltimateSpell(3, 'advanced')?.description).toContain('100 HP');
+    expect(getUltimateSpell(6)).toMatchObject({ name: '寒晶冰矛', category: 'attack' });
+    expect(getUltimateSpell(6, 'advanced')).toMatchObject({ name: '極寒冰龍', category: 'attack', baseName: '寒晶冰矛' });
+    for (const mode of ['starter', 'advanced'] as const) {
+      expect(getUltimateSpell(6, mode)?.description).toContain('魔王 10 HP');
+      expect(getUltimateSpell(6, mode)?.description).not.toContain('護盾');
+    }
   });
   it('identifies old cards by their actual source question and keeps each tier separate', () => {
     const starter = { ultimateId: 2, questionId: getQuestions(2)[3].id };

@@ -334,11 +334,14 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const t = effectClock;
       const success = attack.success;
       const phoenixCast = success && theme === 5;
+      const iceCast = success && theme === 6;
       emitPhase(attack.ultimate
         ? phoenixCast ? t < .42 ? '烈焰鳳召喚' : t < .9 ? '烈焰鳳飛襲' : t < 2.65 ? '烈焰命中燃燒' : '烈焰收勢'
+        : iceCast ? t < .42 ? '寒晶凝結' : t < .9 ? mode === 'advanced' ? '極寒冰龍飛襲' : '冰矛飛襲' : t < 2.65 ? '碎冰寒霜蔓延' : '寒霜收勢'
         : t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
         : attack.blocked && t >= .9 && t < 1.75 ? '守護盾攔截'
         : phoenixCast ? t < .34 ? '火羽匯聚' : t < .48 ? '揮杖施火' : t < .9 ? '火羽飛襲' : t < 1.75 ? '火焰迸裂' : '收杖'
+        : iceCast ? t < .34 ? '霜晶凝結' : t < .48 ? '揮杖施冰' : t < .9 ? '冰矛飛襲' : t < 1.75 ? '碎冰霜霧' : '收杖'
         : t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.75 ? '法術命中' : '收杖');
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);
       const recovery = 1 - ease((t - 1.2) / .45);

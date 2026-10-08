@@ -67,7 +67,10 @@ export interface Session {
   energy?: number;
   ultimateUsed?: boolean;
   ultimateId?: number;
+  /** Compatibility switch; the remaining count is authoritative on new saves. */
   barrier?: boolean;
+  /** Old boolean-only shields migrate to one charge, never an upgraded two. */
+  barrierCharges?: number;
   bonusPoints?: number;
   enemyBonusDamage?: number;
   /** Timers are opt-in on newly started advanced main missions. */

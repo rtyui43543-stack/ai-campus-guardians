@@ -3,6 +3,7 @@ import { getQuestions } from '../content';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   demonstrate, finishSession, restartBattle, retryQuestion, startSession, submitAction,
+  remainingBarrierCharges,
 } from './engine';
 import type { Progress, Session } from './types';
 import { describeAttempt, getLevelRuns, latestRun, scoreSession } from './scoring';
@@ -156,6 +157,57 @@ describe('new campaign storage and backups', () => {
     const finished = finishSession(restored, fifth);
     expect(storage.parseBackup(storage.exportBackup(finished))).toEqual(finished);
     expect(finished.ultimateCards).toEqual(originalCards);
+  });
+
+  it.each([1, 7])('maps legacy enabled castle %i to one remaining block rather than upgrading a saved effect', async levelId => {
+    const storage = await import('./storage');
+    const legacy = solve(reachSlot(levelId, 4));
+    delete legacy.barrierCharges;
+    const original = applySession(createProgress(), legacy);
+    const restored = storage.parseBackup(JSON.stringify(original));
+    expect(restored.active).toMatchObject({ barrier: true, barrierCharges: 1, shield: 100, bonusPoints: 10 });
+    expect(remainingBarrierCharges(restored.active!)).toBe(1);
+    expect(restored.ultimateCards).toEqual(original.ultimateCards);
+    const fifth = advanceSession(restored.active!).session!;
+    const firstHit = wrong(fifth);
+    expect(firstHit).toMatchObject({ shield: 100, barrier: false, barrierCharges: 0, preventedDamage: true });
+    const secondHit = wrong(retryQuestion(firstHit));
+    expect(secondHit).toMatchObject({ shield: 88, preventedDamage: false });
+    expect(storage.parseBackup(storage.exportBackup(applySession(restored, secondHit))).active).toEqual(secondHit);
+  });
+
+  it.each([6, 12])('keeps the former tree shield and zero attack damage in old mission %i saves and history', async levelId => {
+    const storage = await import('./storage');
+    const oldRelease = { ...solve(reachSlot(levelId, 4)), barrier: true, enemyBonusDamage: 0 };
+    delete oldRelease.barrierCharges;
+    const progress = applySession(createProgress(), oldRelease);
+    const originalCards = structuredClone(progress.ultimateCards);
+    const restored = storage.parseBackup(JSON.stringify(progress));
+    expect(restored.active).toMatchObject({ barrier: true, barrierCharges: 1, enemyBonusDamage: 0, bonusPoints: 10 });
+    expect(battleHealth(restored.active!).enemyHp).toBe(20);
+    expect(restored.ultimateCards).toEqual(originalCards);
+    const fifth = advanceSession(restored.active!).session!;
+    const protectedHit = wrong(fifth);
+    expect(protectedHit).toMatchObject({ shield: 100, barrierCharges: 0, preventedDamage: true, enemyBonusDamage: 0 });
+    const finished = finishSession(restored, solve(retryQuestion(protectedHit)));
+    const savedAgain = storage.parseBackup(storage.exportBackup(finished));
+    expect(savedAgain).toEqual(finished);
+    expect(savedAgain.runs![0].records[4]).toMatchObject({ retries: 1, status: 'supported' });
+    expect(scoreSession(savedAgain.runs![0])).toMatchObject({ score: 96, bonusScore: 10, totalScore: 106 });
+    expect(savedAgain.ultimateCards).toEqual(originalCards);
+  });
+
+  it('preserves the old advanced healing checkpoint at its saved 12-HP recovery instead of healing twice', async () => {
+    const storage = await import('./storage');
+    const oldHealing = { ...solve({ ...reachSlot(9, 4), shield: 64 }), shield: 76 };
+    delete oldHealing.barrierCharges;
+    const original = applySession(createProgress(), oldHealing);
+    const restored = storage.parseBackup(JSON.stringify(original));
+    expect(restored.active).toMatchObject({ shield: 76, ultimateUsed: true, bonusPoints: 10, barrier: false, barrierCharges: 0 });
+    expect(restored.ultimateCards).toEqual(original.ultimateCards);
+    expect(submitAction(restored.active!)).toBe(restored.active);
+    expect(advanceSession(restored.active!).session!.shield).toBe(76);
+    expect(storage.parseBackup(storage.exportBackup(restored))).toEqual(restored);
   });
 
   it.each([0, 1])('preserves %i actual errors for new demonstration feedback and its saved record', async retries => {

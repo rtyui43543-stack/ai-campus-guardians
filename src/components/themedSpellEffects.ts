@@ -5,8 +5,8 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 export const NORMAL_CAST_SECONDS = 2.05;
 export const ULTIMATE_CAST_SECONDS = 3;
 export const SPELL_IMPACT_SECONDS = .9;
-export const normalSpellNames = ['守護城堡封印', '雷霆書頁', '森葉分類拼圖', '破偽鏡刃', '烈焰火羽', '伙伴連結樹'];
-export const ultimateSpellNames = ['守護城堡', '雷霆索引', '萬葉歸位', '鏡界破偽', '智慧火鳳', '伙伴守護樹'];
+export const normalSpellNames = ['守護城堡封印', '雷霆書頁', '森葉分類拼圖', '破偽鏡刃', '烈焰火羽', '霜晶冰矛'];
+export const ultimateSpellNames = ['守護城堡', '雷霆索引', '萬葉歸位', '鏡界破偽', '智慧火鳳', '寒晶冰矛'];
 export const enemySpellNames = {
   starter: ['魔盒鎖鏈', '迷言紙頁', '混淆印章', '幻面碎片', '紙翼突襲', '失序齒片'],
   advanced: ['窺密蛛網', '倒時沙雨', '偏心藤鞭', '偽聲尾影', '捷徑墨滴', '急速雲拳'],
@@ -28,8 +28,8 @@ export interface SpellFrame {
 interface Variant { root: THREE.Group; update: (frame: SpellFrame) => void }
 const limit = (v: number, low = 0, high = 1) => Math.max(low, Math.min(high, v));
 const smooth = (v: number) => { const p = limit(v); return p * p * (3 - 2 * p); };
-export const heroSpellColors = [0x32cda8, 0xffce64, 0x80c971, 0xc19df7, 0xff762d, 0x83ca75];
-export const heroSpellElements = ['castle-seal', 'book-lightning', 'forest-puzzle', 'mirror', 'fire', 'guardian-tree'] as const;
+export const heroSpellColors = [0x32cda8, 0xffce64, 0x80c971, 0xc19df7, 0xff762d, 0x79dfff];
+export const heroSpellElements = ['castle-seal', 'book-lightning', 'forest-puzzle', 'mirror', 'fire', 'ice'] as const;
 const cream = 0xfff3cb, ink = 0x173a42;
 
 /** Opaque, outlined objects retain their silhouette against a bright campus.
@@ -137,6 +137,63 @@ function flame(parent: THREE.Object3D, size = 1) {
     [.12, .10], [.14, -.09]], 0xffdc62, .045);
   core.position.z = .065;
   result.scale.setScalar(size); return result;
+}
+function iceShard(parent: THREE.Object3D, size = 1) {
+  const result = group(parent, 'ice-crystal-shard');
+  polygon(result, [[0, -.32], [-.15, -.03], [-.11, .21], [0, .43], [.15, .11], [.11, -.15]], 0x70caed, .09);
+  const facet = polygon(result, [[0, -.32], [0, .43], [.15, .11], [.11, -.15]], 0xbaf3ff, .045);
+  facet.position.z = .065;
+  tube(result, [[-.10, .16, .10], [0, .43, .10], [.14, .11, .10]], .018, 0xeffbff);
+  result.scale.setScalar(size); return result;
+}
+function iceSpear(parent: THREE.Object3D, size = 1) {
+  const result = group(parent, 'frost-crystal-spear');
+  polygon(result, [[-.68, -.06], [.38, -.08], [.82, 0], [.38, .08], [-.68, .06], [-.84, 0]], 0x7bd6f4, .10);
+  const facet = polygon(result, [[-.84, 0], [.82, 0], [.38, .08], [-.68, .06]], 0xe4faff, .035);
+  facet.position.z = .073;
+  for (let i = 0; i < 3; i++) { const crystal = iceShard(result, .27); crystal.position.set(-.35 + i * .20, 0, .075); crystal.rotation.z = -Math.PI / 2; }
+  result.scale.setScalar(size); return result;
+}
+function iceDragon(parent: THREE.Object3D) {
+  const result = group(parent, 'frost-ice-dragon');
+  tube(result, [[-.90, -.35], [-.58, -.16], [-.34, .10], [.1, -.05], [.43, .10], [.64, .16]], .14, 0x89d9f3);
+  const head = polygon(result, [[.44, .09], [.52, .36], [.77, .40], [.89, .23], [1.15, .17], [1.03, .03], [.78, -.04], [.55, -.06]], 0xb5efff, .15);
+  head.name = 'ice-dragon-head';
+  const horns = group(result, 'ice-dragon-horns');
+  polygon(horns, [[.56, .33], [.45, .72], [.73, .40]], 0xdafaff, .08);
+  polygon(horns, [[.73, .36], [.73, .65], [.91, .27]], 0x65bce5, .06);
+  box(result, .068, .045, .02, 0x173d65, .86, .18, .12);
+  for (const side of [-1, 1]) {
+    const wing = group(result, 'ice-dragon-wing');
+    wing.position.z = side < 0 ? -.11 : .14;
+    polygon(wing, [[-.24, .06], [-.88, .86], [-.56, .59], [-.47, 1.03], [-.12, .70], [.16, .86], [.04, .29]], side < 0 ? 0x62b6dc : 0xbaefff, .05);
+    tube(wing, [[-.24, .06, .08], [-.47, 1.03, .08]], .027, 0xf1fdff);
+    tube(wing, [[-.24, .06, .08], [-.88, .86, .08]], .026, 0xe0f8ff);
+  }
+  for (let i = 0; i < 4; i++) { const crest = iceShard(result, .32); crest.position.set(-.45 + i * .22, .21, .13); crest.rotation.z = -.25; }
+  for (const x of [-.32, .24]) {
+    tube(result, [[x, -.01, .09], [x + .08, -.29, .09], [x + .21, -.24, .09]], .04, 0xb9f0ff);
+    polygon(result, [[x + .13, -.23], [x + .33, -.22], [x + .22, -.30]], 0xf2fcff, .04);
+  }
+  return result;
+}
+function iceBurst(parent: THREE.Object3D, shardCount: number) {
+  const result = group(parent, 'frost-shatter-impact');
+  const crystals = Array.from({ length: shardCount }, (_, i) => iceShard(result, .50 + (i % 3) * .12));
+  const mist = Array.from({ length: 4 }, (_, i) => {
+    const patch = body(result, new THREE.CircleGeometry(.45, 18), i % 2 ? 0xc0f0ff : 0x80cbea, 0, 0, -.02, 0, .23);
+    patch.name = 'frost-mist'; return patch;
+  });
+  return { root: result, update(spread: number, reducedMotion: boolean) {
+    crystals.forEach((piece, i) => {
+      const a = i * 2.4, radius = .13 + spread * (.42 + i % 3 * .08);
+      piece.position.set(Math.cos(a) * radius, Math.sin(a) * radius * .75 + spread * .1, .055);
+      piece.rotation.z = reducedMotion ? a : a + spread * .75;
+      piece.scale.setScalar((.50 + i % 3 * .12) * (1 - spread * .24));
+    });
+    mist.forEach((piece, i) => { piece.position.set((i - 1.5) * (.15 + spread * .13), -.22 + i % 2 * .10 + spread * .12, -.03);
+      piece.scale.set(.8 + spread * .65, .36 + spread * .24, 1); });
+  } };
 }
 function openBook(parent: THREE.Object3D) {
   const result = group(parent, 'open-learning-book');
@@ -335,15 +392,14 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
       moving.visible = false;
     };
   } else {
-    const shoots = Array.from({ length: 7 }, () => branch(root));
-    const friends = Array.from({ length: 3 }, (_, i) => shield(landing, [0x65c8a3, 0xffcb67, 0x8eaded][i]));
-    friends.forEach((piece, i) => { piece.position.set((i - 1) * .42, i === 1 ? .36 : .05, .05); piece.scale.setScalar(.62); });
+    const spears = Array.from({ length: 5 }, () => iceSpear(root, .72));
+    const shatter = iceBurst(landing, 12);
     update = f => {
-      const progress = f.reducedMotion ? 1 : smooth(f.time / .9);
-      shoots.forEach((piece, i) => { const p = i / (shoots.length - 1); piece.visible = visibleDuring(f, .08, 1.90) && p <= progress;
-        const point = f.start.clone().lerp(f.target, p); point.y = f.target.y - .50 * f.scale;
-        anchor(piece, point, f, .65); piece.scale.y *= .40 + .60 * smooth((progress - p) * 3 + .3); });
-      anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.88); moving.visible = false;
+      spears.forEach((piece, i) => { piece.visible = visibleDuring(f, .08 + i * .035, .98);
+        const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i * .025);
+        point.y += (i - 2) * .15 * f.scale; anchor(piece, point, f, .72); });
+      anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.88);
+      shatter.update(f.reducedMotion ? .65 : impactAge(f, 1.88), f.reducedMotion); moving.visible = false;
     };
   }
   return { root, update };
@@ -428,16 +484,29 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       });
     };
   } else {
-    const trunk = branch(formation); trunk.scale.set(1.5, 2.05, 1.2);
-    for (let i = -2; i <= 2; i++) { const shoot = branch(formation); shoot.position.set(i * .29, .45, -.03); shoot.rotation.z = -i * .35; }
-    const shields = Array.from({ length: 6 }, (_, i) => shield(root, [0x55bea1, 0xffc15c, 0x86a4dd][i % 3]));
-    const sprigs = Array.from({ length: 6 }, () => leaf(strike, 0x85ca76, 1.1));
-    sprigs.forEach((s, i) => { s.position.set((i % 3 - 1) * .36, Math.floor(i / 3) * .45, 0); s.rotation.z = (i % 3 - 1) * .5; });
+    const crystals = Array.from({ length: 7 }, () => iceShard(formation, .65));
+    crystals.forEach((piece, i) => { piece.position.set((i - 3) * .12, .08 + Math.sin(i * 1.7) * .22, .04); piece.rotation.z = (i - 3) * .18; });
+    const dragon = mode === 'advanced' ? iceDragon(strike) : null;
+    const spears = mode === 'starter' ? Array.from({ length: 9 }, () => iceSpear(root, .86)) : [];
+    const shatter = iceBurst(root, 20);
     update = f => {
-      const ground = f.hero.clone(); ground.y += .02 * f.scale; anchor(formation, ground, f, 1.05);
-      formation.visible = visibleDuring(f, .03, 2.85); formation.scale.y *= f.reducedMotion ? 1 : .2 + .8 * smooth(f.time / .7);
-      const center = f.hero.clone(); center.y += 1.35 * f.scale; animateOrbit(shields, f, center, 1.05, .35, .25, 2.85);
-      anchor(strike, f.target, f, 1.4); strike.visible = visibleDuring(f, .9, 2.7);
+      anchor(formation, f.start, f, 1.15); formation.visible = visibleDuring(f, .03, .7);
+      if (dragon) {
+        const center = f.reducedMotion ? f.target.clone() : path(f);
+        anchor(strike, center, f, 1.45); strike.visible = visibleDuring(f, .18, 1.08);
+        dragon.children.filter(piece => piece.name === 'ice-dragon-wing').forEach((wing, i) => {
+          wing.rotation.x = f.reducedMotion ? 0 : Math.sin(f.time * 8) * (i ? -.18 : .18);
+        });
+      } else {
+        strike.visible = false;
+        spears.forEach((piece, i) => { piece.visible = visibleDuring(f, .15 + i * .018, 1.06);
+          const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i % 3 * .025);
+          point.y += (i % 3 - 1) * .27 * f.scale; point.x -= Math.floor(i / 3) * .22 * f.scale;
+          anchor(piece, point, f, .86); });
+      }
+      anchor(shatter.root, f.target, f, mode === 'advanced' ? 1.25 : 1.1);
+      shatter.root.visible = visibleDuring(f, .9, 2.8);
+      shatter.update(f.reducedMotion ? .65 : smooth((f.time - .9) / .65), f.reducedMotion);
     };
   }
   return { root, update };

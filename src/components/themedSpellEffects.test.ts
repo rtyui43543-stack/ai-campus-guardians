@@ -29,8 +29,8 @@ describe('themed spell performances', () => {
     }
   });
   it('constructs six concrete hero silhouettes and six separately recognizable ultimate formations', () => {
-    const normalShapes = ['guardian-castle', 'thunder-book-page', 'leaf-puzzle-piece', 'mirror-blade', 'flame-feather', 'growing-branch'];
-    const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'wisdom-phoenix', 'faceted-shield'];
+    const normalShapes = ['guardian-castle', 'thunder-book-page', 'leaf-puzzle-piece', 'mirror-blade', 'flame-feather', 'frost-crystal-spear'];
+    const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'wisdom-phoenix', 'ice-crystal-shard'];
     for (let chapter = 1; chapter <= 6; chapter++) {
       const scene = new THREE.Scene(), fx = createThemedSpellEffects(scene, chapter, 'starter');
       fx.update(frame());
@@ -104,6 +104,42 @@ describe('themed spell performances', () => {
     expect(bird.visible).toBe(false); expect(fire.visible).toBe(true);
     expect(visibleMeshes(fire).length).toBeGreaterThan(10);
     fx.dispose();
+  });
+
+  it('uses ice spears and frost for chapter six, with an unmistakable dragon only in the upgraded cast', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), 6, mode);
+      const normal = fx.root.getObjectByName('normal-6')!, special = fx.root.getObjectByName('ultimate-6')!;
+      for (const variant of [normal, special]) {
+        expect(variant.getObjectByName('leaf')).toBeUndefined();
+        expect(variant.getObjectByName('growing-branch')).toBeUndefined();
+        expect(variant.getObjectByName('faceted-shield')).toBeUndefined();
+      }
+      fx.update(frame({ time: .7 }));
+      expect(fx.root.userData.element).toBe('ice');
+      expect(normal.getObjectByName('frost-crystal-spear')).toBeDefined();
+      for (const node of visibleMeshes(normal)) {
+        const value = (node as THREE.Mesh).material as THREE.MeshStandardMaterial;
+        const hue = value.color.getHSL({ h: 0, s: 0, l: 0 });
+        expect(hue.h).toBeGreaterThan(.45); expect(hue.h).toBeLessThan(.65);
+      }
+      fx.update(frame({ ultimate: true, time: .7 }));
+      expect(special.getObjectByName('frost-ice-dragon') !== undefined).toBe(mode === 'advanced');
+      if (mode === 'advanced') {
+        expect(special.getObjectByName('ice-dragon-head')).toBeDefined();
+        expect(special.getObjectByName('ice-dragon-horns')).toBeDefined();
+        expect(special.getObjectByName('ice-dragon-wing')).toBeDefined();
+      } else expect(special.getObjectByName('frost-crystal-spear')).toBeDefined();
+      fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
+      const impact = special.getObjectByName('frost-shatter-impact')!;
+      expect(impact.visible).toBe(true);
+      expect(impact.position.x).toBe(frame().target.x);
+      expect(impact.getObjectByName('frost-mist')).toBeDefined();
+      fx.update(frame({ ultimate: true, time: 1.2 }));
+      expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+      expect(visibleMeshes(impact).length).toBeGreaterThan(20);
+      fx.dispose();
+    }
   });
 
   it('matches 12 counterattacks to the boss species instead of firing the hero projectile backward', () => {
