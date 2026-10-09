@@ -7,9 +7,9 @@ export interface BattleMusicStatus { playing: boolean; error?: string }
 export interface MusicStatus extends BattleMusicStatus { track: MusicTrack | null }
 
 const TRACKS = {
-  adventure: { file: 'adventure-theme.wav', volume: .20, ducked: .06 },
-  battle: { file: 'battle-theme.wav', volume: .27, ducked: .09 },
-  final: { file: 'final-battle.wav', volume: .27, ducked: .09 },
+  adventure: { file: 'EpicBattle_Deity.mp3', volume: .20, ducked: .06 },
+  battle: { file: 'EpicBattle_Deity.mp3', volume: .27, ducked: .09 },
+  final: { file: 'Fight3.mp3', volume: .27, ducked: .09 },
 } as const;
 const players: Partial<Record<MusicTrack, HTMLAudioElement>> = {};
 let wantedTrack: MusicTrack | null = null;

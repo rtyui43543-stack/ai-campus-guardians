@@ -17,6 +17,71 @@ const visibleMeshes = (object: THREE.Object3D) => nodes(object).filter(node => {
 });
 
 describe('themed spell performances', () => {
+  it('gives both sides a bounded charge, directional trail and contact burst without an early hit or extra replay resources', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      for (const success of [true, false]) {
+        const cast = frame({ success, start: new THREE.Vector3(success ? -2.3 : 2.3, 2.0, .5),
+          target: new THREE.Vector3(success ? 2.8 : -2.8, 1.49, .5) });
+        const active = fx.root.getObjectByName(success ? `normal-${chapter}` : `enemy-${chapter}-${mode}`)!;
+        const accents = active.getObjectByName('ordinary-attack-accents')!;
+        const charge = accents.getObjectByName('ordinary-charge')!;
+        const trail = accents.getObjectByName('ordinary-trail')!;
+        const impact = accents.getObjectByName('ordinary-contact')!;
+        const meshes = nodes(accents).filter((node): node is THREE.Mesh => node instanceof THREE.Mesh);
+        const geometryIds = meshes.map(mesh => mesh.geometry.uuid);
+        expect(meshes).toHaveLength(26);
+        fx.update({ ...cast, time: .15 });
+        expect(charge.visible).toBe(true); expect(trail.visible).toBe(false); expect(impact.visible).toBe(false);
+        expect(charge.position.x).toBe(cast.start.x);
+        fx.update({ ...cast, time: .7 });
+        expect(charge.visible).toBe(false); expect(trail.visible).toBe(true); expect(impact.visible).toBe(false);
+        for (const part of trail.children) {
+          expect(part.position.x).toBeGreaterThan(Math.min(cast.start.x, cast.target.x));
+          expect(part.position.x).toBeLessThan(Math.max(cast.start.x, cast.target.x));
+        }
+        fx.update({ ...cast, time: SPELL_IMPACT_SECONDS });
+        expect(trail.visible).toBe(false); expect(impact.visible).toBe(true);
+        expect(impact.position.x).toBe(cast.target.x); expect(impact.position.y).toBe(cast.target.y);
+        const initialSpread = impact.children[0].position.length();
+        fx.update({ ...cast, time: 1.4 });
+        expect(impact.children[0].position.length()).toBeGreaterThan(initialSpread * 2);
+        fx.clear(); fx.update({ ...cast, time: .15 });
+        expect(meshes.map(mesh => mesh.geometry.uuid)).toEqual(geometryIds);
+        expect(impact.visible).toBe(false);
+        fx.update({ ...cast, time: NORMAL_CAST_SECONDS }); expect(fx.root.visible).toBe(false);
+      }
+      fx.update(frame({ ultimate: true, time: 1.2 }));
+      expect(fx.root.getObjectByName(`ultimate-${chapter}`)!.getObjectByName('ordinary-attack-accents')).toBeUndefined();
+      fx.dispose();
+    }
+  });
+
+  it('keeps the added accents static in reduced motion, with no trails, additive blend or enlarged screen coverage', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      for (const success of [true, false]) {
+        const cast = frame({ success, reducedMotion: true, scale: .42,
+          start: new THREE.Vector3(success ? -1.1 : 1.1, 1.0, .5), target: new THREE.Vector3(success ? 1.1 : -1.1, .63, .5) });
+        const active = fx.root.getObjectByName(success ? `normal-${chapter}` : `enemy-${chapter}-${mode}`)!;
+        const accents = active.getObjectByName('ordinary-attack-accents')!;
+        fx.update({ ...cast, time: .7 });
+        expect(accents.getObjectByName('ordinary-trail')!.visible).toBe(false);
+        fx.update({ ...cast, time: 1.1 }); fx.root.updateMatrixWorld(true);
+        const before = visibleMeshes(accents).map(mesh => mesh.matrixWorld.elements.slice());
+        fx.update({ ...cast, time: 1.7 }); fx.root.updateMatrixWorld(true);
+        expect(visibleMeshes(accents).map(mesh => mesh.matrixWorld.elements.slice())).toEqual(before);
+        for (const object of visibleMeshes(accents)) {
+          const bounds = new THREE.Box3().setFromObject(object);
+          expect(bounds.max.x).toBeLessThan(1.7); expect(bounds.min.x).toBeGreaterThan(-1.7);
+          expect(bounds.max.y).toBeLessThan(1.3); expect(bounds.min.y).toBeGreaterThan(.1);
+          expect(((object as THREE.Mesh).material as THREE.Material).blending).toBe(THREE.NormalBlending);
+        }
+      }
+      fx.dispose();
+    }
+  });
+
   it('gives final bosses their own projectiles and expands the consecutive-error ultimate', () => {
     for (const mode of ['starter', 'advanced'] as const) {
       const fx = createThemedSpellEffects(new THREE.Scene(), 5, mode, true);
@@ -32,6 +97,34 @@ describe('themed spell performances', () => {
       fx.update(frame({ time: 1.1, success: false, enemyCritical: true }));
       expect(fx.root.getObjectByName('final-boss-critical-bolt-0')!.visible).toBe(true);
       expect(fx.root.getObjectByName('final-boss-impact-wave')!.visible).toBe(true);
+      fx.dispose();
+    }
+  });
+  it('adds ordinary accents to both final bosses, follows a missed target and excludes critical attacks', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), 5, mode, true);
+      const accents = fx.root.getObjectByName(`final-enemy-${mode}`)!.getObjectByName('ordinary-attack-accents')!;
+      const contact = accents.getObjectByName('ordinary-contact')!;
+      expect(accents.userData.motif).toBe(mode === 'starter' ? 'paper' : 'ice');
+      fx.update(frame({ time: .15, success: false }));
+      expect(accents.visible).toBe(true); expect(accents.getObjectByName('ordinary-charge')!.visible).toBe(true);
+      expect(contact.visible).toBe(false);
+      fx.update(frame({ time: .7, success: false }));
+      expect(accents.getObjectByName('ordinary-trail')!.visible).toBe(true);
+      fx.update(frame({ time: SPELL_IMPACT_SECONDS, success: false, missed: true }));
+      expect(contact.visible).toBe(true);
+      expect(contact.position.x).toBeCloseTo(frame().target.x - .65);
+      expect(contact.position.y).toBeCloseTo(frame().target.y - .55);
+      fx.update(frame({ time: 1.1, success: false, enemyCritical: true }));
+      expect(accents.visible).toBe(false); expect(visibleMeshes(accents)).toHaveLength(0);
+      expect(fx.root.getObjectByName('final-boss-critical-bolt-0')!.visible).toBe(true);
+      fx.update(frame({ time: 1.1, success: false, reducedMotion: true })); fx.root.updateMatrixWorld(true);
+      expect(accents.visible).toBe(true);
+      expect(accents.getObjectByName('ordinary-trail')!.visible).toBe(false);
+      expect(contact.position.x).toBe(frame().target.x);
+      const before = visibleMeshes(accents).map(mesh => mesh.matrixWorld.elements.slice());
+      fx.update(frame({ time: 1.7, success: false, reducedMotion: true })); fx.root.updateMatrixWorld(true);
+      expect(visibleMeshes(accents).map(mesh => mesh.matrixWorld.elements.slice())).toEqual(before);
       fx.dispose();
     }
   });

@@ -4,6 +4,16 @@ Game artwork was generated specifically for this project. The textbook PDF and r
 
 The Windows portable runtime has its full Node.js license in runtime/LICENSE-Node.txt.
 
+Music: PeriTune（むつき醒） (https://peritune.com/)
+
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+
+Original supplied MP3 files, unmodified. Author terms: https://peritune.com/about/
+
+EpicBattle_Deity — https://peritune.com/blog/2022/05/09/epicbattle_deity/
+
+Fight3 — https://peritune.com/blog/2016/05/16/fight3/
+
 
 ============================================================
 @fontsource-variable/noto-sans-tc 5.3.0 (OFL-1.1)

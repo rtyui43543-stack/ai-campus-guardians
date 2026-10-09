@@ -4,6 +4,11 @@ const lock=JSON.parse(readFileSync('package-lock.json','utf8'));
 const notices=['AI 校園守護隊 · Third-party software and font notices',
   'Game artwork was generated specifically for this project. The textbook PDF and reference video are not redistributed.',
   'The Windows portable runtime has its full Node.js license in runtime/LICENSE-Node.txt.'];
+const music = JSON.parse(readFileSync('src/content/musicCredits.json', 'utf8'));
+notices.push('Music: ' + music.creator + ' (' + music.creatorUrl + ')',
+  'License: ' + music.license + ' — ' + music.licenseUrl,
+  'Original supplied MP3 files, unmodified. Author terms: ' + music.termsUrl,
+  ...music.tracks.map(track => track.title + ' — ' + track.source));
 for(const [path,metadata] of Object.entries(lock.packages).sort(([a],[b])=>a.localeCompare(b))){
   if(!path.startsWith('node_modules/')||metadata.dev) continue;
   const pkg=JSON.parse(readFileSync(resolve(path,'package.json'),'utf8'));

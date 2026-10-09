@@ -1,0 +1,23 @@
+{
+  "creator": "PeriTune（むつき醒）",
+  "creatorUrl": "https://peritune.com/",
+  "termsUrl": "https://peritune.com/about/",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "tracks": [
+    {
+      "title": "EpicBattle_Deity",
+      "file": "EpicBattle_Deity.mp3",
+      "source": "https://peritune.com/blog/2022/05/09/epicbattle_deity/",
+      "published": "2022-05-09",
+      "sha256": "502d7aaf3dd40898c611cd4073a95ceedd1845873c1781655da24ace95f6b396"
+    },
+    {
+      "title": "Fight3",
+      "file": "Fight3.mp3",
+      "source": "https://peritune.com/blog/2016/05/16/fight3/",
+      "published": "2016-05-16",
+      "sha256": "153ddceeead093a44c4a069e4d96e409bb2cfe7ed928bcea9100bdd61b91c5db"
+    }
+  ]
+}

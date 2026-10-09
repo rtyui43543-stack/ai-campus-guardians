@@ -1,0 +1,8 @@
+.music-credits{margin-left:auto;color:#617568;font-size:11px;line-height:1.7;text-align:left}
+.music-credits summary{cursor:pointer;width:fit-content;padding:4px 0;text-underline-offset:3px}
+.music-credits summary:hover{text-decoration:underline}
+.music-credits summary:focus-visible{outline:2px solid #2c7665;outline-offset:4px;border-radius:3px}
+.music-credits-body{max-width:340px;padding:6px 0 2px;font-size:12px}
+.music-credits-body p{margin:2px 0}
+.music-credits-body a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.game-cover-footer .music-credits{width:fit-content;margin:8px auto 0}

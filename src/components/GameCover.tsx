@@ -3,6 +3,7 @@ import type { OfflineController } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
 import { AssociationBrand } from './AssociationBrand';
+import { MusicCredits } from './MusicCredits';
 import '../styles/game-cover.css';
 
 export interface GameCoverProps {
@@ -42,6 +43,6 @@ export function GameCover({ offline, onStart, onResume, completed, reducedMotion
     <section className="game-cover-download" aria-label="下載完整離線遊戲">
       <OfflineDownloadCard offline={offline} />
     </section>
-    <footer className="game-cover-footer">生活裡的好判斷，從這場冒險開始。</footer>
+    <footer className="game-cover-footer">生活裡的好判斷，從這場冒險開始。<MusicCredits /></footer>
   </main>;
 }

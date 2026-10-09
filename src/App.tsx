@@ -8,7 +8,7 @@ import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, 
 import { exportBackup, loadProgress, ResetPersistenceError, saveProgress } from './domain/storage';
 import { persistLearningReset, resetLearningProgress } from './domain/progressReset';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
-import { battleSound, loadAudio, playAudio, stopAllAudio, stopAudio } from './platform/audio';
+import { battleSound, loadAudio, playAudio, stopAllAudio, stopAudio, stopBattleSound } from './platform/audio';
 import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/music';
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
@@ -16,6 +16,7 @@ import { screenFromHash, type Screen } from './platform/navigation';
 import { forgetOpening, hasSeenOpening, rememberOpening } from './platform/openingStory';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
 import { battleVisibility } from './components/battleVisibility';
+import { MusicCredits } from './components/MusicCredits';
 import { downloadFile, GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
 import { ResetProgress } from './components/ResetProgress';
 import { LevelScore, ScoreSummary } from './components/Scoring';
@@ -68,6 +69,12 @@ export function App() {
   const attackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
   useEffect(() => () => { if (attackTimer.current) clearTimeout(attackTimer.current); }, []);
+  useEffect(() => {
+    if (screen !== 'battle' || !progress?.settings.sound) { stopBattleSound(); return; }
+    const stopHidden = () => { if (document.hidden) stopBattleSound(); };
+    document.addEventListener('visibilitychange', stopHidden);
+    return () => { document.removeEventListener('visibilitychange', stopHidden); stopBattleSound(); };
+  }, [screen, progress?.settings.sound]);
   const offline = useOffline();
   const read = () => {
     setLoadError('');
@@ -215,7 +222,10 @@ export function App() {
       attackLock.current = true; setAnimating(true);
       if (attackTimer.current) clearTimeout(attackTimer.current);
       attackTimer.current = setTimeout(() => { attackLock.current = false; setAnimating(false); }, snapshot.settings.reducedMotion ? next.ultimateUsed ? 550 : 450 : next.ultimateUsed ? 3000 : 2050);
-      if (snapshot.settings.sound) battleSound(next.success, next.ultimateUsed ? next.ultimateId ?? getLevel(next.levelId).chapterId : questionById.get(next.questionIds[next.index])?.themeId ?? getLevel(next.levelId).chapterId, snapshot.settings.reducedMotion);
+      if (snapshot.settings.sound && !document.hidden) battleSound(next.success, next.ultimateUsed ? next.ultimateId ?? getLevel(next.levelId).chapterId : questionById.get(next.questionIds[next.index])?.themeId ?? getLevel(next.levelId).chapterId, snapshot.settings.reducedMotion, {
+        mode: next.mode, ultimate: next.ultimateUsed, finalBoss: getLevel(next.levelId).finalBoss,
+        enemyCritical: next.lastEnemyCritical, missed: next.lastEnemyMissed, blocked: kind === 'blocked',
+      });
     }
   };
   const start = (level: Level) => {
@@ -413,7 +423,7 @@ export function App() {
             setNotice('重置前的進度備份已匯出，請保存 JSON 檔。');
           }} /></>}
       </main>
-      <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
+      <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span><MusicCredits /></footer>
     </div>
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
     {rulesOpen && <Dialog title="必殺技與計分規則" onClose={() => setRulesOpen(false)}><BattleRules timed={active?.timed === true} finalBoss={battleLevel?.finalBoss === true} /></Dialog>}

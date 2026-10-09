@@ -325,9 +325,92 @@ function animateOrbit(pieces: THREE.Group[], frame: SpellFrame, center: THREE.Ve
   });
 }
 
+type AttackMotif = 'seal' | 'lightning' | 'leaf' | 'mirror' | 'ember' | 'ice' | 'paper' | 'sand' | 'ink' | 'cloud' | 'gear' | 'web';
+const attackMotifs: Record<AttackMotif, number[][]> = {
+  seal: [[-.10, -.13], [.10, -.13], [.10, .08], [.05, .15], [-.05, .15], [-.10, .08]],
+  lightning: [[-.04, -.19], [.11, .035], [.025, .035], [.08, .19], [-.11, -.02], [-.025, -.02]],
+  leaf: [[0, -.17], [-.11, -.04], [-.08, .09], [.02, .20], [.10, .06], [.09, -.06]],
+  mirror: [[-.07, -.20], [-.12, .06], [.045, .18], [.13, -.015]],
+  ember: [[0, -.15], [-.11, -.04], [-.10, .10], [-.02, .025], [.05, .23], [.12, .02], [.09, -.09]],
+  ice: [[0, -.23], [-.095, -.035], [-.055, .16], [.025, .26], [.095, .015]],
+  paper: [[-.13, -.15], [.11, -.11], [.15, .14], [-.09, .18]],
+  sand: [[0, -.11], [-.10, 0], [0, .13], [.10, 0]],
+  ink: [[0, .20], [-.105, -.015], [-.085, -.115], [.02, -.15], [.115, -.05]],
+  cloud: [[-.15, -.075], [-.17, .03], [-.095, .105], [-.025, .075], [.04, .145], [.14, .08], [.17, -.055], [.09, -.12]],
+  gear: [[-.07, -.14], [.055, -.14], [.055, -.06], [.14, -.06], [.14, .06], [.06, .06], [.06, .14], [-.06, .14], [-.06, .06], [-.14, .06], [-.14, -.06], [-.07, -.06]],
+  web: [[0, -.18], [-.055, -.05], [-.18, 0], [-.055, .05], [0, .18], [.055, .05], [.18, 0], [.055, -.05]],
+};
+
+/** Local, pooled accents make an ordinary cast read as charge → flight → contact.
+ * The original elemental objects stay in front; only 26 simple meshes are added,
+ * without lights, screen flashes, per-frame geometry or changes to hit timing. */
+function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: AttackMotif) {
+  const root = group(parent, 'ordinary-attack-accents');
+  root.userData.motif = motif;
+  const charge = group(root, 'ordinary-charge'), trail = group(root, 'ordinary-trail');
+  const impact = group(root, 'ordinary-contact');
+  const template = polygon(charge, attackMotifs[motif], color, .025);
+  template.material.emissiveIntensity = .42;
+  const charges = [template, ...Array.from({ length: 5 }, () => {
+    const part = new THREE.Mesh(template.geometry, template.material); charge.add(part); return part;
+  })];
+  const streakGeometry = new THREE.PlaneGeometry(.42, .065);
+  const streakMaterial = material(color, 0, .72);
+  const streaks = Array.from({ length: 6 }, () => {
+    const part = new THREE.Mesh(streakGeometry, streakMaterial); trail.add(part); return part;
+  });
+  const fragments = Array.from({ length: 12 }, () => {
+    const part = new THREE.Mesh(template.geometry, template.material); impact.add(part); return part;
+  });
+  const waveMaterial = material(color, 0, .7);
+  const waveGeometry = new THREE.TorusGeometry(.48, .027, 4, 24, Math.PI * 1.65);
+  const waves = Array.from({ length: 2 }, () => {
+    const part = new THREE.Mesh(waveGeometry, waveMaterial); impact.add(part); return part;
+  });
+  // Reused scratch vectors avoid per-frame vector allocation in the accent layer.
+  const flightPoint = new THREE.Vector3(), direction = new THREE.Vector3();
+  return { root, update(f: SpellFrame) {
+    const prepare = f.reducedMotion ? .6 : smooth(f.time / .42);
+    anchor(charge, f.start, f); charge.visible = visibleDuring(f, .02, .50);
+    charges.forEach((part, i) => {
+      const angle = i * Math.PI / 3 + (f.reducedMotion ? 0 : f.time * 1.2);
+      const radius = .50 - prepare * .21;
+      part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, -.03);
+      part.rotation.z = angle; part.scale.setScalar(.65 + prepare * .55);
+    });
+    trail.visible = !f.reducedMotion && visibleDuring(f, .43, SPELL_IMPACT_SECONDS);
+    path(f, flightPoint); direction.copy(f.target).sub(f.start).normalize();
+    const angle = Math.atan2(direction.y, direction.x);
+    streaks.forEach((part, i) => {
+      const lag = .22 + Math.floor(i / 2) * .25;
+      const side = (i % 2 ? 1 : -1) * (.11 + Math.floor(i / 2) * .055);
+      part.position.copy(flightPoint).addScaledVector(direction, -lag * f.scale);
+      part.position.x -= direction.y * side * f.scale; part.position.y += direction.x * side * f.scale;
+      part.position.z = .81; part.quaternion.copy(f.camera.quaternion); part.rotateZ(angle);
+      part.scale.set(f.scale * (1.05 - i * .06), f.scale * (1 - i * .06), f.scale);
+    });
+    const spread = f.reducedMotion ? .62 : smooth((f.time - SPELL_IMPACT_SECONDS) / .62);
+    anchor(impact, f.target, f); impact.visible = visibleDuring(f, SPELL_IMPACT_SECONDS, 1.88);
+    fragments.forEach((part, i) => {
+      const angle = i * Math.PI / 6 + .15, radius = .22 + spread * (.52 + i % 3 * .08);
+      part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * .78, .03);
+      part.rotation.z = angle + (f.reducedMotion ? 0 : spread * .45);
+      part.scale.setScalar((i % 2 ? .80 : 1.12) * (1 - spread * .35));
+    });
+    waves.forEach((part, i) => {
+      const scale = .62 + spread * 1.45 + i * .20;
+      part.scale.set(scale, scale * .72, 1); part.rotation.z = i * Math.PI;
+      part.position.z = -.035 - i * .012;
+    });
+    waveMaterial.opacity = f.reducedMotion ? .38 : .7 * (1 - smooth((f.time - 1.25) / .6));
+  } };
+}
+
 function normalVariant(parent: THREE.Object3D, theme: number): Variant {
   const root = group(parent, `normal-${theme}`); root.userData.identity = normalSpellNames[theme - 1];
   root.userData.element = heroSpellElements[theme - 1];
+  const accents = ordinaryAttackAccents(root, heroSpellColors[theme - 1],
+    (['seal', 'lightning', 'leaf', 'mirror', 'ember', 'ice'] as const)[theme - 1]);
   const moving = group(root, 'normal-projectile'), landing = group(root, 'normal-impact');
   let update: Variant['update'];
   if (theme === 1) {
@@ -428,7 +511,7 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
       shatter.update(f.reducedMotion ? .65 : impactAge(f, 1.88), f.reducedMotion); moving.visible = false;
     };
   }
-  return { root, update };
+  return { root, update(f) { update(f); accents.update(f); } };
 }
 
 function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Variant {
@@ -709,6 +792,11 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
   const root = group(parent, `enemy-${theme}-${mode}`); root.userData.identity = enemySpellNames[mode][theme - 1];
   const pieces: THREE.Group[] = [], landing = group(root, 'enemy-impact');
   const advanced = mode === 'advanced';
+  const accents = ordinaryAttackAccents(root,
+    (advanced ? [0xc4a3eb, 0xe8b962, 0x8eaa60, 0xae91dd, 0x71578a, 0xaedbf2]
+      : [0xe4bb66, 0x9fafd8, 0x91acd8, 0xb28ace, 0xe5ca91, 0xedc66e])[theme - 1],
+    (advanced ? ['web', 'sand', 'leaf', 'mirror', 'ink', 'cloud'] as const
+      : ['seal', 'paper', 'seal', 'mirror', 'paper', 'gear'] as const)[theme - 1]);
   if (theme === 1 && advanced) {
     const web = group(root, 'spider-web'); pieces.push(web);
     for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; tube(web, [[0, 0], [Math.cos(a) * .8, Math.sin(a) * .8]], .018, 0xeddaff); }
@@ -751,6 +839,7 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
   } else if (advanced) { for (let i = 0; i < 3; i++) pieces.push(cloudFist(root)); }
   else { for (let i = 0; i < 6; i++) pieces.push(gear(root)); }
   return { root, update(f) {
+    accents.update(f);
     const hit = smooth((f.time - .9) / .35);
     pieces.forEach((piece, i) => {
       piece.visible = visibleDuring(f, .10 + i % 3 * .04, 1.7);
@@ -772,6 +861,8 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
 function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
   const root = group(parent, `final-enemy-${mode}`);
   root.userData.identity = mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';
+  const accents = ordinaryAttackAccents(root, mode === 'starter' ? 0xc67198 : 0xb27af0,
+    mode === 'starter' ? 'paper' : 'ice');
   const summon = ritualRing(root, 'final-boss-summoning-seal', 0xe67aa7, .65);
   const projectile = group(root, 'final-boss-projectile');
   if (mode === 'starter') {
@@ -796,6 +887,8 @@ function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
   chase.forEach((bolt, i) => { bolt.name = 'final-boss-critical-bolt-' + i; });
   return { root, update(f) {
     const critical = !!f.enemyCritical;
+    accents.root.visible = !critical;
+    if (!critical) accents.update(f);
     const strength = critical ? 1.65 : 1;
     root.userData.critical = critical;
     root.userData.identity = critical ? mode === 'starter' ? '魔典王 · 混沌追擊必殺' : '九頭龍 · 幻焰追擊必殺' : mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';

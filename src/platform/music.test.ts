@@ -58,7 +58,7 @@ describe('offline battle music lifecycle', () => {
     expect(instances).toHaveLength(1);
     expect(doc.body.appendChild).toHaveBeenCalledTimes(1);
     expect(instances[0].play).toHaveBeenCalledTimes(1);
-    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/battle-theme.wav', loop: true, hidden: true, volume: .27, paused: false });
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/EpicBattle_Deity.mp3', loop: true, hidden: true, volume: .27, paused: false });
     expect(instances[0].attributes['data-testid']).toBe('battle-music');
     expect(events.at(-1)).toEqual({ playing: true });
   });
@@ -142,7 +142,7 @@ describe('offline battle music lifecycle', () => {
     instances[0].currentTime = 5;
     await music.startAdventureMusic();
     expect(instances).toHaveLength(1);
-    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/adventure-theme.wav', loop: true, paused: false, volume: .20, currentTime: 5 });
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/EpicBattle_Deity.mp3', loop: true, paused: false, volume: .20, currentTime: 5 });
     expect(instances[0].play).toHaveBeenCalledTimes(1);
     expect(allEvents.at(-1)).toEqual({ track: 'adventure', playing: true });
     expect(events.at(-1)).toEqual({ playing: false });
@@ -169,7 +169,7 @@ describe('offline battle music lifecycle', () => {
     const first = music.startMusic('final'), second = music.startMusic('final');
     expect(first).toBe(second); await first; await music.startMusic('final');
     expect(instances).toHaveLength(1);
-    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/final-battle.wav',
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/Fight3.mp3',
       loop: true, hidden: true, volume: .27, paused: false });
     expect(instances[0].attributes['data-testid']).toBe('final-music');
     expect(instances[0].play).toHaveBeenCalledTimes(1);
@@ -185,7 +185,7 @@ describe('offline battle music lifecycle', () => {
       const playing = instances.filter(audio => !audio.paused);
       expect(playing).toHaveLength(1);
       expect(playing[0].src).toBe('https://school.test/game/music/'
-        + (track === 'final' ? 'final-battle' : track === 'battle' ? 'battle-theme' : 'adventure-theme') + '.wav');
+        + (track === 'final' ? 'Fight3.mp3' : 'EpicBattle_Deity.mp3'));
       expect(instances.filter(audio => audio.paused).every(audio => audio.currentTime === 0)).toBe(true);
       expect(allEvents.at(-1)).toEqual({ track, playing: true });
       playing[0].currentTime = 7;
@@ -201,7 +201,7 @@ describe('offline battle music lifecycle', () => {
     const final = music.startMusic('final');
     playback = async audio => { audio.paused = false; };
     await music.startAdventureMusic(); held.resolve(); await final;
-    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/final-battle.wav', paused: true });
+    expect(instances[0]).toMatchObject({ src: 'https://school.test/game/music/Fight3.mp3', paused: true });
     expect(instances[1].paused).toBe(false);
     expect(allEvents.at(-1)).toEqual({ track: 'adventure', playing: true });
     expect(events.at(-1)).toEqual({ playing: false });
@@ -236,103 +236,37 @@ describe('offline battle music lifecycle', () => {
   });
 });
 
-describe('bundled original instrumental', () => {
-  it('bundles an independent 48-second final battle loop without clipping or silent sections', () => {
-    const wav = readFileSync(new URL('../../public/music/final-battle.wav', import.meta.url));
-    const battle = readFileSync(new URL('../../public/music/battle-theme.wav', import.meta.url));
-    const adventure = readFileSync(new URL('../../public/music/adventure-theme.wav', import.meta.url));
-    expect(wav.subarray(0, 4).toString()).toBe('RIFF'); expect(wav.subarray(8, 12).toString()).toBe('WAVE');
-    expect(wav.readUInt16LE(20)).toBe(1); expect(wav.readUInt16LE(22)).toBe(2);
-    expect(wav.readUInt16LE(34)).toBe(16);
-    const rate = wav.readUInt32LE(24), frames = wav.readUInt32LE(40) / 4;
-    expect(frames / rate).toBe(48); expect(wav.length).toBeLessThan(5 * 1024 * 1024);
-    expect(wav.subarray(44, battle.length).equals(battle.subarray(44))).toBe(false);
-    expect(wav.subarray(44, adventure.length).equals(adventure.subarray(44))).toBe(false);
-    let peak = 0;
-    for (let start = 0; start < frames; start += rate / 2) {
-      let energy = 0, count = 0;
-      for (let frame = start; frame < Math.min(frames, start + rate / 2); frame += 1) {
-        for (let channel = 0; channel < 2; channel += 1) {
-          const value = wav.readInt16LE(44 + frame * 4 + channel * 2) / 32768;
-          energy += value * value; count += 1; peak = Math.max(peak, Math.abs(value));
-        }
-      }
-      expect(Math.sqrt(energy / count)).toBeGreaterThan(.025);
-    }
-    expect(peak).toBeGreaterThan(.5); expect(peak).toBeLessThan(.86);
-    for (let channel = 0; channel < 2; channel += 1) {
-      const seam = Math.abs(wav.readInt16LE(44 + channel * 2) - wav.readInt16LE(wav.length - 4 + channel * 2)) / 32768;
-      expect(seam).toBeLessThan(.01);
-    }
+describe('supplied PeriTune music files', () => {
+  const credits = JSON.parse(readFileSync(new URL('../content/musicCredits.json', import.meta.url), 'utf8'));
+  it.each(credits.tracks as { file: string; sha256: string }[])('preserves the supplied $file without re-encoding', track => {
+    const mp3 = readFileSync(new URL('../../public/music/' + track.file, import.meta.url));
+    expect(createHash('sha256').update(mp3).digest('hex')).toBe(track.sha256);
+    const id3 = mp3.subarray(0, 3).toString() === 'ID3';
+    const frame = mp3[0] === 0xff && (mp3[1] & 0xe0) === 0xe0;
+    expect(id3 || frame).toBe(true);
+    expect(mp3.length).toBeGreaterThan(4 * 1024 * 1024);
   });
 
-  it('includes the real final loop in the verified offline audio pack instead of the core-only install', () => {
-    const temporaryRoot = resolve(tmpdir()), folder = mkdtempSync(resolve(temporaryRoot, 'guardians-final-music-'));
+  it('includes both exact MP3s in the verified offline pack', () => {
+    const temporaryRoot = resolve(tmpdir()), folder = mkdtempSync(resolve(temporaryRoot, 'guardians-music-'));
     try {
-      const wav = readFileSync(new URL('../../public/music/final-battle.wav', import.meta.url));
-      mkdirSync(resolve(folder, 'music')); writeFileSync(resolve(folder, 'index.html'), '<!doctype html><head></head>');
-      writeFileSync(resolve(folder, 'music', 'final-battle.wav'), wav);
+      mkdirSync(resolve(folder, 'music'));
+      writeFileSync(resolve(folder, 'index.html'), '<!doctype html><head></head>');
+      for (const track of credits.tracks) {
+        writeFileSync(resolve(folder, 'music', track.file), readFileSync(new URL('../../public/music/' + track.file, import.meta.url)));
+      }
       const built = spawnSync(process.execPath, ['scripts/build-offline.mjs', folder], { cwd: process.cwd(), encoding: 'utf8' });
       expect(built.status, built.stderr).toBe(0);
       const manifest = JSON.parse(readFileSync(resolve(folder, 'offline-manifest.json'), 'utf8'));
-      expect(manifest.files.filter((file: { core: boolean }) => !file.core)).toEqual([{
-        url: '/music/final-battle.wav', size: wav.length, core: false,
-        hash: createHash('sha256').update(wav).digest('hex'),
-      }]);
+      expect(manifest.files.filter((file: { core: boolean }) => !file.core)).toEqual(credits.tracks.map((track: {file: string; sha256: string}) => ({
+        url: '/music/' + track.file, hash: track.sha256, core: false,
+        size: readFileSync(new URL('../../public/music/' + track.file, import.meta.url)).length,
+      })));
     } finally {
       const absoluteFolder = resolve(folder);
-      if (!absoluteFolder.startsWith(temporaryRoot + sep) || !basename(absoluteFolder).startsWith('guardians-final-music-'))
+      if (!absoluteFolder.startsWith(temporaryRoot + sep) || !basename(absoluteFolder).startsWith('guardians-music-'))
         throw new Error('Refusing to remove a test directory outside the created temporary folder.');
       rmSync(absoluteFolder, { recursive: true, force: true });
     }
-  });
-
-  it('bundles a distinct, seamless and gentler 20-second exploration melody for offline use', () => {
-    const wav = readFileSync(new URL('../../public/music/adventure-theme.wav', import.meta.url));
-    const battle = readFileSync(new URL('../../public/music/battle-theme.wav', import.meta.url));
-    expect(wav.subarray(0, 4).toString()).toBe('RIFF');
-    expect(wav.subarray(8, 12).toString()).toBe('WAVE');
-    expect(wav.readUInt16LE(20)).toBe(1);
-    expect(wav.readUInt16LE(22)).toBe(2);
-    expect(wav.readUInt16LE(34)).toBe(16);
-    const rate = wav.readUInt32LE(24), frames = wav.readUInt32LE(40) / 4;
-    expect(frames / rate).toBe(20);
-    expect(wav.length).toBeLessThan(2 * 1024 * 1024);
-    expect(wav.equals(battle)).toBe(false);
-    let peak = 0;
-    for (let start = 0; start < frames; start += rate / 2) {
-      let energy = 0, count = 0;
-      for (let frame = start; frame < Math.min(frames, start + rate / 2); frame += 1) {
-        const value = wav.readInt16LE(44 + frame * 4) / 32768;
-        energy += value * value; count += 1; peak = Math.max(peak, Math.abs(value));
-      }
-      expect(Math.sqrt(energy / count)).toBeGreaterThan(.02);
-    }
-    expect(peak).toBeLessThan(.69);
-    const seam = Math.abs(wav.readInt16LE(44) - wav.readInt16LE(wav.length - 4)) / 32768;
-    expect(seam).toBeLessThan(.035);
-  });
-  it('is a small 16-second stereo PCM loop with audible energy throughout', () => {
-    const wav = readFileSync(new URL('../../public/music/battle-theme.wav', import.meta.url));
-    expect(wav.subarray(0, 4).toString()).toBe('RIFF');
-    expect(wav.subarray(8, 12).toString()).toBe('WAVE');
-    expect(wav.readUInt16LE(20)).toBe(1);
-    expect(wav.readUInt16LE(22)).toBe(2);
-    expect(wav.readUInt16LE(34)).toBe(16);
-    const rate = wav.readUInt32LE(24), frames = wav.readUInt32LE(40) / 4;
-    expect(frames / rate).toBe(16);
-    expect(wav.length).toBeLessThan(2 * 1024 * 1024);
-    let peak = 0;
-    for (let start = 0; start < frames; start += rate / 2) {
-      let energy = 0, count = 0;
-      for (let frame = start; frame < Math.min(frames, start + rate / 2); frame += 1) {
-        const value = wav.readInt16LE(44 + frame * 4) / 32768;
-        energy += value * value; count += 1; peak = Math.max(peak, Math.abs(value));
-      }
-      expect(Math.sqrt(energy / count)).toBeGreaterThan(.025);
-    }
-    expect(peak).toBeLessThan(.89);
-    const seam = Math.abs(wav.readInt16LE(44) - wav.readInt16LE(wav.length - 4)) / 32768;
-    expect(seam).toBeLessThan(.045);
   });
 });
