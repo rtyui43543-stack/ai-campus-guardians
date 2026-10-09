@@ -18,8 +18,8 @@
 @media(max-height:560px) and (min-width:641px){.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:56%;width:200px;max-width:28%;height:110px;scale:1;transform:translateX(-50%) scale(.7);transform-origin:center top}}
 
 .story-scene-visual{position:absolute;inset:0;min-height:0;border-radius:inherit;overflow:hidden}
-/* Phone props have their own row, so no shot can put them over either character. */
-@media(max-width:640px),(max-height:560px) and (max-width:1000px){
+/* Phone and tablet props have their own row, outside every character camera shot. */
+@media(max-width:1366px){
   .story-cinematic:not(.story-ready) .story-stage{display:grid;grid-template-rows:minmax(0,1fr) 64px}
   .story-cinematic:not(.story-ready) .story-scene-visual{position:relative;inset:auto;border-radius:0;grid-row:1}
   .story-cinematic:not(.story-ready) .story-stage-moment{position:relative;inset:auto;grid-row:2;min-width:0;overflow:hidden;border-top:1px solid #eac67180;background:#123c42;display:flex;align-items:center;justify-content:center}
@@ -50,4 +50,38 @@
   .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-team{padding:7px 10px;gap:7px;transform:none}
   .story-cinematic:not(.story-ready) .story-team svg:nth-child(2){width:28px;height:28px}
   .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-team-stars{display:none}
+}
+@media(min-width:641px) and (max-width:1366px){
+  .story-cinematic:not(.story-ready) .story-stage{grid-template-rows:minmax(0,1fr) 80px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-props{padding:9px 18px;gap:12px}
+  .story-cinematic:not(.story-ready) .story-props svg{width:28px;height:28px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-prop-label{font-size:16px;max-width:240px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-signal{font-size:16px;padding:9px 14px;gap:10px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-data-cards,
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-sorting-cards{gap:8px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-data-cards>span,
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-sorting-cards>span{min-width:52px;padding:5px 8px;font-size:13px;gap:3px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-lock{font-size:16px;padding:9px 12px;gap:8px}
+  .story-cinematic:not(.story-ready) .story-clue,
+  .story-cinematic:not(.story-ready) .story-notebook{width:56px;height:60px;padding:5px 8px;gap:4px}
+  .story-cinematic:not(.story-ready) .story-clue>svg,
+  .story-cinematic:not(.story-ready) .story-notebook>svg{width:28px;height:24px}
+  .story-cinematic:not(.story-ready) .story-search svg{width:36px;height:36px}
+  .story-cinematic:not(.story-ready) .story-video{width:98px;height:60px;padding:6px}
+  .story-cinematic:not(.story-ready) .story-video>svg{width:26px;height:26px}
+  .story-cinematic:not(.story-ready) .story-wave{height:17px;gap:3px}
+  .story-cinematic:not(.story-ready) .story-wave i{max-height:17px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-team{padding:9px 14px;gap:10px}
+  .story-cinematic:not(.story-ready) .story-team svg:nth-child(2){width:34px;height:34px}
+}
+@media(min-width:641px) and (max-width:1366px) and (max-height:680px){
+  .story-cinematic:not(.story-ready) .story-stage{grid-template-rows:minmax(0,1fr) 64px}
+  .story-cinematic:not(.story-ready) .story-clue,
+  .story-cinematic:not(.story-ready) .story-notebook{height:48px}
+  .story-cinematic:not(.story-ready) .story-video{height:48px;padding:4px}
+  .story-cinematic:not(.story-ready) .story-video>svg{width:20px;height:20px}
+  .story-cinematic:not(.story-ready) .story-wave{height:14px}
+  .story-cinematic:not(.story-ready) .story-wave i{max-height:14px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-data-cards>span,
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-sorting-cards>span{padding-block:3px;gap:1px}
 }

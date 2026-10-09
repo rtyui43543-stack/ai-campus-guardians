@@ -2,6 +2,7 @@ import { appAssetUrl } from './urls';
 import { acquireBattleMusicDuck, setBattleMusicDucked } from './music';
 import { buildBattleSound, type BattleSoundOptions } from './battleSoundDesign';
 import { synthesizeCreatureVoice } from './creatureVoice';
+import { battleSampleAssets, buildBattleSampleCues, type BattleSampleId } from './battleSamples';
 
 let audioIndex: Record<string, string> = {};
 let loaded: Promise<void> | null = null;
@@ -11,12 +12,48 @@ let narrationRequest = 0;
 let activeBattleStop: (() => void) | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 let noiseContext: AudioContext | null = null;
+let sampleContext: AudioContext | null = null;
+let sampleGeneration = 0;
+const sampleBuffers = new Map<BattleSampleId, AudioBuffer>();
+const sampleLoads = new Map<BattleSampleId, Promise<void>>();
 
 function soundContext(): AudioContext {
   const Context = globalThis.AudioContext ?? (globalThis as typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Context) throw new Error('Audio feedback is unavailable.');
   if (!context || context.state === 'closed') context = new Context();
   return context;
+}
+
+function prepareSampleContext(current: AudioContext): number {
+  if (sampleContext !== current) {
+    sampleContext = current;
+    sampleGeneration++;
+    sampleBuffers.clear(); sampleLoads.clear();
+  }
+  return sampleGeneration;
+}
+
+/** Decode silently before combat. A late download is never allowed to start a cast. */
+export async function preloadBattleSamples(): Promise<void> {
+  try {
+    const current = soundContext(), generation = prepareSampleContext(current);
+    const loads = (Object.keys(battleSampleAssets) as BattleSampleId[]).map(id => {
+      if (sampleBuffers.has(id)) return Promise.resolve();
+      const existing = sampleLoads.get(id);
+      if (existing) return existing;
+      const load = (async () => {
+        const response = await fetch(appAssetUrl(battleSampleAssets[id]));
+        if (!response.ok) throw new Error('Battle sample is not cached yet.');
+        const buffer = await current.decodeAudioData(await response.arrayBuffer());
+        if (generation === sampleGeneration && current === sampleContext && current.state !== 'closed')
+          sampleBuffers.set(id, buffer);
+      })().catch(() => { /* The existing generated material remains available offline. */ })
+        .finally(() => { if (generation === sampleGeneration) sampleLoads.delete(id); });
+      sampleLoads.set(id, load);
+      return load;
+    });
+    await Promise.all(loads);
+  } catch { /* Audio support is optional, including silent preloading. */ }
 }
 
 /** Stop the current cast as soon as the player leaves the arena or disables sound. */
@@ -40,6 +77,8 @@ export function stopAllAudio(): void {
   const previous = context;
   context = null;
   noiseBuffer = null; noiseContext = null;
+  sampleContext = null; sampleGeneration++;
+  sampleBuffers.clear(); sampleLoads.clear();
   if (previous) void previous.close().catch(() => { /* Reset does not depend on optional sound support. */ });
 }
 export async function playAudio(key: string): Promise<void> {
@@ -107,6 +146,15 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     const resumed = current.resume();
     const start = current.currentTime;
     const plan = buildBattleSound(success, theme, reducedMotion, options);
+    prepareSampleContext(current);
+    // Snapshot only ready buffers. Fetch/decode completion can benefit a future
+    // gesture, but must not insert sound into this cast or the next question.
+    const sampleCues = buildBattleSampleCues(plan, reducedMotion).flatMap(cue => {
+      const buffer = sampleBuffers.get(cue.id);
+      const duration = buffer ? Math.min(cue.duration, buffer.duration - cue.offset) : 0;
+      return buffer && duration > .01 ? [{ ...cue, duration, buffer }] : [];
+    });
+    void preloadBattleSamples();
     const releaseMusic = acquireBattleMusicDuck(plan.enhanced ? 'ultimate' : 'attack');
     const nodes: AudioNode[] = [];
     const sources = new Set<AudioScheduledSourceNode>();
@@ -131,7 +179,15 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8;
     limiter.attack.value = .003; limiter.release.value = .14;
     mix.connect(limiter); limiter.connect(current.destination);
-    plan.voices.forEach((voice, index) => {
+    const trackSource = (source: AudioScheduledSourceNode, end: number) => {
+      sources.add(source);
+      source.onended = () => {
+        sources.delete(source); source.disconnect();
+        if (sources.size === 0) cleanup();
+      };
+      source.stop(end);
+    };
+    plan.voices.filter(voice => !sampleCues.some(cue => cue.replaces(voice))).forEach((voice, index) => {
       const at = start + voice.at, end = at + voice.duration;
       const gain = current.createGain(); nodes.push(gain);
       gain.gain.setValueAtTime(0, at);
@@ -175,12 +231,24 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
         oscillator.frequency.exponentialRampToValueAtTime(voice.to, end);
         oscillator.connect(gain); oscillator.start(at);
       }
-      sources.add(source);
-      source.onended = () => {
-        sources.delete(source); source.disconnect();
-        if (sources.size === 0) cleanup();
-      };
-      source.stop(end + .006);
+      trackSource(source, Math.min(end + .006, start + plan.duration));
+    });
+    sampleCues.forEach(cue => {
+      const at = start + cue.at, end = at + cue.duration;
+      const source = current.createBufferSource(), gain = current.createGain();
+      nodes.push(source, gain); source.buffer = cue.buffer;
+      gain.gain.setValueAtTime(0, at);
+      gain.gain.linearRampToValueAtTime(cue.gain, at + Math.min(.006, cue.duration * .1));
+      gain.gain.setValueAtTime(cue.gain, end - Math.min(.045, cue.duration * .22));
+      gain.gain.linearRampToValueAtTime(0, end);
+      if (current.createStereoPanner) {
+        const pan = current.createStereoPanner(); nodes.push(pan);
+        pan.pan.setValueAtTime(cue.pan, at);
+        if (cue.panTo !== undefined) pan.pan.linearRampToValueAtTime(cue.panTo, end);
+        gain.connect(pan); pan.connect(mix);
+      } else gain.connect(mix);
+      source.connect(gain); source.start(at, cue.offset);
+      trackSource(source, end);
     });
   } catch { stopBattleSound(); /* Optional offline synthesized effects. */ }
 }

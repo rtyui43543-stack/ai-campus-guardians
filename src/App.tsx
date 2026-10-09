@@ -8,7 +8,7 @@ import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, 
 import { exportBackup, getStarterBossMigrationResult, loadProgress, ResetPersistenceError, saveProgress } from './domain/storage';
 import { persistLearningReset, resetLearningProgress } from './domain/progressReset';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
-import { battleSound, loadAudio, playAudio, stopAllAudio, stopAudio, stopBattleSound } from './platform/audio';
+import { battleSound, loadAudio, playAudio, preloadBattleSamples, stopAllAudio, stopAudio, stopBattleSound } from './platform/audio';
 import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/music';
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
@@ -75,6 +75,9 @@ export function App() {
     document.addEventListener('visibilitychange', stopHidden);
     return () => { document.removeEventListener('visibilitychange', stopHidden); stopBattleSound(); };
   }, [screen, progress?.settings.sound]);
+  useEffect(() => {
+    if (progress?.settings.sound) void preloadBattleSamples();
+  }, [progress?.settings.sound]);
   const offline = useOffline();
   const read = () => {
     setLoadError('');
@@ -215,6 +218,7 @@ export function App() {
     const snapshot = progressRef.current;
     if (!snapshot) return;
     const prior = snapshot.active;
+    if (prior && (prior.index !== next.index || prior.step !== 'action' && next.step === 'action')) stopBattleSound();
     commit(applySession(snapshot, next), persist);
     if ((next.step === 'feedback' || next.step === 'defeat') && ((next.success && !prior?.success) || (!next.success && prior?.step !== 'feedback'))) {
       const before = prior ? battleHealth(prior) : {playerHp:100,enemyHp:100};
@@ -239,7 +243,7 @@ export function App() {
     if (!progress) return;
     clockRef.current.pause(performance.now()); setRulesOpen(false);
     const session = level.finalBoss ? startFinalBossSession(progress, level.mode) : startSession(level.id, level.mode);
-    stopAudio();
+    stopAudio(); stopBattleSound();
     attackLock.current = false; setAnimating(false);
     if (attackTimer.current) clearTimeout(attackTimer.current);
     setCue('');
@@ -249,7 +253,7 @@ export function App() {
   };
   const restart = () => {
     if (!progress?.active || !isDefeated(progress.active)) return;
-    stopAudio();
+    stopAudio(); stopBattleSound();
     if (attackTimer.current) clearTimeout(attackTimer.current);
     attackLock.current = false; setAnimating(false); setCue('');
     setHintOpen(false); setResult(null);
@@ -262,7 +266,7 @@ export function App() {
     if (!snapshot?.active || attackLock.current) return;
     const active = snapshot.active;
     const next = advanceSession(active);
-    stopAudio(); setHintOpen(false);
+    stopAudio(); stopBattleSound(); setHintOpen(false);
     if (next.finished) {
       const finished = finishSession(snapshot, active);
       setResult(latestRun(finished));

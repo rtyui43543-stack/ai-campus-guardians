@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildBattleSound } from './battleSoundDesign';
 import { synthesizeCreatureVoice } from './creatureVoice';
+import { battleSampleAssets, buildBattleSampleCues } from './battleSamples';
 
 const musicDuck = vi.hoisted(() => ({ acquire: vi.fn(), releases: [] as ReturnType<typeof vi.fn>[] }));
 vi.mock('./music', () => ({ setBattleMusicDucked: vi.fn(), acquireBattleMusicDuck: musicDuck.acquire }));
+vi.mock('./urls', () => ({
+  appAssetUrl: (path: string) => new URL(path.replace(/^\//, ''), 'https://school.test/game/').href,
+}));
 
 describe('battle sound choreography', () => {
   it('gives each visible hero element and both sets of enemies a distinct material voice', () => {
@@ -146,6 +150,51 @@ describe('original creature synthesis', () => {
   });
 });
 
+describe('supplied sample choreography', () => {
+  it('assigns each reference to its visible material while keeping nonmatching skills synthesized', () => {
+    expect(buildBattleSampleCues(buildBattleSound(true, 5, false, { ultimate: true })).map(cue => cue.id))
+      .toEqual(['phoenix-call', 'fire-feather', 'explosion']);
+    expect(buildBattleSampleCues(buildBattleSound(true, 6, false, { ultimate: true, mode: 'advanced' })).map(cue => cue.id))
+      .toEqual(['ice-dragon-roar', 'frost-arrow', 'explosion']);
+    expect(buildBattleSampleCues(buildBattleSound(true, 6, false, { ultimate: true })).some(cue => cue.id === 'ice-dragon-roar'))
+      .toBe(false);
+    expect(buildBattleSampleCues(buildBattleSound(false, 1, false, { finalBoss: true, enemyCritical: true, mode: 'advanced' })).map(cue => cue.id))
+      .toEqual(['ice-dragon-roar', 'frost-arrow', 'explosion']);
+    for (const theme of [2, 3, 4]) expect(buildBattleSampleCues(buildBattleSound(true, theme, false, { ultimate: true })))
+      .toEqual([]);
+    expect(buildBattleSampleCues(buildBattleSound(false, 5, false, { enemyCritical: true, mode: 'advanced' }))).toEqual([]);
+    expect(buildBattleSampleCues(buildBattleSound(true, 1)).map(cue => cue.id)).toEqual(['heavy-impact']);
+  });
+
+  it('keeps ready sample replacements synchronized and strictly inside normal, ultimate and reduced cast clocks', () => {
+    for (const success of [true, false]) for (const reduced of [true, false]) {
+      for (const mode of ['starter', 'advanced'] as const) for (const enhanced of [true, false]) {
+        for (let theme = 1; theme <= 6; theme++) {
+          const plan = buildBattleSound(success, theme, reduced, { mode, ultimate: enhanced, enemyCritical: enhanced });
+          for (const cue of buildBattleSampleCues(plan, reduced)) {
+            expect(cue.duration).toBeGreaterThan(0);
+            expect(cue.at + cue.duration).toBeLessThan(plan.duration);
+            expect(cue.offset).toBeGreaterThanOrEqual(0);
+            expect(plan.voices.some(cue.replaces)).toBe(true);
+            if (['fire-feather', 'frost-arrow'].includes(cue.id)) expect(cue.at).toBe(.48 / (reduced ? 6 : 1));
+            if (['heavy-impact', 'explosion'].includes(cue.id)) expect(cue.at).toBe(plan.impact);
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps a dodge or shield block free from damage impact samples', () => {
+    for (const flag of [{ missed: true }, { blocked: true }]) {
+      for (const theme of [1, 6]) {
+        const cues = buildBattleSampleCues(buildBattleSound(false, theme, false,
+          { mode: 'advanced', finalBoss: true, enemyCritical: true, ...flag }));
+        expect(cues.some(cue => ['heavy-impact', 'explosion'].includes(cue.id))).toBe(false);
+      }
+    }
+  });
+});
+
 class MockParam {
   value = 0;
   setValueAtTime = vi.fn();
@@ -168,6 +217,7 @@ class MockContext {
   resume = vi.fn(() => MockContext.resumeResult ?? Promise.resolve());
   close = vi.fn(async () => { this.state = 'closed'; });
   createBuffer = vi.fn((_channels: number, length: number) => ({ getChannelData: () => new Float32Array(length) }));
+  decodeAudioData = vi.fn(async (data: ArrayBuffer) => ({ duration: 1.4, sample: new Uint8Array(data)[0] }));
   constructor() { MockContext.instances.push(this); }
   node() { const node = new MockNode(); this.nodes.push(node); return node; }
   createGain() { return this.node(); }
@@ -184,6 +234,8 @@ describe('battle Web Audio scheduling and cancellation', () => {
     musicDuck.releases = []; musicDuck.acquire.mockReset();
     musicDuck.acquire.mockImplementation(() => { const release = vi.fn(); musicDuck.releases.push(release); return release; });
     vi.stubGlobal('AudioContext', MockContext);
+    vi.stubGlobal('document', { baseURI: 'https://school.test/game/' });
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -286,5 +338,139 @@ describe('battle Web Audio scheduling and cancellation', () => {
     const { battleSound } = await import('./audio');
     expect(() => battleSound(true, 1)).not.toThrow();
     expect(MockContext.instances).toHaveLength(0);
+  });
+
+  const suppliedFetch = () => vi.fn(async (url: string) => ({ ok: true,
+    arrayBuffer: async () => new Uint8Array([Object.values(battleSampleAssets).findIndex(path => url.endsWith(path)) + 1]).buffer }));
+  const isSample = (source: MockNode) => !!source.buffer && 'sample' in (source.buffer as object);
+
+  it('preloads and decodes each local excerpt once without unlocking, playing or creating narration elements', async () => {
+    const fetch = suppliedFetch(); vi.stubGlobal('fetch', fetch);
+    const { preloadBattleSamples } = await import('./audio');
+    await Promise.all([preloadBattleSamples(), preloadBattleSamples()]);
+    await preloadBattleSamples();
+    expect(fetch).toHaveBeenCalledTimes(6);
+    const context = MockContext.instances[0];
+    expect(context.decodeAudioData).toHaveBeenCalledTimes(6);
+    expect(context.resume).not.toHaveBeenCalled();
+    expect(context.sources).toHaveLength(0);
+    expect(fetch.mock.calls.every(([url]) => url.startsWith('https://school.test/game/sfx/'))).toBe(true);
+  });
+
+  it('replaces only the matching synthesized layers and fades every sample before the next-question deadline', async () => {
+    vi.stubGlobal('fetch', suppliedFetch());
+    const { preloadBattleSamples, battleSound } = await import('./audio');
+    await preloadBattleSamples();
+    for (const reduced of [true, false]) {
+      const context = MockContext.instances[0], before = context.sources.length;
+      battleSound(true, 5, reduced, { ultimate: true, mode: 'advanced' });
+      const plan = buildBattleSound(true, 5, reduced, { ultimate: true, mode: 'advanced' });
+      const cues = buildBattleSampleCues(plan, reduced);
+      const sources = context.sources.slice(before), samples = sources.filter(isSample);
+      expect(samples).toHaveLength(3);
+      expect(sources).toHaveLength(plan.voices.filter(voice => !cues.some(cue => cue.replaces(voice))).length + cues.length);
+      samples.forEach((source, i) => {
+        expect(source.start).toHaveBeenCalledWith(10 + cues[i].at, cues[i].offset);
+        expect(source.stop.mock.calls[0][0]).toBeCloseTo(10 + cues[i].at + cues[i].duration);
+        expect(source.stop.mock.calls[0][0]).toBeLessThan(10 + plan.duration);
+      });
+    }
+  });
+
+  it('uses the immediate fallback when decoding is pending, never supplements an old cast, and uses samples on the next tap', async () => {
+    let finish!: (response: { ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }) => void;
+    const response = new Promise<{ ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }>(resolve => { finish = resolve; });
+    vi.stubGlobal('fetch', vi.fn(() => response));
+    const { preloadBattleSamples, battleSound, stopBattleSound } = await import('./audio');
+    const preloading = preloadBattleSamples();
+    battleSound(true, 6, false, { ultimate: true, mode: 'advanced' });
+    const context = MockContext.instances[0], count = context.sources.length;
+    expect(count).toBe(buildBattleSound(true, 6, false, { ultimate: true, mode: 'advanced' }).voices.length);
+    stopBattleSound();
+    finish({ ok: true, arrayBuffer: async () => new Uint8Array([1]).buffer });
+    await preloading;
+    expect(context.sources).toHaveLength(count);
+    expect(context.sources.some(isSample)).toBe(false);
+    battleSound(true, 6, false, { ultimate: true, mode: 'advanced' });
+    expect(context.sources.slice(count).filter(isSample)).toHaveLength(3);
+  });
+
+  it('cancels every scheduled excerpt on exit, sound disable, a new cast or reset and restores its own music lease once', async () => {
+    vi.stubGlobal('fetch', suppliedFetch());
+    const { preloadBattleSamples, battleSound, stopBattleSound, stopAllAudio } = await import('./audio');
+    await preloadBattleSamples();
+    const context = MockContext.instances[0];
+    for (const cancel of [stopBattleSound, () => battleSound(false, 3), stopAllAudio]) {
+      const before = context.sources.length;
+      battleSound(true, 5, false, { ultimate: true });
+      const samples = context.sources.slice(before).filter(isSample), lease = musicDuck.releases.at(-1)!;
+      expect(samples).toHaveLength(3);
+      cancel(); cancel();
+      expect(samples.every(source => source.stop.mock.calls.length === 2 && source.onended === null)).toBe(true);
+      expect(lease).toHaveBeenCalledOnce();
+      expect(samples.every(source => source.disconnect.mock.calls.length > 0)).toBe(true);
+    }
+  });
+
+  it('does not install old decoded buffers into a fresh context after a reset', async () => {
+    let finish!: (response: { ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }) => void;
+    const response = new Promise<{ ok: boolean; arrayBuffer: () => Promise<ArrayBuffer> }>(resolve => { finish = resolve; });
+    vi.stubGlobal('fetch', vi.fn(() => response));
+    const { preloadBattleSamples, battleSound, stopAllAudio } = await import('./audio');
+    const preloading = preloadBattleSamples();
+    stopAllAudio();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
+    await preloadBattleSamples();
+    finish({ ok: true, arrayBuffer: async () => new Uint8Array([1]).buffer });
+    await preloading;
+    battleSound(true, 5, false, { ultimate: true });
+    expect(MockContext.instances).toHaveLength(2);
+    expect(MockContext.instances[1].sources.some(isSample)).toBe(false);
+  });
+
+  it('falls back only for unavailable materials and retries a failed offline sample without refetching decoded ones', async () => {
+    let arrowAvailable = false;
+    const ready = suppliedFetch();
+    const fetch = vi.fn(async (url: string) => url.endsWith('/frost-arrow.mp3') && !arrowAvailable
+      ? { ok: false, arrayBuffer: async () => new ArrayBuffer(0) } : ready(url));
+    vi.stubGlobal('fetch', fetch);
+    const { preloadBattleSamples, battleSound, stopBattleSound } = await import('./audio');
+    await preloadBattleSamples();
+    const context = MockContext.instances[0];
+    battleSound(true, 6, false, { ultimate: true, mode: 'advanced' });
+    const first = [...context.sources];
+    expect(first.filter(isSample)).toHaveLength(2);
+    const plan = buildBattleSound(true, 6, false, { ultimate: true, mode: 'advanced' });
+    const readyCues = buildBattleSampleCues(plan).filter(cue => cue.id !== 'frost-arrow');
+    expect(first).toHaveLength(plan.voices.filter(voice => !readyCues.some(cue => cue.replaces(voice))).length + 2);
+    stopBattleSound();
+    // Finish the cast's silent retry, then permit the next explicit preload.
+    await preloadBattleSamples();
+    arrowAvailable = true;
+    await preloadBattleSamples();
+    const calls = fetch.mock.calls.map(([url]) => url);
+    expect(calls.filter(url => url.endsWith('/frost-arrow.mp3')).length).toBeGreaterThan(1);
+    for (const path of Object.values(battleSampleAssets).filter(path => !path.endsWith('/frost-arrow.mp3')))
+      expect(calls.filter(url => url.endsWith(path))).toHaveLength(1);
+    battleSound(true, 6, false, { ultimate: true, mode: 'advanced' });
+    expect(context.sources.slice(first.length).filter(isSample)).toHaveLength(3);
+  });
+
+  it('ends a shorter decoded asset at its real end and never schedules its fade or stop past the cast deadline', async () => {
+    vi.stubGlobal('fetch', suppliedFetch());
+    const { preloadBattleSamples, battleSound } = await import('./audio');
+    // An excerpt can be shorter after the device decoder trims MP3 padding.
+    const preloading = preloadBattleSamples(), context = MockContext.instances[0];
+    context.decodeAudioData.mockImplementation(async data => ({ duration: .11, sample: new Uint8Array(data)[0] }));
+    await preloading;
+    battleSound(true, 5, false, { ultimate: true });
+    const samples = context.sources.filter(isSample);
+    expect(samples).toHaveLength(3);
+    for (const source of samples) {
+      expect(source.stop.mock.calls[0][0] - source.start.mock.calls[0][0]).toBeCloseTo(.11);
+      expect(source.stop.mock.calls[0][0]).toBeLessThan(13);
+    }
+    expect(context.nodes.some(node => node.gain.linearRampToValueAtTime.mock.calls.some(([value, at]) => value === 0 && at > 10)))
+      .toBe(true);
   });
 });

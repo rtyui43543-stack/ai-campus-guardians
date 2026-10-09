@@ -1,0 +1,123 @@
+{
+  "source": "User-provided reference audio; files contain no embedded author/source metadata.",
+  "purpose": "Short offline combat cues; runtime fades and stops each cue before the next question.",
+  "clips": [
+    {
+      "asset": "/sfx/frost-arrow.mp3",
+      "suppliedFile": "冰霜箭射出.mp3",
+      "sourceSha256": "237f377ea37c6f71d364e3e34c9319b72c549f25a078c6761c09914de6576951",
+      "sourceSeconds": 6.034286,
+      "sourcePeak": 0.873763,
+      "sourceMaxRmsAtSeconds": 2.25,
+      "trimStartSeconds": 1.88,
+      "trimEndSeconds": 2.67,
+      "tempoFactors": [
+        1.795
+      ],
+      "seconds": 0.44,
+      "decodedPeak": 0.744407,
+      "bytes": 7985,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    },
+    {
+      "asset": "/sfx/heavy-impact.mp3",
+      "suppliedFile": "重物砸下.mp3",
+      "sourceSha256": "138f1f7125b05b7079ccb4ba17cc7f3a7258acf1c505858ee04399113f846335",
+      "sourceSeconds": 2.16,
+      "sourcePeak": 1.02487,
+      "sourceMaxRmsAtSeconds": 0.13,
+      "trimStartSeconds": 0.08,
+      "trimEndSeconds": 0.75,
+      "tempoFactors": [
+        1.19
+      ],
+      "seconds": 0.56,
+      "decodedPeak": 0.735977,
+      "bytes": 10075,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    },
+    {
+      "asset": "/sfx/fire-feather.mp3",
+      "suppliedFile": "火羽.mp3",
+      "sourceSha256": "5412f8c9af43a28ab90271d85591b45ace3e3376cb76aa1dadd49d50b5e2136f",
+      "sourceSeconds": 9.038367,
+      "sourcePeak": 1.06037,
+      "sourceMaxRmsAtSeconds": 1.22,
+      "trimStartSeconds": 0.49,
+      "trimEndSeconds": 1.51,
+      "tempoFactors": [
+        2.0,
+        1.275
+      ],
+      "seconds": 0.4,
+      "decodedPeak": 0.736258,
+      "bytes": 7567,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    },
+    {
+      "asset": "/sfx/explosion.mp3",
+      "suppliedFile": "爆炸.mp3",
+      "sourceSha256": "29004b4e798fe96fc24fa9057dbc310cba1d982d7d14a51257f01ea53c38905a",
+      "sourceSeconds": 2.977959,
+      "sourcePeak": 1.379528,
+      "sourceMaxRmsAtSeconds": 0.12,
+      "trimStartSeconds": 0.045,
+      "trimEndSeconds": 1.28,
+      "tempoFactors": [
+        1.58
+      ],
+      "seconds": 0.78,
+      "decodedPeak": 0.740147,
+      "bytes": 13418,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    },
+    {
+      "asset": "/sfx/phoenix-call.mp3",
+      "suppliedFile": "鳳凰音效.mp3",
+      "sourceSha256": "a9c5219b7145ac240786a8e25b86d1c7a43f97dcf69b15a96029c4bb653e86b8",
+      "sourceSeconds": 8.045714,
+      "sourcePeak": 1.381758,
+      "sourceMaxRmsAtSeconds": 0.61,
+      "trimStartSeconds": 0.21,
+      "trimEndSeconds": 2.1,
+      "tempoFactors": [
+        2.0,
+        1.21
+      ],
+      "seconds": 0.78,
+      "decodedPeak": 0.745166,
+      "bytes": 13418,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    },
+    {
+      "asset": "/sfx/ice-dragon-roar.mp3",
+      "suppliedFile": "冰龍咆嘯.mp3",
+      "sourceSha256": "dad6c6c0e18f1f441dd9e6054dedc0ea47f459d5919edbc55f46f5dd05a9e98e",
+      "sourceSeconds": 3.448163,
+      "sourcePeak": 1.344631,
+      "sourceMaxRmsAtSeconds": 0.64,
+      "trimStartSeconds": 0.09,
+      "trimEndSeconds": 2.09,
+      "tempoFactors": [
+        2.0,
+        1.25
+      ],
+      "seconds": 0.8,
+      "decodedPeak": 0.746047,
+      "bytes": 13836,
+      "finite": true,
+      "clipped": 0,
+      "processing": "pitch-preserving tempo; peak normalize; 8ms/45ms fade"
+    }
+  ]
+}
