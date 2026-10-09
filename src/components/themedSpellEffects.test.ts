@@ -121,14 +121,15 @@ describe('themed spell performances', () => {
     }
   });
 
-  it('changes the advanced phoenix into fire on contact instead of leaving a second bird hovering during the cinematic', () => {
+  it('keeps advanced fire particles on contact without duplicating the cinematic phoenix with a low-detail creature', () => {
     const fx = createThemedSpellEffects(new THREE.Scene(), 5, 'advanced');
     const special = fx.root.getObjectByName('ultimate-5')!;
     expect(special.getObjectByName('open-learning-book')).toBeUndefined();
     const bird = special.getObjectByName('ultimate-strike')!;
     const fire = special.getObjectByName('phoenix-fire-impact')!;
+    expect(special.getObjectByName('wisdom-phoenix')).toBeUndefined();
     fx.update(frame({ ultimate: true, time: .6 }));
-    expect(bird.visible).toBe(true); expect(fire.visible).toBe(false);
+    expect(bird.visible).toBe(false); expect(fire.visible).toBe(false);
     fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
     expect(fire.visible).toBe(true);
     expect(fire.position.x).toBe(frame().target.x);
@@ -138,7 +139,7 @@ describe('themed spell performances', () => {
     fx.dispose();
   });
 
-  it('uses ice spears and frost for chapter six, with an unmistakable dragon only in the upgraded cast', () => {
+  it('keeps starter ice spears and advanced contact frost without duplicating the high-detail cinematic ice dragon', () => {
     for (const mode of ['starter', 'advanced'] as const) {
       const fx = createThemedSpellEffects(new THREE.Scene(), 6, mode);
       const normal = fx.root.getObjectByName('normal-6')!, special = fx.root.getObjectByName('ultimate-6')!;
@@ -156,11 +157,10 @@ describe('themed spell performances', () => {
         expect(hue.h).toBeGreaterThan(.45); expect(hue.h).toBeLessThan(.65);
       }
       fx.update(frame({ ultimate: true, time: .7 }));
-      expect(special.getObjectByName('frost-ice-dragon') !== undefined).toBe(mode === 'advanced');
+      expect(special.getObjectByName('frost-ice-dragon')).toBeUndefined();
       if (mode === 'advanced') {
-        expect(special.getObjectByName('ice-dragon-head')).toBeDefined();
-        expect(special.getObjectByName('ice-dragon-horns')).toBeDefined();
-        expect(special.getObjectByName('ice-dragon-wing')).toBeDefined();
+        expect(special.getObjectByName('ultimate-strike')!.visible).toBe(false);
+        expect(special.getObjectByName('ice-dragon-head')).toBeUndefined();
       } else expect(special.getObjectByName('frost-crystal-spear')).toBeDefined();
       fx.update(frame({ ultimate: true, time: SPELL_IMPACT_SECONDS }));
       const impact = special.getObjectByName('frost-shatter-impact')!;

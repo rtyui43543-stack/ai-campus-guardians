@@ -24,6 +24,7 @@ import { GameCover } from './components/GameCover';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
 import { getUltimateSpell } from './content/ultimateSpells';
 import { UltimateCinematic } from './components/UltimateCinematic';
+import { preloadUltimateSummons } from './components/ultimateSummons';
 import { QuestionClock } from './platform/questionClock';
 import { FinalBossChallenge, UltimatePicker, finalBattleTrack, levelLabel } from './components/FinalBossChallenge';
 import './components/adventure-music.css';
@@ -111,6 +112,10 @@ export function App() {
       document.getElementById('question-title')?.focus();
     }
   }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step]);
+  useEffect(() => {
+    const level = screen === 'battle' && progress?.active ? getLevel(progress.active.levelId) : intro;
+    if (level) void preloadUltimateSummons(level);
+  }, [screen, progress?.active?.levelId, intro]);
   useEffect(() => {
     const updateMusic = (event: Event) => setMusicPlaying((event as CustomEvent<{ playing: boolean }>).detail.playing);
     window.addEventListener(MUSIC_EVENT, updateMusic);
@@ -351,7 +356,7 @@ export function App() {
         </div>
         <div className="topbar-tools"><div className="mode-toggle" aria-label="選擇難度">{(['starter', 'advanced'] as Mode[]).map(mode =>
           <button key={mode} className={progress.settings.mode === mode ? 'selected' : ''} aria-pressed={progress.settings.mode === mode}
-            disabled={screen === 'battle'} onClick={() => commit({ ...progress, settings: { ...progress.settings, mode }, updatedAt: new Date().toISOString() })}>{modeNames[mode]}<span>{mode === 'starter' ? '3–4 年級' : '5–6 年級'}</span></button>)}</div>
+            disabled={screen === 'battle'} onClick={() => commit({ ...progress, settings: { ...progress.settings, mode }, updatedAt: new Date().toISOString() })}>{modeNames[mode]}</button>)}</div>
           <button className="icon-button" title="回到首頁" aria-label="回到首頁" onClick={() => navigate('cover')}><Home size={21} /></button>
           <button className="main-music-button" title={musicPlaying ? '關閉冒險音樂' : '播放冒險音樂'} aria-label={musicPlaying ? '關閉冒險音樂' : '播放冒險音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={21} /> : <VolumeX size={21} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button>
           <button className="icon-button" title="停止朗讀" aria-label="停止朗讀" onClick={stopAudio}><Volume2 size={21} /></button>

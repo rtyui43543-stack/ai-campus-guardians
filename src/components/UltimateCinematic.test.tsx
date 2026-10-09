@@ -1,7 +1,10 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { UltimateCinematic } from './UltimateCinematic';
 import { getUltimateSpell } from '../content/ultimateSpells';
+import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING } from './ultimateSummons';
+
+vi.mock('../platform/urls', () => ({ appAssetUrl: (path: string) => `/ai-campus-guardians${path}` }));
 
 describe('upgraded ultimate battlefield presentation', () => {
   it('keeps the unchanged starter support spell and ordinary counterattack cues out of these attack cinematics', () => {
@@ -82,7 +85,9 @@ describe('upgraded ultimate battlefield presentation', () => {
   it('retains the distinctive advanced form and readable name when reduced motion is enabled', () => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={5} mode="advanced" cue="ultimate-9-30" reducedMotion />);
     expect(markup).toContain('is-reduced');
-    expect(markup).toContain('ultimate-phoenix-wing');
+    expect(markup).toContain('ultimate-summon-phoenix');
+    expect(markup).toContain(`/ai-campus-guardians${ULTIMATE_SUMMON_ART.phoenix.path}`);
+    expect(markup).not.toContain('ultimate-phoenix-wing');
     expect(markup).toContain(getUltimateSpell(5, 'advanced')!.name);
   });
 
@@ -110,9 +115,10 @@ describe('upgraded ultimate battlefield presentation', () => {
   it('sends a horned ice dragon before crystal impact and frost, replacing every world-tree formation', () => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
     expect(markup).toContain('有角與冰晶翼的巨大冰龍飛向對手，命中碎冰炸裂，寒霜蔓延全場');
-    expect(markup).toContain('ultimate-ice-dragon-horns');
-    expect(markup).toContain('ultimate-ice-dragon-wing front');
-    expect(markup).toContain('ultimate-ice-dragon-wing rear');
+    expect(markup).toContain('ultimate-summon-iceDragon');
+    expect(markup).toContain(`/ai-campus-guardians${ULTIMATE_SUMMON_ART.iceDragon.path}`);
+    expect(markup).not.toContain('ultimate-ice-dragon-horns');
+    expect(markup).not.toContain('ultimate-ice-dragon-wing');
     expect(markup).toContain('ultimate-ice-spike-front');
     expect(markup).toContain('ultimate-ice-ground-cracks');
     const phases = ['data-phase="ice-dragon-flight"', 'data-phase="ice-shatter-impact"', 'data-phase="full-battlefield-frost"'];
@@ -129,7 +135,8 @@ describe('upgraded ultimate battlefield presentation', () => {
   it('retains the ice dragon and crystals in reduced motion', () => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="advanced" cue="ultimate-9-30" reducedMotion />);
     expect(markup).toContain('is-reduced');
-    expect(markup).toContain('ultimate-ice-dragon-horns');
+    expect(markup).toContain('ultimate-summon-iceDragon');
+    expect(markup).toContain(`/ai-campus-guardians${ULTIMATE_SUMMON_ART.iceDragon.path}`);
     expect(markup).toContain('ultimate-ice-spike-front');
     expect(markup).toContain(getUltimateSpell(6, 'advanced')!.name);
   });
@@ -157,5 +164,23 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(markup).toContain('ultimate-colossal-ice-lance');
     expect(markup).toContain('ultimate-frost-lance-wave');
     expect(markup).toContain(getUltimateSpell(6, 'starter')!.name);
+  });
+
+  it.each([{ chapter: 5, kind: 'phoenix' as const }, { chapter: 6, kind: 'iceDragon' as const }])('uses one full-color card-derived creature only for upgraded chapter $chapter, with the existing hit and end times', ({ chapter, kind }) => {
+    const advanced = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-4-35" reducedMotion={false} />);
+    expect(advanced).toContain('ultimate-illustrated-summon');
+    expect(advanced).toContain(`data-summon-art="${kind}"`);
+    expect(advanced).toContain(`src="/ai-campus-guardians${ULTIMATE_SUMMON_ART[kind].path}"`);
+    expect(advanced).toContain('width="1536" height="1024"');
+    expect(advanced.match(/class="ultimate-summon-creature"/g)).toHaveLength(1);
+    expect(advanced).toContain(`data-impact-ms="${ULTIMATE_SUMMON_TIMING.impactMs}"`);
+    expect(advanced).toContain(`data-duration-ms="${ULTIMATE_SUMMON_TIMING.durationMs}"`);
+    expect(advanced).toContain('--ultimate-summon-duration:3000ms');
+    expect(advanced).not.toContain('ultimate-phoenix-wing');
+    expect(advanced).not.toContain('ultimate-ice-dragon-wing');
+    const starter = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(starter).not.toContain('ultimate-illustrated-summon');
+    expect(starter).not.toContain('ultimate-summon-creature');
+    expect(starter).not.toContain(ULTIMATE_SUMMON_ART[kind].path);
   });
 });

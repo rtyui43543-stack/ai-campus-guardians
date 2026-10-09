@@ -626,7 +626,8 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       anchor(wave, ground, f, 1 + spread); wave.visible = visibleDuring(f, .9, 2.80);
     };
   } else if (theme === 5) {
-    const bird = phoenix(strike);
+    // The upgraded creature is rendered by the card-derived cinematic sprite.
+    // Keep world-space ignition and contact particles, without a second low-detail bird.
     const ignition = Array.from({ length: 5 }, () => flame(formation, .70));
     ignition.forEach((piece, i) => { piece.position.set((i - 2) * .13, (i % 2) * .18, 0); piece.rotation.z = (i - 2) * .18; });
     const fireImpact = group(root, 'phoenix-fire-impact');
@@ -634,8 +635,7 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     const feathers = Array.from({ length: 10 }, (_, i) => feather(root, i % 2 ? 0xffdc71 : 0xf6823e, .65));
     update = f => {
       const center = f.reducedMotion ? f.target.clone() : path(f);
-      anchor(strike, center, f, 1.5); strike.visible = visibleDuring(f, .25, mode === 'advanced' ? 1.08 : 2.75);
-      bird.children.filter(o => o.name === 'phoenix-wing').forEach((wing, i) => { wing.rotation.z = f.reducedMotion ? 0 : (i ? -1 : 1) * Math.sin(f.time * 7) * .18; });
+      strike.visible = false;
       anchor(formation, f.start, f, 1.3); formation.visible = visibleDuring(f, .02, .72);
       animateOrbit(feathers, f, center, .95, 1.2, .25, 2.8);
       anchor(fireImpact, f.target, f); fireImpact.visible = visibleDuring(f, .9, 2.8);
@@ -663,7 +663,6 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, b = a + Math.PI * 2 / 3;
         tube(crystalArray, [[Math.cos(a) * .62, Math.sin(a) * .62, .03], [Math.cos(b) * .62, Math.sin(b) * .62, .03]], .018, 0x81d0ed); }
     }
-    const dragon = mode === 'advanced' ? iceDragon(strike) : null;
     const lance = mode === 'starter' ? group(strike, 'colossal-frost-lance') : null;
     if (lance) {
       const main = iceSpear(lance, 1.85); main.position.x = -1.515;
@@ -683,12 +682,10 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     update = f => {
       anchor(formation, f.start, f, 1.15); formation.visible = visibleDuring(f, .03, .7);
       if (crystalArray) crystalArray.rotation.z = f.reducedMotion ? 0 : f.time * .9;
-      if (dragon) {
-        const center = f.reducedMotion ? f.target.clone() : path(f);
-        anchor(strike, center, f, 1.45); strike.visible = visibleDuring(f, .18, 1.08);
-        dragon.children.filter(piece => piece.name === 'ice-dragon-wing').forEach((wing, i) => {
-          wing.rotation.x = f.reducedMotion ? 0 : Math.sin(f.time * 8) * (i ? -.18 : .18);
-        });
+      if (mode === 'advanced') {
+        // One high-detail ice dragon comes from the cinematic; its shards still
+        // land on the actual opponent in the arena at the shared contact time.
+        strike.visible = false;
       } else {
         anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.25);
         if (!f.reducedMotion) strike.scale.multiplyScalar(.45 + .55 * smooth((f.time - .24) / .18));

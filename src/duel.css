@@ -3,6 +3,12 @@
 .battle-shell .main-content{padding:0;max-width:none;margin:0;outline:none}
 .duel-stage{position:relative;isolation:isolate;width:100%;height:100dvh;min-height:650px;overflow:hidden;background:linear-gradient(160deg,#183d53,#071d32);color:#fff}
 .duel-stage button{font-family:inherit}.duel-stage button:focus-visible{outline:3px solid #ffe495;outline-offset:4px}
+/* Give the upgraded card-derived creatures a clear stage during the locked cast.
+   HP and Home remain visible; the question and all choices return when the cast ends. */
+.duel-stage:has(>.ultimate-illustrated-summon) .duel-hud{z-index:7}
+.duel-stage:has(>.ultimate-illustrated-summon) .duel-bubble{opacity:0;pointer-events:none}
+.duel-stage:has(>.ultimate-illustrated-summon) .duel-choices{opacity:.1;pointer-events:none}
+.duel-stage:has(>.ultimate-illustrated-summon) .duel-damage{z-index:7}
 .duel-hud{position:absolute;z-index:5;top:20px;left:24px;right:24px;display:grid;grid-template-columns:90px 1fr 180px 1fr;align-items:center;gap:25px}
 .duel-back{display:flex;align-items:center;justify-content:center;gap:7px;background:#102b3dd9;border:1px solid #ffffff30;color:#d8ecef;padding:12px 9px;border-radius:12px;font-size:14px}
 .duel-meter{min-width:0}.duel-meter>div{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;text-shadow:0 1px 3px #153238}

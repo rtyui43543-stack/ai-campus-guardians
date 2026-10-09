@@ -62,9 +62,25 @@ body { font-size: 18px; }
 .app-shell:not(.battle-shell) .sidebar-bottom > small { font-size: 15px; line-height: 1.8; color: var(--student-secondary); }
 .app-shell:not(.battle-shell) .topbar-title { font-size: 16px; color: var(--student-ink); }
 .app-shell:not(.battle-shell) .breadcrumb { color: var(--student-secondary); }
-.app-shell:not(.battle-shell) .mode-toggle button { color: var(--student-secondary); }
-.app-shell:not(.battle-shell) .mode-toggle button span { font-size: 15px; opacity: 1; }
-.app-shell:not(.battle-shell) .mode-toggle button.selected { color: var(--student-green); font-weight: 750; }
+.app-shell:not(.battle-shell) .mode-toggle { flex-shrink: 0; max-width: 100%; }
+.app-shell:not(.battle-shell) .mode-toggle button {
+  color: var(--student-secondary);
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.25;
+  min-width: 92px;
+  min-height: 52px;
+  padding: 8px 18px;
+}
+.app-shell:not(.battle-shell) .mode-toggle button.selected { color: var(--student-green); font-weight: 800; }
+@media (max-width: 760px) {
+  .app-shell:not(.battle-shell) .mode-toggle button {
+    font-size: 22px;
+    min-width: 76px;
+    min-height: 48px;
+    padding: 8px 12px;
+  }
+}
 .app-shell:not(.battle-shell) .app-footer { flex-wrap: wrap; gap: 8px 16px; color: var(--student-secondary); font-size: 16px; line-height: 1.7; }
 .app-shell:not(.battle-shell) .app-footer :is(span, button) { font-size: 16px; color: var(--student-secondary); }
 .app-shell:not(.battle-shell) .app-footer button { min-height: 44px; }

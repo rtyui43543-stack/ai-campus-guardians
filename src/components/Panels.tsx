@@ -121,7 +121,7 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
       <div className="preference-row"><div><b>冒險與戰鬥背景音樂</b><p>主頁播放輕快的探索配樂，對戰時換成緊湊配樂。可用頁面上的音樂按鈕隨時關閉；關閉設定會保留。</p></div><Toggle label="冒險與戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
       <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
-      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟300HP最終魔王關。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階 · 3–4 年級</option><option value="advanced">進階 · 5–6 年級</option></select></div>
+      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟300HP最終魔王關。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階</option><option value="advanced">進階</option></select></div>
     </section>
   </>;
 }

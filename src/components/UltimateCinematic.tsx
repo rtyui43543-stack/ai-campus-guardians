@@ -1,6 +1,8 @@
 import { useId, type CSSProperties } from 'react';
 import type { Mode } from '../domain/types';
 import { getUltimateSpell } from '../content/ultimateSpells';
+import { appAssetUrl } from '../platform/urls';
+import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING, type UltimateSummonKind } from './ultimateSummons';
 import '../styles/ultimate-cinematic.css';
 
 export interface UltimateCinematicProps {
@@ -14,12 +16,20 @@ const star = 'M0-18 5-5 18 0 5 5 0 18-5 5-18 0-5-5Z';
 const leaf = 'M0 0C-45-30-52-90 0-123C52-90 45-30 0 0Z';
 const feather = 'M0 0C-18-35-33-96 0-170C35-96 22-34 0 0Z';
 
+function IllustratedSummon({ kind, phase }: { kind: UltimateSummonKind; phase: string }) {
+  const art = ULTIMATE_SUMMON_ART[kind];
+  return <div className={`ultimate-summon-flight ultimate-summon-${kind}`} data-phase={phase} data-summon-art={kind}>
+    <div className="ultimate-summon-wake" aria-hidden="true" />
+    <img className="ultimate-summon-creature" src={appAssetUrl(art.path)} width={art.width} height={art.height} alt="" aria-hidden="true" decoding="sync" draggable={false} />
+  </div>;
+}
+
 /** Keep the bird's proportions while its HTML anchor travels between the same
  * left/right actor lanes as the arena. Contact is at 900 ms, when HP changes. */
-function PhoenixProjectile({ id, fieldBurn = true }: { id: string; fieldBurn?: boolean }) {
+function PhoenixProjectile({ id, fieldBurn = true, illustrated = false }: { id: string; fieldBurn?: boolean; illustrated?: boolean }) {
   const fire = `url(#${id}-phoenix-fire)`;
   return <div className="ultimate-phoenix" data-sequence={fieldBurn ? 'summon-grow-flight-impact-burn' : 'summon-grow-flight-impact-feathers'}>
-    <div className="ultimate-phoenix-flight" data-phase="summon-grow-flight">
+    {illustrated ? <IllustratedSummon kind="phoenix" phase="summon-grow-flight" /> : <div className="ultimate-phoenix-flight" data-phase="summon-grow-flight">
       <svg viewBox="0 0 1440 900" aria-hidden="true" focusable="false">
         <defs><linearGradient id={`${id}-phoenix-fire`} x1="0" y1="1" x2="0" y2="0"><stop stopColor="#b83928" /><stop offset=".4" stopColor="#f47b37" /><stop offset=".75" stopColor="#ffd269" /><stop offset="1" stopColor="#fff9d7" /></linearGradient></defs>
         <g className="ultimate-phoenix-flight-trail" fill="none" stroke="#ffc866" strokeWidth="18" strokeLinecap="round">
@@ -39,7 +49,7 @@ function PhoenixProjectile({ id, fieldBurn = true }: { id: string; fieldBurn?: b
           <path d="M715 357 728 363 714 371" fill="#1b4845" stroke="none" />
         </g>
       </svg>
-    </div>
+    </div>}
     <div className="ultimate-phoenix-impact" data-phase="enemy-impact">
       <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
         <circle className="ultimate-fire-impact-ring" r="102" fill="#fff1a037" stroke="#ffe79b" strokeWidth="12" />
@@ -192,36 +202,8 @@ function StarterCombatCinematic({ id, chapter, name, cue, reducedMotion }: { id:
 /** A horned, winged ice dragon crosses the actor lanes before the ice field
  * spreads. Independent percentage anchors preserve its silhouette on tablets. */
 function IceDragonProjectile({ id }: { id: string }) {
-  const ice = `url(#${id}-dragon-ice)`, edge = '#317da9';
   return <div className="ultimate-ice-dragon" data-sequence="ice-gather-dragon-flight-impact-frost">
-    <div className="ultimate-ice-dragon-flight" data-phase="ice-dragon-flight">
-      <svg viewBox="0 0 1440 900" aria-hidden="true" focusable="false">
-        <defs><linearGradient id={`${id}-dragon-ice`} x1="0" y1="1" x2=".6" y2="0"><stop stopColor="#287aaf" /><stop offset=".36" stopColor="#79d6ee" /><stop offset=".68" stopColor="#c8f8ff" /><stop offset="1" stopColor="#f7feff" /></linearGradient></defs>
-        <g className="ultimate-ice-dragon-wake" fill="none" stroke="#c4f4ff" strokeWidth="14" strokeLinecap="round">
-          <path d="M560 576C391 524 247 613 61 594M546 627C337 652 186 746 40 702" />
-        </g>
-        <g className="ultimate-ice-dragon-wing rear" fill={ice} stroke={edge} strokeWidth="5" strokeLinejoin="round">
-          <path d="M676 545 962 164 899 306 1124 245 1000 397 1134 428 853 521 792 653Z" />
-          <path d="M676 545 962 164M676 545 1124 245M676 545 1134 428" fill="none" stroke="#e3fbff" strokeWidth="9" />
-        </g>
-        <g className="ultimate-ice-dragon-body" fill={ice} stroke={edge} strokeWidth="7" strokeLinejoin="round">
-          <path d="M782 479C714 454 643 488 580 553C491 621 387 583 291 607C216 626 137 648 67 587L195 723 326 679C435 653 492 766 642 710C712 685 772 621 816 565Z" />
-          <path d="M322 624 267 562 368 599 394 538 447 617 499 568 545 628 615 568 632 642" fill="#d6faff" />
-          <path d="M610 660 584 756 701 788 711 763 640 735 655 682M756 605 791 716 884 725 892 698 834 682 815 597" />
-          <path d="M688 764 740 778 697 790M874 699 919 715 884 728" fill="#f0fdff" />
-          <path d="M741 486 756 389 813 344 892 383 914 438 1021 454 973 516 874 558 796 541Z" />
-          <path className="ultimate-ice-dragon-horns" d="M784 376 737 242 833 349M858 373 903 257 902 403" fill="#e1fbff" />
-          <path d="M859 432 899 427 875 450Z" fill="#173754" stroke="none" />
-          <path d="M881 499 958 476M922 490 920 507 935 491 941 504" fill="none" stroke="#275d80" strokeWidth="5" />
-          <path d="M769 452 813 399 861 406M464 649 543 673 614 652 693 596" fill="none" stroke="#f1fdff" strokeWidth="8" opacity=".8" />
-        </g>
-        <g className="ultimate-ice-dragon-wing front" fill={ice} stroke={edge} strokeWidth="5" strokeLinejoin="round">
-          <path d="M640 584 458 132 452 292 272 199 343 382 187 392 494 539 559 670Z" />
-          <path d="M640 584 458 132M640 584 272 199M640 584 187 392" fill="none" stroke="#e8fcff" strokeWidth="10" />
-          <path d="M458 132 452 292 525 359M272 199 343 382 457 442" fill="none" stroke="#a6edfa" strokeWidth="4" />
-        </g>
-      </svg>
-    </div>
+    <IllustratedSummon kind="iceDragon" phase="ice-dragon-flight" />
     <div className="ultimate-ice-dragon-impact" data-phase="ice-shatter-impact">
       <svg viewBox="-240 -240 480 480" aria-hidden="true" focusable="false">
         <g fill="#c1f4ff" stroke="#479cc3" strokeWidth="5" strokeLinejoin="round">
@@ -300,8 +282,9 @@ function StarterFrostLance({ id, name, cue, reducedMotion }: { id: string; name:
   </div>;
 }
 
-/** Advanced forms and starter attack ultimates fill the battlefield below the UI.
- * The existing 3D staff, projectile and impact still play beneath it. No game
+/** Advanced forms and starter attack ultimates fill the battlefield. The two
+ * card-derived summons rise above the temporarily subdued question UI.
+ * The existing staff and impact still play beneath it. No game
  * state, animation timer or damage is owned by this presentation component. */
 export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: UltimateCinematicProps) {
   const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '');
@@ -322,9 +305,13 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
     : chapter === 1 ? '天穹城堡護盾先形成，城門發射巨大城堡徽印飛向對手，命中展開封印堡壘'
     : `${scope === 'half' ? '半屏' : '全場'}魔法展開`;
   const maskFaces = [[315, 405], [720, 435], [1115, 405]];
-  return <div className={`ultimate-cinematic ultimate-theme-${chapter} scope-${scope}${reducedMotion ? ' is-reduced' : ''}`}
+  const illustratedSummon = chapter === 5 || chapter === 6;
+  return <div className={`ultimate-cinematic ultimate-theme-${chapter} scope-${scope}${illustratedSummon ? ' ultimate-illustrated-summon' : ''}${reducedMotion ? ' is-reduced' : ''}`}
     role="img" aria-label={`進階升級必殺技：${spell?.name ?? '主題魔法'}，${presentation}`}
-    data-ultimate-tier="advanced" data-spell={chapter} data-cue={cue} data-scope={scope}>
+    data-ultimate-tier="advanced" data-spell={chapter} data-cue={cue} data-scope={scope}
+    style={illustratedSummon ? { '--ultimate-summon-duration': `${ULTIMATE_SUMMON_TIMING.durationMs}ms` } as CSSProperties : undefined}
+    data-duration-ms={illustratedSummon ? ULTIMATE_SUMMON_TIMING.durationMs : undefined}
+    data-impact-ms={illustratedSummon ? ULTIMATE_SUMMON_TIMING.impactMs : undefined}>
     <div className="ultimate-field-wash" style={{ '--ultimate-accent': accent } as CSSProperties} />
     <svg className="ultimate-field" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <defs>
@@ -412,7 +399,7 @@ export function UltimateCinematic({ chapter, mode, cue, reducedMotion }: Ultimat
       </g>
     </svg>
     {chapter === 1 && <CastleProjection id={id} upgraded />}
-    {chapter === 5 && <PhoenixProjectile id={id} />}
+    {chapter === 5 && <PhoenixProjectile id={id} illustrated />}
     {chapter === 6 && <IceDragonProjectile id={id} />}
     <div className="ultimate-tier-banner"><span>技能升級 · 進階必殺</span><strong>{spell?.name}</strong></div>
   </div>;
