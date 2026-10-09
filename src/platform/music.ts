@@ -3,13 +3,14 @@ import { appAssetUrl } from './urls';
 export const BATTLE_MUSIC_EVENT = 'battle-music-status';
 export const MUSIC_EVENT = 'game-music-status';
 export type MusicTrack = 'adventure' | 'battle' | 'final';
+export type BattleMusicDuck = 'attack' | 'ultimate';
 export interface BattleMusicStatus { playing: boolean; error?: string }
 export interface MusicStatus extends BattleMusicStatus { track: MusicTrack | null }
 
 const TRACKS = {
-  adventure: { file: 'EpicBattle_Deity.mp3', volume: .20, ducked: .06 },
-  battle: { file: 'EpicBattle_Deity.mp3', volume: .27, ducked: .09 },
-  final: { file: 'Fight3.mp3', volume: .27, ducked: .09 },
+  adventure: { file: 'EpicBattle_Deity.mp3', volume: .20, ducked: .06, attack: .03, ultimate: .012 },
+  battle: { file: 'EpicBattle_Deity.mp3', volume: .27, ducked: .09, attack: .035, ultimate: .014 },
+  final: { file: 'Fight3.mp3', volume: .27, ducked: .09, attack: .035, ultimate: .014 },
 } as const;
 const players: Partial<Record<MusicTrack, HTMLAudioElement>> = {};
 let wantedTrack: MusicTrack | null = null;
@@ -17,6 +18,56 @@ let ducked = false;
 let generation = 0;
 let pending: Promise<void> | null = null;
 let listening = false;
+let nextDuckId = 0;
+const battleDucks = new Map<number, BattleMusicDuck>();
+let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+let volumeGeneration = 0;
+
+function targetVolume(track: MusicTrack): number {
+  const settings = TRACKS[track];
+  let value: number = ducked ? settings.ducked : settings.volume;
+  for (const kind of battleDucks.values()) value = Math.min(value, settings[kind]);
+  return value;
+}
+
+function cancelVolumeRamp() {
+  volumeGeneration++;
+  if (volumeTimer !== null) clearTimeout(volumeTimer);
+  volumeTimer = null;
+}
+
+/** Lower immediately before a cast, then recover gently after its final sound. */
+function updateVolumes(recover = false) {
+  cancelVolumeRamp();
+  const attempt = volumeGeneration;
+  const starts = Object.entries(players).map(([track, player]) => ({ track: track as MusicTrack, player, volume: player.volume }));
+  if (!recover || starts.every(({ track, volume }) => targetVolume(track) <= volume)) {
+    for (const { track, player } of starts) player.volume = targetVolume(track);
+    return;
+  }
+  const fade = (step: number) => {
+    if (attempt !== volumeGeneration) return;
+    for (const { track, player, volume } of starts) {
+      const target = targetVolume(track);
+      player.volume = step === 12 ? target : volume + (target - volume) * step / 12;
+    }
+    volumeTimer = step < 12 ? setTimeout(() => fade(step + 1), 25) : null;
+  };
+  volumeTimer = setTimeout(() => fade(1), 25);
+}
+
+/** Independent leases keep overlapping casts and narration from unmuting each other. */
+export function acquireBattleMusicDuck(kind: BattleMusicDuck): () => void {
+  const id = ++nextDuckId;
+  battleDucks.set(id, kind);
+  updateVolumes();
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    if (battleDucks.delete(id)) updateVolumes(true);
+  };
+}
 
 function report(status: MusicStatus) {
   window.dispatchEvent(new CustomEvent<MusicStatus>(MUSIC_EVENT, { detail: status }));
@@ -43,7 +94,7 @@ function getPlayer(track: MusicTrack) {
     players[track] = player;
     document.body.appendChild(player);
   }
-  player.volume = ducked ? TRACKS[track].ducked : TRACKS[track].volume;
+  if (volumeTimer === null || player.paused) player.volume = targetVolume(track);
   return player;
 }
 
@@ -117,6 +168,8 @@ export const startAdventureMusic = () => startMusic('adventure');
 
 /** Stop on the cover, during stories, or when muted. Pending playback cannot restart it. */
 export function stopMusic(): void {
+  cancelVolumeRamp();
+  updateVolumes();
   wantedTrack = null;
   generation += 1;
   pending = null;
@@ -133,8 +186,5 @@ export function stopMusic(): void {
 export const stopBattleMusic = stopMusic;
 export function setBattleMusicDucked(value: boolean): void {
   ducked = value;
-  for (const [track, player] of Object.entries(players)) {
-    const setting = TRACKS[track as MusicTrack];
-    player.volume = ducked ? setting.ducked : setting.volume;
-  }
+  updateVolumes();
 }

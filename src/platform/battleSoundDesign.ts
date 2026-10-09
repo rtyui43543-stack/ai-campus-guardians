@@ -11,7 +11,7 @@ export interface BattleSoundOptions {
 
 export interface BattleSoundVoice {
   phase: 'charge' | 'launch' | 'impact' | 'tail';
-  kind: OscillatorType | 'noise';
+  kind: OscillatorType | 'noise' | 'creature';
   at: number;
   duration: number;
   from: number;
@@ -20,6 +20,11 @@ export interface BattleSoundVoice {
   pan: number;
   filter?: BiquadFilterType;
   resonance?: number;
+  /** A voice is synthesized from a glottal source and moving formants, not a tone. */
+  creature?: 'phoenix' | 'dragon';
+  envelope?: 'sustain' | 'swell' | 'gust';
+  panTo?: number;
+  layer?: string;
 }
 
 interface Timbre {
@@ -75,16 +80,24 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
   const pitch = (success ? mode === 'advanced' ? 1.06 : 1 : .91) * (!success && options.finalBoss ? .76 : 1);
   const sourcePan = success ? -.55 : .55, targetPan = -sourcePan;
   const add = (phase: BattleSoundVoice['phase'], kind: BattleSoundVoice['kind'], at: number,
-    length: number, from: number, to: number, gain: number, pan: number, filter?: BiquadFilterType, resonance = .8) => {
+    length: number, from: number, to: number, gain: number, pan: number, filter?: BiquadFilterType, resonance = .8,
+    detail: Pick<BattleSoundVoice, 'creature' | 'envelope' | 'panTo' | 'layer'> = {}) => {
     const speed = reducedMotion ? 6 : 1;
     voices.push({ phase, kind, at: at / speed, duration: length / speed,
       from: Math.max(32, from * pitch), to: Math.max(32, to * pitch), gain: gain * (reducedMotion ? .8 : 1),
-      pan, ...(filter ? { filter, resonance } : {}) });
+      pan, ...(filter ? { filter, resonance } : {}), ...detail });
   };
   const note = (phase: BattleSoundVoice['phase'], at: number, length: number, from: number,
     to: number, gain: number, pan: number, kind: OscillatorType = profile.wave) => add(phase, kind, at, length, from, to, gain, pan);
   const air = (phase: BattleSoundVoice['phase'], at: number, length: number, from: number,
     to: number, gain: number, pan: number, filter: BiquadFilterType = 'bandpass') => add(phase, 'noise', at, length, from, to, gain, pan, filter);
+  const texture = (phase: BattleSoundVoice['phase'], layer: string, at: number, length: number,
+    from: number, to: number, gain: number, pan: number, filter: BiquadFilterType = 'bandpass',
+    envelope?: BattleSoundVoice['envelope'], panTo?: number, resonance = .8) =>
+    add(phase, 'noise', at, length, from, to, gain, pan, filter, resonance, { layer, envelope, panTo });
+  const creature = (name: 'phoenix' | 'dragon', at: number, length: number, from: number, to: number, gain: number) =>
+    add('charge', 'creature', at, length, from, to, gain, sourcePan, undefined, .8,
+      { creature: name, layer: 'creature-call', envelope: 'sustain', panTo: targetPan * .35 });
   const fundamental = profile.fundamental;
 
   note('charge', .015, .39, fundamental * .7, fundamental * 2.2, enhanced ? .09 : .055, sourcePan);
@@ -93,9 +106,32 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
     // Rising fifths announce a summon/critical strike before its larger hit.
     [1, 1.5, 2].forEach((ratio, i) => note('charge', .07 + i * .09, .36,
       fundamental * ratio, fundamental * ratio * 1.7, .05, sourcePan, 'sine'));
+    // Calls belong to the creature shown in the summon, rather than every fire
+    // or ice enemy. Keeping them before contact leaves the explosion readable.
+    if (success && index === 4) creature('phoenix', .08, .77, mode === 'advanced' ? 680 : 820, 470, .24);
+    if ((success && index === 5 && mode === 'advanced') || (!success && options.finalBoss && mode === 'advanced'))
+      creature('dragon', .055, .8, success ? 74 : 60, 42, .25);
+    if (profile.id === 'book-lightning' || profile.id === 'chaos-grimoire') {
+      [.055, .18, .32].forEach((at, i) => texture('charge', 'book-pages', at, .17,
+        1200 + i * 300, 2700, .055, sourcePan, 'highpass'));
+    }
+    if (profile.texture === 'metal') texture('charge', 'resonant-seal', .12, .4, 180, 1050, .1, sourcePan, 'bandpass', 'swell', 0, 2.2);
+    if (profile.texture === 'glass' || profile.texture === 'ice') texture('charge', 'crystal-charge', .14, .34, 1100, 4200, .09, sourcePan, 'bandpass', 'swell', 0, 1.7);
+    if (profile.texture === 'rustle') texture('charge', 'leaf-wind', .12, .36, 800, 2000, .08, sourcePan, 'bandpass', 'swell');
   }
   air('launch', .48, .40, profile.air * .5, profile.air * 2, enhanced ? .17 : .12, 0);
   note('launch', .48, .40, fundamental * 3.3, fundamental * .8, .065, 0);
+  if (enhanced) {
+    texture('launch', 'flight', .48, .4, profile.air * .65, profile.air * 1.65,
+      .16, sourcePan, 'bandpass', 'swell', targetPan);
+    if (success && index === 4) {
+      // A wing beat and hot wake under the cry, moving toward the enemy lane.
+      [.48, .61, .74].forEach((at, i) => texture('launch', 'wingbeat', at, .14, 680 + i * 160,
+        190, .11 - i * .018, sourcePan + (targetPan - sourcePan) * (i / 2), 'lowpass'));
+    }
+    if (profile.texture === 'ice') texture('launch', 'frost-breath', .48, .46,
+      720, 2900, .11, sourcePan, 'bandpass', 'gust', targetPan);
+  }
 
   if (!success && options.missed) {
     // A dodge must never report a bass impact. Let the projectile whistle past.
@@ -141,14 +177,58 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
         break;
     }
     if (enhanced) {
-      // Summons sustain after contact; enemy critical attacks still finish inside
-      // the existing 2.05 s animation, rather than leaking into the next question.
-      const tail = success ? 1.48 : .72;
-      note('tail', 1.12, tail, fundamental * .75, fundamental * .5, .075, 0, 'sine');
-      air('tail', 1.08, tail, profile.air * .6, 200, .08, 0, 'lowpass');
-      [1, 1.5, 2].forEach((ratio, i) => note('tail', 1.14 + i * .10,
-        success ? .93 : .45, profile.shimmer * ratio, profile.shimmer * ratio * (success ? 1.08 : .8),
-        .03, i % 2 ? -.35 : .35, 'sine'));
+      // Material-specific aftermath replaces the identical chord/hiss previously
+      // used for all summons. Enemy critical tails fit the existing 2.05 s clock.
+      const tail = success ? 1.58 : .74;
+      switch (profile.texture) {
+        case 'flame':
+          texture('impact', 'explosion', .9, .65, 2000, 90, .24, targetPan, 'lowpass');
+          texture('tail', 'combustion', 1.04, tail, 1550, 340, .17, targetPan, 'lowpass', 'gust', 0);
+          [.97, 1.14, 1.32, 1.52, 1.71].forEach((at, i) => texture('tail', 'fire-crackle', at,
+            .07 + i * .008, 3100 + i * 270, 750, .075 - i * .008, i % 2 ? -.32 : .32, 'highpass'));
+          note('impact', 1.04, .45, 94, 33, .14, targetPan, 'sine');
+          break;
+        case 'ice':
+          texture('impact', 'ice-explosion', .9, .61, 4400, 600, .19, targetPan, 'highpass');
+          [.92, 1.02, 1.15, 1.3, 1.48].forEach((at, i) => {
+            texture('impact', 'ice-fracture', at, .085, 1800 + i * 630, 4900 - i * 280,
+              .105 - i * .012, i % 2 ? -.42 : .42, 'bandpass', undefined, undefined, 1.8);
+            note('tail', at + .015, .39, 2400 + i * 431, 1900 + i * 381, .04, i % 2 ? -.4 : .4, 'sine');
+          });
+          texture('tail', 'blizzard', 1.02, tail, 1950, 700, .18, targetPan, 'bandpass', 'gust', sourcePan);
+          texture('tail', 'frost-rumble', 1.03, success ? 1.2 : .73, 380, 75, .095, 0, 'lowpass', 'sustain');
+          break;
+        case 'electric':
+          texture('impact', 'thunder', .9, .78, 1450, 100, .22, targetPan, 'lowpass');
+          texture('tail', 'rolling-thunder', 1.09, tail, 420, 70, .13, targetPan, 'lowpass', 'gust', 0);
+          [.96, 1.13, 1.33, 1.56].forEach((at, i) => texture('impact', 'lightning-arc', at, .095,
+            4300, 1300 + i * 240, .095, i % 2 ? -.4 : .4, 'bandpass'));
+          break;
+        case 'glass':
+          texture('impact', 'mirror-shatter', .9, .26, 4900, 1700, .16, targetPan, 'highpass');
+          [.93, 1.06, 1.21, 1.4, 1.62].forEach((at, i) => {
+            texture('tail', 'glass-shards', at, .095, 3300 + i * 370, 1500, .05, i % 2 ? -.4 : .4, 'highpass');
+            note('tail', at, success ? .68 : .26, profile.shimmer * (1.4 + i * .27),
+              profile.shimmer * (1.39 + i * .27), .035, i % 2 ? -.4 : .4, 'sine');
+          });
+          break;
+        case 'metal':
+          texture('impact', 'seal-slam', .9, .22, 670, 110, .16, targetPan, 'lowpass');
+          [1, 1.414, 1.932, 2.76].forEach((ratio, i) => note('tail', .94 + i * .025,
+            success ? 1.2 - i * .13 : .72 - i * .1, profile.shimmer * ratio,
+            profile.shimmer * ratio * .995, .047 / (1 + i * .45), i % 2 ? -.3 : .3, 'sine'));
+          texture('tail', 'shield-resonance', 1.01, tail, 450, 210, .09, 0, 'bandpass', 'sustain', undefined, 2.3);
+          break;
+        case 'rustle':
+          texture('tail', 'leaf-swirl', .97, tail, 2200, 700, .12, targetPan, 'bandpass', 'gust', sourcePan);
+          [0, .14, .29, .47].forEach((offset, i) => {
+            texture('impact', 'puzzle-click', .9 + offset, .065, 1200 + i * 270, 380, .075,
+              i % 2 ? -.25 : .25, 'bandpass');
+            note('tail', 1.06 + offset, success ? .82 : .38, fundamental * (2 + i * .5),
+              fundamental * (2.05 + i * .5), .045, i % 2 ? -.25 : .25, 'sine');
+          });
+          break;
+      }
     }
   }
   return { profile: profile.id, enhanced, impact: .9 / (reducedMotion ? 6 : 1),

@@ -48,7 +48,7 @@ describe('offline battle music lifecycle', () => {
     win.addEventListener('game-music-status', event => allEvents.push((event as CustomEvent).detail));
     music = await import('./music');
   });
-  afterEach(() => { music.stopBattleMusic(); vi.unstubAllGlobals(); });
+  afterEach(() => { music.stopBattleMusic(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   it('coalesces rapid starts into one scoped looping audio player', async () => {
     const first = music.startBattleMusic(), second = music.startBattleMusic();
@@ -135,6 +135,58 @@ describe('offline battle music lifecycle', () => {
     expect(instances[0].volume).toBe(.27);
     expect(instances[0].paused).toBe(false);
     expect(instances[0].play).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the strongest cast duck until all active casts finish, then restores music smoothly', async () => {
+    vi.useFakeTimers();
+    await music.startBattleMusic();
+    const releaseAttack = music.acquireBattleMusicDuck('attack');
+    expect(instances[0].volume).toBe(.035);
+    const releaseUltimate = music.acquireBattleMusicDuck('ultimate');
+    expect(instances[0].volume).toBe(.014);
+    releaseAttack(); vi.advanceTimersByTime(300);
+    expect(instances[0].volume).toBe(.014);
+    releaseUltimate();
+    expect(instances[0].volume).toBe(.014);
+    vi.advanceTimersByTime(150);
+    expect(instances[0].volume).toBeGreaterThan(.014);
+    expect(instances[0].volume).toBeLessThan(.27);
+    vi.advanceTimersByTime(150);
+    expect(instances[0].volume).toBeCloseTo(.27);
+    releaseUltimate();
+    expect(instances[0].paused).toBe(false);
+    expect(instances[0].play).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not release a combat duck when narration stops, or release narration when combat stops', async () => {
+    vi.useFakeTimers();
+    await music.startMusic('final');
+    music.setBattleMusicDucked(true);
+    const release = music.acquireBattleMusicDuck('ultimate');
+    music.setBattleMusicDucked(false);
+    expect(instances[0].volume).toBe(.014);
+    music.setBattleMusicDucked(true);
+    release(); vi.advanceTimersByTime(300);
+    expect(instances[0].volume).toBeCloseTo(.09);
+    music.setBattleMusicDucked(false);
+    expect(instances[0].volume).toBe(.27);
+  });
+
+  it('cancels an old recovery on the next hit and keeps a cast duck when music is toggled back on', async () => {
+    vi.useFakeTimers();
+    await music.startBattleMusic();
+    const first = music.acquireBattleMusicDuck('attack');
+    first(); vi.advanceTimersByTime(100);
+    const second = music.acquireBattleMusicDuck('ultimate');
+    vi.advanceTimersByTime(500);
+    expect(instances[0].volume).toBe(.014);
+    music.stopMusic();
+    await music.startAdventureMusic();
+    expect(instances[0].paused).toBe(true);
+    expect(instances[1]).toMatchObject({ volume: .012, paused: false });
+    second(); vi.advanceTimersByTime(500);
+    expect(instances[0].paused).toBe(true);
+    expect(instances[1]).toMatchObject({ volume: .20, paused: false });
   });
 
   it('plays the bundled exploration track at a lower volume and reuses it across main pages', async () => {

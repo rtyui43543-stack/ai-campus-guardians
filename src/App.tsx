@@ -523,7 +523,7 @@ function Results({ session, onLevel, onMap, onProposal }: {
   const summary = sessionSummary(session.records);
   const score = scoreSession(session);
   return <div className="results-page"><section className="results-hero"><span className="results-medal"><ShieldCheck size={42} /></span>
-    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.passed === false ? '成績已保存，再挑戰一次！' : level.finalBoss ? '最終魔王被擊敗了！' : session.review ? '舊版練習紀錄' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · {levelLabel(level)} · {level.title}{session.passed === false ? level.finalBoss ? ' · 魔王尚未被擊敗' : ' · 有超時題，尚未過關' : ''}</p>
+    <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.passed === false ? '成績已保存，再挑戰一次！' : level.finalBoss ? '最終魔王被擊敗了！' : session.review ? '過往練習紀錄' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · {levelLabel(level)} · {level.title}{session.passed === false ? level.finalBoss ? ' · 魔王尚未被擊敗' : ' · 有超時題，尚未過關' : ''}</p>
     <div className="result-skill"><Sparkles size={18} />{chapter.skill}<span>學會的事，比勝率更重要</span></div></section>
     <ScoreSummary run={session} />
     <div className="summary-grid">{(['first', 'supported', 'practice'] as const).map(status => <div className={'summary-card ' + status} key={status}><span>{statusNames[status]}</span><strong>{summary[status]}<small> 題</small></strong><p>{status === 'first' ? '獨立完成的思考' : status === 'supported' ? '再次思考或使用提示後答對' : '看過示範，安排再練習'}</p></div>)}{score.timeouts > 0 && <div className="summary-card timeout"><span>超時未作答</span><strong>{score.timeouts}<small> 題</small></strong><p>{level.finalBoss && session.passed !== false ? '魔王已擊敗；下次挑戰，練習在時間內回答' : '這次留下分數，重新挑戰完成每一題'}</p></div>}</div>

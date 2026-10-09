@@ -1,6 +1,7 @@
 import { appAssetUrl } from './urls';
-import { setBattleMusicDucked } from './music';
+import { acquireBattleMusicDuck, setBattleMusicDucked } from './music';
 import { buildBattleSound, type BattleSoundOptions } from './battleSoundDesign';
+import { synthesizeCreatureVoice } from './creatureVoice';
 
 let audioIndex: Record<string, string> = {};
 let loaded: Promise<void> | null = null;
@@ -106,12 +107,14 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     const resumed = current.resume();
     const start = current.currentTime;
     const plan = buildBattleSound(success, theme, reducedMotion, options);
+    const releaseMusic = acquireBattleMusicDuck(plan.enhanced ? 'ultimate' : 'attack');
     const nodes: AudioNode[] = [];
     const sources = new Set<AudioScheduledSourceNode>();
     let stopped = false;
     const cleanup = () => {
       if (stopped) return;
       stopped = true;
+      releaseMusic();
       for (const source of sources) { source.onended = null; try { source.stop(); } catch { /* Already ended. */ } }
       sources.clear();
       for (const node of nodes) node.disconnect();
@@ -130,15 +133,31 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
       const at = start + voice.at, end = at + voice.duration;
       const gain = current.createGain(); nodes.push(gain);
       gain.gain.setValueAtTime(0, at);
-      gain.gain.linearRampToValueAtTime(voice.gain, at + Math.min(.012, voice.duration * .15));
+      const attack = voice.envelope === 'swell' ? voice.duration * .32 : Math.min(.012, voice.duration * .15);
+      gain.gain.linearRampToValueAtTime(voice.gain, at + attack);
+      if (voice.envelope === 'gust') {
+        // Broad swells give fire a rushing burn and frost a moving wind instead
+        // of an exponentially fading click. Values share the audio clock.
+        [.58, .92, .63, .85, .43].forEach((level, i) =>
+          gain.gain.linearRampToValueAtTime(voice.gain * level, at + voice.duration * (.17 + i * .14)));
+      } else if (voice.envelope) {
+        gain.gain.linearRampToValueAtTime(voice.gain * .78, at + voice.duration * .7);
+      }
       gain.gain.exponentialRampToValueAtTime(.0001, end);
       if (current.createStereoPanner) {
         const pan = current.createStereoPanner(); nodes.push(pan);
-        pan.pan.value = voice.pan;
+        pan.pan.setValueAtTime(voice.pan, at);
+        if (voice.panTo !== undefined) pan.pan.linearRampToValueAtTime(voice.panTo, end);
         gain.connect(pan); pan.connect(mix);
       } else gain.connect(mix);
       let source: AudioScheduledSourceNode;
-      if (voice.kind === 'noise') {
+      if (voice.kind === 'creature') {
+        const call = current.createBufferSource(); nodes.push(call); source = call;
+        const samples = synthesizeCreatureVoice(voice, current.sampleRate);
+        const buffer = current.createBuffer(1, samples.length, current.sampleRate);
+        buffer.getChannelData(0).set(samples);
+        call.buffer = buffer; call.connect(gain); call.start(at);
+      } else if (voice.kind === 'noise') {
         const noise = current.createBufferSource(), filter = current.createBiquadFilter();
         nodes.push(noise, filter); source = noise;
         noise.buffer = battleNoise(current); noise.loop = true;

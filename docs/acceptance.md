@@ -1,5 +1,7 @@
 # 3D 十二關版本驗收
 
+平板直式／橫式與最新戰鬥混音驗收見 [tablet-combat-audio-acceptance.md](tablet-combat-audio-acceptance.md)，後續介面更新須檢查其中的平板尺寸矩陣。
+
 最新版文字閱讀與闖關評分的驗收見 [score-readability-acceptance.md](score-readability-acceptance.md)。
 
 最新版血量歸零、首頁與台灣華語朗讀的驗收見 [defeat-voice-acceptance.md](defeat-voice-acceptance.md)。

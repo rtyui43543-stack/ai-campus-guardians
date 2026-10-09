@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildBattleSound } from './battleSoundDesign';
+import { synthesizeCreatureVoice } from './creatureVoice';
 
-vi.mock('./music', () => ({ setBattleMusicDucked: vi.fn() }));
+const musicDuck = vi.hoisted(() => ({ acquire: vi.fn(), releases: [] as ReturnType<typeof vi.fn>[] }));
+vi.mock('./music', () => ({ setBattleMusicDucked: vi.fn(), acquireBattleMusicDuck: musicDuck.acquire }));
 
 describe('battle sound choreography', () => {
   it('gives each visible hero element and both sets of enemies a distinct material voice', () => {
@@ -64,6 +66,70 @@ describe('battle sound choreography', () => {
     expect(missed.voices.some(v => v.phase === 'impact' && v.kind === 'triangle')).toBe(false);
     expect(blocked.voices.some(v => v.phase === 'impact' && v.kind === 'triangle')).toBe(false);
   });
+
+  it('gives firebird casts a creature call, moving wings, timed explosion and sustained crackling burn', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const cast = buildBattleSound(true, 5, false, { mode, ultimate: true });
+      const call = cast.voices.find(voice => voice.kind === 'creature')!;
+      expect(call.creature).toBe('phoenix');
+      expect(call.at + call.duration).toBeLessThan(cast.impact);
+      for (const layer of ['flight', 'wingbeat', 'explosion', 'combustion', 'fire-crackle'])
+        expect(cast.voices.some(voice => voice.layer === layer)).toBe(true);
+      expect(cast.voices.find(voice => voice.layer === 'explosion')!.at).toBe(cast.impact);
+      const fire = cast.voices.find(voice => voice.layer === 'combustion')!;
+      expect(fire.envelope).toBe('gust');
+      expect(fire.at + fire.duration).toBeGreaterThan(2.5);
+      const flight = cast.voices.find(voice => voice.layer === 'flight')!;
+      expect(flight.panTo).toBeGreaterThan(flight.pan);
+    }
+    expect(buildBattleSound(false, 5, false, { mode: 'advanced', enemyCritical: true })
+      .voices.some(voice => voice.creature === 'phoenix')).toBe(false);
+  });
+
+  it('matches the ice spear and dragon forms, with fractures and blizzard following contact', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const cast = buildBattleSound(true, 6, false, { mode, ultimate: true });
+      expect(cast.voices.some(voice => voice.creature === 'dragon')).toBe(mode === 'advanced');
+      for (const layer of ['frost-breath', 'ice-explosion', 'ice-fracture', 'blizzard'])
+        expect(cast.voices.some(voice => voice.layer === layer)).toBe(true);
+      expect(cast.voices.filter(voice => ['ice-explosion', 'ice-fracture', 'blizzard'].includes(voice.layer ?? ''))
+        .every(voice => voice.at >= cast.impact)).toBe(true);
+    }
+    expect(buildBattleSound(false, 1, false, { mode: 'advanced', finalBoss: true, enemyCritical: true })
+      .voices.some(voice => voice.creature === 'dragon')).toBe(true);
+  });
+
+  it('uses each other summon material for the aftermath instead of a shared sound', () => {
+    const expected = ['seal-slam', 'thunder', 'puzzle-click', 'mirror-shatter'];
+    expected.forEach((layer, index) => {
+      const cast = buildBattleSound(true, index + 1, false, { ultimate: true });
+      expect(cast.voices.some(voice => voice.layer === layer)).toBe(true);
+      expect(cast.voices.some(voice => voice.kind === 'creature')).toBe(false);
+    });
+  });
+});
+
+describe('original creature synthesis', () => {
+  it('produces bounded, repeatable vocal waveforms with quiet endpoints at tablet and desktop sample rates', () => {
+    for (const sampleRate of [8000, 44100]) for (const creature of ['phoenix', 'dragon'] as const) {
+      const voice = { creature, from: creature === 'phoenix' ? 680 : 74, to: creature === 'phoenix' ? 470 : 42, duration: .8 };
+      const samples = synthesizeCreatureVoice(voice, sampleRate);
+      expect(samples).toHaveLength(Math.ceil(sampleRate * voice.duration));
+      expect(samples).toEqual(synthesizeCreatureVoice(voice, sampleRate));
+      expect(samples.every(value => Number.isFinite(value) && Math.abs(value) <= .841)).toBe(true);
+      expect(Math.abs(samples[0])).toBe(0); expect(Math.abs(samples.at(-1)!)).toBeLessThan(.001);
+      const power = samples.reduce((sum, value) => sum + value * value, 0) / samples.length;
+      expect(power).toBeGreaterThan(.03); expect(power).toBeLessThan(.45);
+    }
+  });
+
+  it('separates a piercing phoenix call from the low dragon roar', () => {
+    const zeroCrossings = (samples: Float32Array) => samples.reduce((total, value, i) =>
+      total + (i > 0 && value * samples[i - 1] < 0 ? 1 : 0), 0);
+    const bird = synthesizeCreatureVoice({ creature: 'phoenix', from: 680, to: 470, duration: .8 }, 44100);
+    const dragon = synthesizeCreatureVoice({ creature: 'dragon', from: 74, to: 42, duration: .8 }, 44100);
+    expect(zeroCrossings(bird)).toBeGreaterThan(zeroCrossings(dragon) * 2);
+  });
 });
 
 class MockParam {
@@ -101,6 +167,8 @@ class MockContext {
 describe('battle Web Audio scheduling and cancellation', () => {
   beforeEach(() => {
     vi.resetModules(); MockContext.instances = []; MockContext.resumeResult = null;
+    musicDuck.releases = []; musicDuck.acquire.mockReset();
+    musicDuck.acquire.mockImplementation(() => { const release = vi.fn(); musicDuck.releases.push(release); return release; });
     vi.stubGlobal('AudioContext', MockContext);
   });
   afterEach(() => vi.unstubAllGlobals());
@@ -137,6 +205,23 @@ describe('battle Web Audio scheduling and cancellation', () => {
     expect(current.every(source => source.stop.mock.calls.length === 1)).toBe(true);
   });
 
+  it('ducks music for real casts, restores it once on completion or cancellation, and schedules creature buffers', async () => {
+    const { battleSound, stopBattleSound } = await import('./audio');
+    battleSound(true, 5, false, { ultimate: true });
+    const context = MockContext.instances[0];
+    expect(musicDuck.acquire).toHaveBeenLastCalledWith('ultimate');
+    expect(context.createBuffer).toHaveBeenCalledTimes(2); // shared noise and original bird voice
+    const voiceSources = [...context.sources];
+    voiceSources.forEach(source => source.onended?.());
+    expect(musicDuck.releases[0]).toHaveBeenCalledOnce();
+    stopBattleSound();
+    expect(musicDuck.releases[0]).toHaveBeenCalledOnce();
+    battleSound(false, 1);
+    expect(musicDuck.acquire).toHaveBeenLastCalledWith('attack');
+    stopBattleSound();
+    expect(musicDuck.releases[1]).toHaveBeenCalledOnce();
+  });
+
   it('closes pending sound on reset and creates a fresh context and noise buffer for the next gesture', async () => {
     const { battleSound, stopAllAudio } = await import('./audio');
     battleSound(false, 3, true, { enemyCritical: true });
@@ -161,6 +246,8 @@ describe('battle Web Audio scheduling and cancellation', () => {
     reject(new Error('gesture expired')); await Promise.resolve();
     expect(first.every(source => source.stop.mock.calls.length === 2)).toBe(true);
     expect(current.every(source => source.stop.mock.calls.length === 1)).toBe(true);
+    expect(musicDuck.releases[0]).toHaveBeenCalledOnce();
+    expect(musicDuck.releases[1]).not.toHaveBeenCalled();
   });
 
   it('does not interrupt gameplay when Web Audio is unavailable', async () => {

@@ -6,7 +6,7 @@ import '../styles/growth-dashboard.css';
 
 const scopes: { value: DashboardScope; label: string }[] = [
   { value: 'all', label: '全部闖關' }, { value: 'starter', label: '初階' },
-  { value: 'advanced', label: '進階' }, { value: 'review', label: '舊版練習' },
+  { value: 'advanced', label: '進階' }, { value: 'review', label: '過往練習紀錄' },
 ];
 const modeName = (mode: Level['mode']) => mode === 'starter' ? '初階' : '進階';
 const levelNumber = (level: Level) => level.finalBoss ? '最終魔王關' : `第 ${level.mode === 'starter' ? level.id : level.id - 6} 關`;

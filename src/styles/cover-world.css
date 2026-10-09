@@ -136,3 +136,130 @@
 @media(max-width:600px) and (max-height:740px) {
   .duel-stage .duel-bubble { top: 102px; }
 }
+
+/* Give tablet cards room for their reading content before adding another column. */
+.app-shell.magic-campus .chapter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(330px, calc(50% - 10px))), 1fr));
+  gap: 20px;
+}
+.app-shell.magic-campus .chapter-card { display: flex; flex-direction: column; }
+.app-shell.magic-campus .chapter-card-header { flex-wrap: wrap; }
+.app-shell.magic-campus .chapter-icon { flex-shrink: 0; }
+.app-shell.magic-campus .chapter-number,
+.app-shell.magic-campus .chapter-status { white-space: nowrap; }
+.app-shell.magic-campus .chapter-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 6px 14px;
+  align-items: center;
+  min-height: 0;
+  margin: 16px 0;
+}
+.app-shell.magic-campus .chapter-card-body > div { display: contents; }
+.app-shell.magic-campus .chapter-card-body h3 { grid-column: 1; grid-row: 1; }
+.app-shell.magic-campus .chapter-card-body p:not(.chapter-boss-name) { grid-column: 1; grid-row: 2; margin-top: 0; }
+.app-shell.magic-campus .chapter-card-body > .guardian-portrait {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 112px;
+  height: 112px;
+  align-self: center;
+}
+.app-shell.magic-campus .chapter-card-body .chapter-boss-name {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin-top: 7px;
+  overflow-wrap: normal;
+}
+.app-shell.magic-campus .chapter-card-body .skill-label {
+  grid-column: 1 / -1;
+  grid-row: 4;
+  margin-top: 3px;
+}
+.app-shell.magic-campus .chapter-card-body .skill-label svg { flex-shrink: 0; }
+.app-shell.magic-campus .level-list { margin-top: auto; }
+
+/* The recommendation badge has its own row, so it cannot squeeze the action text. */
+.app-shell.magic-campus .level-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 23px;
+  gap: 4px 12px;
+  padding: 13px 14px;
+}
+.app-shell.magic-campus .level-row .level-play {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 44px;
+  height: 44px;
+}
+.app-shell.magic-campus .level-row .level-action {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: grid;
+  gap: 4px;
+}
+.app-shell.magic-campus .level-action strong { white-space: nowrap; }
+.app-shell.magic-campus .level-action .level-title { overflow-wrap: normal; }
+.app-shell.magic-campus .level-row .next-tag {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: start;
+  white-space: nowrap;
+  margin: 0;
+  padding: 2px 7px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.app-shell.magic-campus .level-row.recommended .level-action { grid-row: 2; }
+.app-shell.magic-campus .level-row > .level-arrow { grid-column: 3; grid-row: 1 / span 2; margin-left: 0; }
+
+@media (max-width: 1100px) {
+  /* Tablet navigation opens as a drawer instead of consuming the card columns. */
+  .app-shell.magic-campus .sidebar {
+    width: 270px;
+    transform: translateX(-100%);
+    transition: transform .2s;
+    box-shadow: 12px 0 35px #1025494a;
+  }
+  .app-shell.magic-campus .sidebar.open { transform: translateX(0); }
+  .app-shell.magic-campus .sidebar-scrim { position: fixed; inset: 0; background: #21453355; z-index: 24; }
+  .app-shell.magic-campus .content-shell { margin-left: 0; }
+  .app-shell.magic-campus .mobile-toggle { display: inline-flex; }
+  .app-shell.magic-campus .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    height: auto;
+    min-height: 80px;
+    padding: 12px 20px;
+    gap: 10px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 15;
+  }
+  .app-shell.magic-campus .topbar-title { width: auto; min-width: 0; }
+  .app-shell.magic-campus .topbar-title .breadcrumb,
+  .app-shell.magic-campus .topbar-title > svg { display: none; }
+  .app-shell.magic-campus .topbar-tools { width: auto; min-width: 0; flex-wrap: nowrap; justify-content: flex-end; gap: 8px; }
+  .app-shell.magic-campus .mode-toggle button { min-width: 76px; min-height: 48px; padding: 8px 12px; font-size: 22px; }
+  .app-shell.magic-campus .main-content { padding: 24px 20px; }
+  .app-shell.magic-campus .toast { left: 50%; }
+  .app-shell.magic-campus .chapter-card { padding: 20px 18px 16px; }
+  .app-shell.magic-campus .chapter-card-body { grid-template-columns: minmax(0, 1fr) 88px; gap: 6px 12px; }
+  .app-shell.magic-campus .chapter-card-body > .guardian-portrait { width: 88px; height: 88px; }
+}
+@media (max-width: 700px) {
+  .app-shell.magic-campus .topbar { grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 10px 16px; }
+  .app-shell.magic-campus .topbar-tools { justify-content: space-between; flex-wrap: wrap; }
+  .app-shell.magic-campus .topbar-tools > .icon-button { display: none; }
+  .app-shell.magic-campus .main-content { padding: 20px 16px; }
+  .app-shell.magic-campus .chapter-card-body { grid-template-columns: minmax(0, 1fr) 88px; }
+  .app-shell.magic-campus .level-action strong { font-size: 20px; }
+  .app-shell.magic-campus .level-action .level-title { font-size: 16px; }
+}
+@media (min-width: 1600px) {
+  .app-shell.magic-campus .chapter-card-body { grid-template-columns: minmax(0, 1fr) 140px; }
+  .app-shell.magic-campus .chapter-card-body > .guardian-portrait { width: 140px; height: 140px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.magic-campus .sidebar { transition: none; }
+}
