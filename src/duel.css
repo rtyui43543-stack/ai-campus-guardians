@@ -3,11 +3,9 @@
 .battle-shell .main-content{padding:0;max-width:none;margin:0;outline:none}
 .duel-stage{position:relative;isolation:isolate;width:100%;height:100dvh;min-height:650px;overflow:hidden;background:linear-gradient(160deg,#183d53,#071d32);color:#fff}
 .duel-stage button{font-family:inherit}.duel-stage button:focus-visible{outline:3px solid #ffe495;outline-offset:4px}
-/* Give the upgraded card-derived creatures a clear stage during the locked cast.
-   HP and Home remain visible; the question and all choices return when the cast ends. */
+/* Keep HP, Home and post-cast navigation above the upgraded summon effects. */
 .duel-stage:has(>.ultimate-illustrated-summon) .duel-hud{z-index:7}
-.duel-stage:has(>.ultimate-illustrated-summon) .duel-bubble{opacity:0;pointer-events:none}
-.duel-stage:has(>.ultimate-illustrated-summon) .duel-choices{opacity:.1;pointer-events:none}
+.duel-stage:has(>.ultimate-illustrated-summon) .duel-answer-area{z-index:7}
 .duel-stage:has(>.ultimate-illustrated-summon) .duel-damage{z-index:7}
 .duel-hud{position:absolute;z-index:5;top:20px;left:24px;right:24px;display:grid;grid-template-columns:90px 1fr 180px 1fr;align-items:center;gap:25px}
 .duel-back{display:flex;align-items:center;justify-content:center;gap:7px;background:#102b3dd9;border:1px solid #ffffff30;color:#d8ecef;padding:12px 9px;border-radius:12px;font-size:14px}
@@ -34,7 +32,15 @@
 .duel-attack-name{position:absolute;left:50%;top:45%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;color:#fff1ae;background:#162f44bd;border:1px solid #fadd9960;padding:8px 18px;border-radius:30px;font-weight:800;font-size:19px;pointer-events:none;animation:spell-label 1.6s both;z-index:3}
 .duel-damage{position:absolute;z-index:4;top:49%;text-align:center;color:#ffe7a6;text-shadow:0 3px 0 #733d26,2px 0 0 #733d26;pointer-events:none;animation:duel-hit 1.75s both}.duel-damage.to-enemy{right:21%}.duel-damage.to-hero{left:21%}.duel-damage.to-hero b{color:#ffc7a8}.duel-damage>span{font-size:14px;display:block}.duel-damage b{font-size:48px;font-weight:900;line-height:1.1}.duel-damage small{font-size:15px}
 .duel-static .duel-damage,.duel-static .duel-attack-name{animation:none}.duel-static .duel-meter progress::-webkit-progress-value{transition:none}
-.duel-bubble.is-casting .duel-feedback{display:none}
+/* Preserve the arena's framing measurements while hiding the whole panel until
+   the next question or retry begins, including after the attack animation ends. */
+.duel-bubble.is-resolving{visibility:hidden;pointer-events:none}
+/* Both tiers and enemy ultimates clear the lower text too. Keep its geometry so
+   the actors do not jump; only navigation returns when the animation finishes. */
+.duel-answer-area.is-ultimate-resolving .duel-choices,
+.duel-answer-area.is-ultimate-resolving .duel-hint-button,
+.duel-answer-area.is-ultimate-resolving .duel-score,
+.duel-answer-area.is-casting .duel-controls{visibility:hidden;pointer-events:none}
 .duel-meter{background:#133548dc;padding:9px 13px;border:1px solid #e0f6ff2b;border-radius:13px;box-shadow:0 3px 15px #11313918}.duel-controls,.duel-select-note{color:#244758;text-shadow:none}.duel-rule{color:#476473;font-weight:600}
 @keyframes duel-hit{0%,45%{opacity:0;transform:scale(.5) translateY(15px)}53%{opacity:1;transform:scale(1.2) translateY(0)}68%{opacity:1;transform:scale(1) translateY(-10px)}100%{opacity:0;transform:scale(1) translateY(-38px)}}
 @keyframes spell-label{0%{opacity:0;transform:translate(-50%,10px) scale(.8)}18%,66%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-15px)}}

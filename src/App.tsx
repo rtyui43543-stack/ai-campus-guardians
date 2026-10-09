@@ -15,6 +15,7 @@ import { appAssetUrl } from './platform/urls';
 import { screenFromHash, type Screen } from './platform/navigation';
 import { forgetOpening, hasSeenOpening, rememberOpening } from './platform/openingStory';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
+import { battleVisibility } from './components/battleVisibility';
 import { downloadFile, GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
 import { ResetProgress } from './components/ResetProgress';
 import { LevelScore, ScoreSummary } from './components/Scoring';
@@ -109,7 +110,7 @@ export function App() {
   }, [screen, progress]);
   useEffect(() => {
     const active = progress?.active;
-    if (screen === 'battle' && active && !isDefeated(active)) {
+    if (screen === 'battle' && active?.step === 'action' && !isDefeated(active)) {
       document.getElementById('question-title')?.focus();
     }
   }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step]);
@@ -314,6 +315,7 @@ export function App() {
   const selectedLevels = levels.filter(l => l.mode === progress.settings.mode && (!l.finalBoss || finalBossUnlocked(progress, l.mode)));
   const nextLevel = selectedLevels.find(l => !progress.completed.includes(l.id)) ?? selectedLevels[0];
   const active = progress.active;
+  const battleText = battleVisibility(active, animating);
   const health = active ? battleHealth(active) : {playerHp:100,enemyHp:100};
   const battleLevel = active ? getLevel(active.levelId)! : null;
   const battleChapter = battleLevel ? getChapter(battleLevel.chapterId)! : null;
@@ -378,7 +380,7 @@ export function App() {
             <div className="duel-round"><span>{modeNames[active.mode]} · {levelLabel(battleLevel)}</span><b>第 {active.index + 1} 題 / {active.questionIds.length}</b></div>
             <DuelMeter label={battleBoss.name} hp={health.enemyHp} maxHp={battleLevel.finalBoss ? 300 : 100} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
           </div>
-          <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (animating ? 'is-casting' : '')} aria-labelledby="question-title">
+          <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (battleText.hideQuestion ? 'is-resolving' : '')} inert={battleText.hideQuestion} aria-labelledby="question-title">
             <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button></div></div>
             <BattleMechanics session={active} paused={clockPaused || rulesOpen || !!pickingSpell || active.step !== 'action'} onChooseSpell={() => { flushClock(); clockRef.current.pause(performance.now()); setChooseSpellOpen(true); }} onRules={() => { flushClock(); clockRef.current.pause(performance.now()); setRulesOpen(true); }} />
             <h1 id="question-title" tabIndex={-1}>{presented.prompt}</h1>
@@ -389,8 +391,8 @@ export function App() {
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>
           {animating && active.success && !(active.ultimateUsed && active.mode === 'advanced') && <div className={'duel-attack-name ' + (active.ultimateUsed ? 'is-ultimate' : '')} key={cue}><Sparkles size={18} />{active.ultimateUsed ? getUltimateSpell(spellChapter, battleLevel.mode)?.name + ' · 獎勵＋10分' : abilityNames[spellChapter - 1]}</div>}
           {animating && <div className={'duel-damage ' + (active.success ? 'to-enemy' : 'to-hero') + (active.lastEnemyCritical && !active.success ? ' is-enemy-ultimate' : '')} key={'damage-' + cue}><span>{active.success ? '命中！' : active.lastEnemyMissed ? '鏡界閃避，攻擊落空！' : active.preventedDamage ? '魔法減輕傷害' : active.lastEnemyCritical ? '連錯追擊！魔王必殺技' : active.timedOut ? '超時攻擊' : '魔王反擊'}</span><b>{!active.success && (active.lastEnemyMissed || (active.lastEnemyDamage ?? Number(cue.split('-').at(-1))) === 0) ? '免傷' : '−' + Number(cue.split('-').at(-1))}<small>{!active.success && (active.lastEnemyMissed || (active.lastEnemyDamage ?? Number(cue.split('-').at(-1))) === 0) ? '成功' : ' HP'}</small></b></div>}
-          <div className="duel-answer-area">
-            <div className="duel-choices" aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '') + (active.lightningHintChoices?.includes(i) ? ' lightning-clue' : '')} title={active.lightningHintChoices?.includes(i) ? '雷霆線索：兩個發光選項中，至少一個是答案。' : undefined} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
+          <div className={'duel-answer-area' + (battleText.hideAnswers ? ' is-ultimate-resolving' : '') + (battleText.hideControls ? ' is-casting' : '')} inert={battleText.hideControls}>
+            <div className="duel-choices" inert={battleText.hideAnswers} aria-label="直接選擇答案">{presented.choices.map((choice,i) => <button key={i} className={'duel-choice ' + (active.selected === i ? active.success ? 'correct' : 'incorrect' : '') + (active.lightningHintChoices?.includes(i) ? ' lightning-clue' : '')} title={active.lightningHintChoices?.includes(i) ? '雷霆線索：兩個發光選項中，至少一個是答案。' : undefined} disabled={active.step !== 'action' || animating} aria-pressed={active.selected === i} onClick={() => {
               answer(i);
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.lightningHintChoices?.includes(i) && <Zap className="lightning-clue-icon" size={23} aria-label="雷霆線索" />}{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
             <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { flushClock(); const current = progressRef.current?.active; if (current?.step !== 'action') return; setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(current)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
