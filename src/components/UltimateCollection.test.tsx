@@ -2,8 +2,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UltimateCollection, UltimateCardTitle, createUltimateCardDownloader, unlockedUltimateIds } from './UltimateCollection';
-import { ultimateSpells } from '../content/ultimateSpells';
-import { composeUltimateCard } from './ultimateCardLayout';
+import { allUltimateSpells, ultimateSpells } from '../content/ultimateSpells';
+import { composeUltimateCard, getUltimateCardLayout } from './ultimateCardLayout';
 
 vi.mock('../platform/urls', () => ({ appAssetUrl: (path: string) => `/ai-campus-guardians${path}` }));
 vi.mock('./ultimateCardLayout', async importOriginal => ({ ...await importOriginal<typeof import('./ultimateCardLayout')>(), composeUltimateCard: vi.fn(async () => new Blob(['titled PNG card'], { type: 'image/png' })) }));
@@ -51,10 +51,13 @@ describe('ultimate collection visibility', () => {
     expect(html).toContain('ultimate-advanced-2-v1.webp');
     expect(html).not.toContain('src="/ai-campus-guardians/art/ultimate-2-v1.webp"');
   });
-  it('anchors the label in artwork coordinates rather than viewport font size or flow layout', () => {
-    const html = renderToStaticMarkup(createElement(UltimateCardTitle, { name: '萬卷雷霆陣' }));
+  it.each(allUltimateSpells)('anchors $name at its audited artwork baseline used by exported PNGs', spell => {
+    const html = renderToStaticMarkup(createElement(UltimateCardTitle, { name: spell.name }));
+    const layout = getUltimateCardLayout(spell.name);
     expect(html).toContain('viewBox="0 0 1024 1536"');
-    expect(html).toContain('x="512" y="1446"');
+    expect(html).toContain(`x="${layout.titleX}" y="${layout.titleY}"`);
+    expect(html).toContain(`font-size="${layout.titleSize}"`);
+    expect(html).toContain('dominant-baseline="alphabetic"');
     expect(html).toContain('text-anchor="middle"');
   });
 });

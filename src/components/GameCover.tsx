@@ -2,6 +2,7 @@ import { ArrowRight, Clock3, Play, ShieldCheck, Sparkles, UserRound, WifiOff } f
 import type { OfflineController } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
+import { AssociationBrand } from './AssociationBrand';
 import '../styles/game-cover.css';
 
 export interface GameCoverProps {
@@ -23,6 +24,7 @@ export function GameCover({ offline, onStart, onResume, completed, reducedMotion
         <div className="game-cover-spark game-cover-spark-three" aria-hidden="true">✧</div>
       </div>
       <div className="game-cover-copy">
+        <AssociationBrand placement="cover" />
         <span className="game-cover-badge"><Sparkles size={20} />生活裡的 AI 挑戰</span>
         <h1 id="cover-title" tabIndex={-1} className="game-cover-title" aria-label="AI 校園守護隊"><span>AI 校園</span><span>守護隊</span></h1>
         <p className="game-cover-tagline">破解生活難題，學會正確用 AI！</p>

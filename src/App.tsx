@@ -21,6 +21,7 @@ import { LevelScore, ScoreSummary } from './components/Scoring';
 import { StoryCinematic } from './components/StoryCinematic';
 import { getOpeningStory, getLevelStory } from './content/stories';
 import { GameCover } from './components/GameCover';
+import { AssociationBrand } from './components/AssociationBrand';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
 import { getUltimateSpell } from './content/ultimateSpells';
 import { UltimateCinematic } from './components/UltimateCinematic';
@@ -364,6 +365,7 @@ export function App() {
         </div>
       </header>
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
+        {screen !== 'battle' && <AssociationBrand placement="main" />}
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
           onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} />}
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (battleLevel.finalBoss ? 'final-duel-stage ' : '') + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">

@@ -4,7 +4,7 @@ import { allUltimateSpells, getUltimateCardKey, getUltimateCardMode, type Ultima
 import { appAssetUrl } from '../platform/urls';
 import { getChapter } from '../content/levels';
 import type { Mode } from '../domain/types';
-import { CARD_LAYOUT, composeUltimateCard } from './ultimateCardLayout';
+import { CARD_TITLE_FONT, composeUltimateCard, getUltimateCardLayout } from './ultimateCardLayout';
 import '../styles/ultimate-collection.css';
 
 export interface UltimateCollectionRecord {
@@ -31,10 +31,11 @@ export function unlockedUltimateIds(cards: readonly UltimateCollectionRecord[], 
 }
 
 export function UltimateCardTitle({ name }: { name: string }) {
-  return <svg className="ultimate-card-title-layer" viewBox={`0 0 ${CARD_LAYOUT.width} ${CARD_LAYOUT.height}`} aria-hidden="true" focusable="false">
-    <text x={CARD_LAYOUT.titleX} y={CARD_LAYOUT.titleY} textAnchor="middle" dominantBaseline="central"
-      fontSize={CARD_LAYOUT.titleSize} fontWeight="900" fill={CARD_LAYOUT.titleColor}
-      stroke={CARD_LAYOUT.titleOutline} strokeWidth="2" paintOrder="stroke">{name}</text>
+  const layout = getUltimateCardLayout(name);
+  return <svg className="ultimate-card-title-layer" viewBox={`0 0 ${layout.width} ${layout.height}`} aria-hidden="true" focusable="false" data-card-title={name}>
+    <text x={layout.titleX} y={layout.titleY} textAnchor="middle" dominantBaseline="alphabetic"
+      fontSize={layout.titleSize} fontWeight="900" fontFamily={CARD_TITLE_FONT} fill={layout.titleColor}
+      stroke={layout.titleOutline} strokeWidth="2" paintOrder="stroke">{name}</text>
   </svg>;
 }
 

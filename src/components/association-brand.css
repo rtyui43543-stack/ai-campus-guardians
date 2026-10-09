@@ -1,0 +1,31 @@
+.association-brand {
+  width: min(100%, 480px);
+  min-width: 0;
+  padding: 10px 16px;
+  border: 1px solid #d5bf85;
+  border-radius: 15px;
+  background: #fffefaed;
+  box-shadow: 0 4px 14px #173f3920;
+}
+.association-brand img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.association-brand-cover { margin: 0 0 20px; }
+.association-brand-main { margin: 0 0 24px; }
+
+@media (max-width: 700px) {
+  .association-brand { padding: 9px 11px; border-radius: 12px; }
+  .association-brand-cover { margin: 0 auto 18px; }
+  .association-brand-main { margin-bottom: 20px; }
+}
+@media (min-width: 701px) and (min-height: 561px) and (max-height: 800px) {
+  .association-brand-cover { width: min(100%, 420px); padding: 8px 12px; margin-bottom: 14px; }
+}
+@media (max-height: 560px) and (min-width: 701px) {
+  .association-brand-cover { width: min(100%, 390px); padding: 6px 10px; margin-bottom: 12px; }
+}
+
+@media print { .association-brand { display: none; } }
