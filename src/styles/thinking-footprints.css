@@ -1,0 +1,77 @@
+.thinking-footprints { color: #173e36; background: linear-gradient(120deg, #fffdf2, #ecf7ee); border: 1px solid #aec9af; border-radius: 22px; padding: 22px; margin: 22px 0 30px; font-size: 16px; line-height: 1.5; box-shadow: 0 6px 20px #234a3310; }
+.thinking-footprints * { min-width: 0; }
+.thinking-footprints button { touch-action: manipulation; }
+.thinking-footprints button:focus-visible { outline: 3px solid #946214; outline-offset: 3px; }
+.tf-heading, .tf-overview { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.thinking-footprints h2 { font-size: clamp(27px, 2.5vw, 34px); line-height: 1.35; margin: 3px 0 0; }
+.tf-eyebrow { display: flex; gap: 7px; align-items: center; color: #426751; font-size: 15px; font-weight: 650; }
+.tf-mode, .tf-filter { display: flex; align-items: center; padding: 4px; gap: 4px; background: #e0ebdd; border-radius: 12px; }
+.tf-mode button, .tf-filter button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; padding: 8px 14px; border-radius: 9px; font-size: 16px; font-weight: 700; }
+.tf-mode button[aria-pressed="true"] { color: #fff6c5; background: #1a5140; }
+.tf-filter button[aria-pressed="true"] { background: #fffdf3; color: #234d39; box-shadow: 0 2px 5px #25473412; }
+.tf-filter strong { color: #974818; }
+.tf-overview { margin-top: 14px; }
+.tf-completion { display: flex; align-items: center; gap: 12px; }
+.tf-completion b, .tf-completion span { display: block; }
+.tf-completion span { color: #4b6657; font-size: 15px; margin-top: 4px; }
+.tf-ring { position: relative; width: 76px; height: 76px; flex-shrink: 0; }
+.tf-ring svg { width: 100%; height: 100%; }
+.tf-ring circle { fill: none; stroke-width: 7; }
+.tf-ring-track { stroke: #d8e6d7; }
+.tf-ring-value { stroke: #20856a; stroke-linecap: round; }
+.tf-ring strong { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 27px; font-variant-numeric: tabular-nums; }
+.tf-ring small { font-size: 15px; color: #4a6957; margin: 5px 0 0 2px; }
+.tf-guide { font-size: 15px; color: #456453; margin: 12px 0; }
+.tf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 10px; }
+.tf-level { display: flex; flex-direction: column; text-align: left; padding: 13px; background: #fffef8; border: 1px solid #bfcebb; border-radius: 14px; min-height: 146px; max-width: 260px; color: #234735; }
+.tf-level.completed { background: #e6f3e9; border-color: #83b39b; }
+.tf-level.needs-practice { background: #fff5df; border-color: #d6b875; }
+.tf-level:hover, .tf-level[aria-expanded="true"] { border-color: #206b55; box-shadow: inset 0 0 0 2px #206b55; }
+.tf-level-top { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; }
+.tf-level-top > svg:last-child { margin-left: auto; color: #20785b; }
+.tf-level-icon { width: 31px; height: 31px; display: flex; align-items: center; justify-content: center; color: #267b64; }
+.tf-level-title { font-size: 17px; line-height: 1.45; margin: 8px 0 11px; flex: 1; }
+.tf-status-bar { display: flex; gap: 2px; height: 7px; background: #dce5d9; border-radius: 8px; overflow: hidden; }
+.tf-first { background: #278167; }
+.tf-supported { background: #b6711c; }
+.tf-practice { background: #8860b3; }
+.tf-timeout { background: #bf4b64; }
+.tf-level-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 14px; font-weight: 650; }
+.tf-level.needs-practice .tf-level-bottom { color: #87491a; }
+.tf-legend { display: flex; flex-wrap: wrap; gap: 6px 17px; margin-top: 13px; color: #486351; font-size: 14px; }
+.tf-legend > span { display: inline-flex; gap: 6px; align-items: center; }
+.tf-legend i { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.tf-empty { display: flex; gap: 14px; align-items: center; padding: 20px; border: 1px dashed #adc1a4; border-radius: 14px; background: #fffef7; }
+.tf-empty > svg { flex-shrink: 0; color: #26735a; }
+.tf-empty p { font-size: 15px; margin-top: 5px; color: #496652; }
+.tf-empty button { min-height: 44px; flex-shrink: 0; margin-left: auto; padding: 9px 12px; border-radius: 10px; background: #dfeddc; font-size: 16px; font-weight: 700; }
+.tf-detail { margin-top: 18px; border-top: 1px solid #b9ceb5; padding-top: 18px; }
+.tf-detail > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.tf-detail > header span { font-size: 14px; color: #476a53; }
+.tf-detail h3 { font-size: 23px; line-height: 1.5; margin: 2px 0 0; }
+.tf-detail > p { margin-top: 8px; font-size: 16px; }
+.tf-close { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; background: #e0ecd9; }
+.tf-records { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; list-style: none; padding: 0; margin: 16px 0; }
+.tf-records li { display: flex; align-items: start; gap: 8px; font-size: 16px; line-height: 1.65; }
+.tf-record-status { border-radius: 5px; padding: 2px 7px; font-size: 13px; color: white; white-space: nowrap; margin-top: 2px; }
+.tf-record-status.tf-supported { background: #925915; }
+.tf-record-status.tf-practice { background: #78519f; }
+.tf-record-status.tf-timeout { background: #ae3e58; }
+.tf-challenge { display: inline-flex; gap: 8px; align-items: center; min-height: 46px; font-size: 17px; font-weight: 750; color: #fff9cf; background: #205340; border-radius: 11px; padding: 10px 16px; margin-top: 14px; }
+.tf-pagination { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; }
+.tf-pagination button { display: flex; align-items: center; min-height: 44px; padding: 8px; font-size: 15px; background: #e3eedb; border-radius: 8px; }
+.tf-pagination button:disabled { opacity: .5; }
+@media (max-width: 600px) {
+  .thinking-footprints { padding: 16px; border-radius: 17px; }
+  .tf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .tf-level { padding: 10px; max-width: none; min-height: 145px; }
+  .tf-level-title { font-size: 16px; }
+  .tf-filter { width: 100%; }
+  .tf-filter button { flex: 1; padding: 8px; }
+  .tf-heading { gap: 10px; }
+  .tf-mode button { padding: 8px 12px; }
+  .tf-records { grid-template-columns: 1fr; }
+  .tf-empty { flex-wrap: wrap; padding: 16px; }
+  .tf-empty > div { flex: 1; }
+  .tf-empty button { margin-left: 42px; }
+}

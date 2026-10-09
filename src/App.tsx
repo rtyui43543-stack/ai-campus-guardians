@@ -5,7 +5,7 @@ import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finalBossUnlocked, finishSession, isDefeated, restartBattle, retryQuestion, selectUltimate, sessionSummary, startFinalBossSession, startSession, submitAction, tickQuestion, useHint } from './domain/engine';
-import { exportBackup, loadProgress, ResetPersistenceError, saveProgress } from './domain/storage';
+import { exportBackup, getStarterBossMigrationResult, loadProgress, ResetPersistenceError, saveProgress } from './domain/storage';
 import { persistLearningReset, resetLearningProgress } from './domain/progressReset';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
 import { battleSound, loadAudio, playAudio, stopAllAudio, stopAudio, stopBattleSound } from './platform/audio';
@@ -25,6 +25,7 @@ import { getOpeningStory, getLevelStory } from './content/stories';
 import { GameCover } from './components/GameCover';
 import { AssociationBrand } from './components/AssociationBrand';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
+import { battleEnemyMaxHp } from './domain/battleHealth';
 import { getUltimateSpell } from './content/ultimateSpells';
 import { UltimateCinematic } from './components/UltimateCinematic';
 import { preloadUltimateSummons } from './components/ultimateSummons';
@@ -82,8 +83,15 @@ export function App() {
     void loadProgress().then(p => {
       progressRef.current = p; setProgress(p);
       const previous = latestRun(p);
-      setScreen(screenFromHash(requested, { battle: Boolean(p.active), results: Boolean(previous) }));
-      if (requested === '#results' && previous) setResult(previous);
+      const completedByUpdate = getStarterBossMigrationResult(p);
+      if (completedByUpdate) {
+        setResult(completedByUpdate); setScreen('results');
+        setNotice('初階最終魔王已調整為 200 HP；這場已達目標，作答與成績已保存。');
+        void saveProgress(p).catch(() => setNotice('這場挑戰已完成，存檔尚未成功，請先匯出備份。'));
+      } else {
+        setScreen(screenFromHash(requested, { battle: Boolean(p.active), results: Boolean(previous) }));
+        if (requested === '#results' && previous) setResult(previous);
+      }
       void loadAudio();
     }).catch(error => setLoadError(error instanceof Error ? error.message : '存檔無法讀取'));
   };
@@ -388,7 +396,7 @@ export function App() {
             <button className="duel-back" onClick={() => navigate('cover')} aria-label="回到首頁" title="回到首頁，保留本次挑戰"><Home size={20} /><span>首頁</span></button>
             <DuelMeter label="你 · 小羽" hp={health.playerHp} side="hero" cue={cue} reducedMotion={progress.settings.reducedMotion} />
             <div className="duel-round"><span>{modeNames[active.mode]} · {levelLabel(battleLevel)}</span><b>第 {active.index + 1} 題 / {active.questionIds.length}</b></div>
-            <DuelMeter label={battleBoss.name} hp={health.enemyHp} maxHp={battleLevel.finalBoss ? 300 : 100} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
+            <DuelMeter label={battleBoss.name} hp={health.enemyHp} maxHp={battleEnemyMaxHp(active)} side="enemy" cue={cue} reducedMotion={progress.settings.reducedMotion} />
           </div>
           <section className={'duel-bubble ' + (active.step === 'feedback' || isDefeated(active) ? 'has-feedback ' : '') + (battleText.hideQuestion ? 'is-resolving' : '')} inert={battleText.hideQuestion} aria-labelledby="question-title">
             <div className="duel-question-meta"><span>{battleLevel.title}</span><div><button className="duel-tool duel-music" aria-label={musicPlaying ? '關閉戰鬥音樂' : '播放戰鬥音樂'} aria-pressed={musicPlaying} onClick={toggleMusic}>{musicPlaying ? <Music2 size={18} /> : <VolumeX size={18} />}<span>{musicPlaying ? '音樂開' : '音樂關'}</span></button><button className="duel-tool" aria-label="朗讀題目與選項" onClick={() => narrate(audioKey + '.prompt')}><Volume2 size={21} /></button></div></div>

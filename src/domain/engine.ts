@@ -2,6 +2,7 @@ import { getQuestions, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
 import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
 import { reconstructRuns } from './scoring';
+import { battleEnemyMaxHp, initialEnemyHp } from './battleHealth';
 import type { AttemptRecord, LearningStatus, Mode, Progress, Session } from './types';
 
 export const QUESTION_TIME_MS = 30_000;
@@ -39,6 +40,7 @@ export function startSession(levelId: number, mode: Mode, review = false, progre
   if (!questionIds.length) throw new Error('找不到這個挑戰關卡。');
   return {
     id: uniqueId(), levelId, mode: curriculumMode, review, questionIds, index: 0, step: 'action',
+    ...(level.finalBoss ? { enemyMaxHp: initialEnemyHp(levelId) } : {}),
     selected: null, reason: null, retries: 0, hintUsed: false, demoUsed: false,
     feedback: '', success: false, shield: 100, repaired: 0, records: [],
     energy: 0, ultimateUsed: false, barrier: false, barrierCharges: 0, bonusPoints: 0, enemyBonusDamage: 0,
@@ -65,7 +67,7 @@ export function requiresReason(_session: Session): boolean {
 
 export function battleHealth(session: Session): { playerHp: number; enemyHp: number } {
   const finalBoss = levels.find(level => level.id === session.levelId)?.finalBoss;
-  const enemyMaxHp = finalBoss ? 300 : 100;
+  const enemyMaxHp = battleEnemyMaxHp(session);
   const currentDamage = session.step === 'feedback' && session.success ? finalBoss ? 20 : 100 / session.questionIds.length : 0;
   return { playerHp: session.shield, enemyHp: Math.max(0, enemyMaxHp - session.repaired - currentDamage - (session.enemyBonusDamage ?? 0) - (session.enemyBurnDamage ?? 0)) };
 }
@@ -265,6 +267,7 @@ function makeRecord(session: Session): AttemptRecord {
     questionId: session.questionIds[session.index], mode: session.mode,
     action: session.selected, reason: session.reason, status,
     retries: session.retries, hintUsed: session.hintUsed, at: now(),
+    ...(session.enemyMaxHp === undefined ? {} : { enemyMaxHp: session.enemyMaxHp }),
     ...(session.demoUsed && session.demoRetriesKnown ? { demoUsed: true } : {}),
     ...(session.timed ? { timed: true, elapsedMs: session.elapsedMs ?? 0, timedOut: expired } : {}),
     ...(session.ultimateUsed ? { ultimateUsed: true, ultimateId: session.ultimateId } : {}),
@@ -335,6 +338,7 @@ export function finishSession(progress: Progress, session: Session): Progress {
     ...progress, active: null, completed, attempts: [...progress.attempts, ...records],
     runs: [...(progress.runs ?? reconstructRuns(progress.attempts)), {
       sessionId: session.id, levelId: session.levelId, mode: session.mode, review: session.review, records, at, passed,
+      ...(session.enemyMaxHp === undefined ? {} : { enemyMaxHp: session.enemyMaxHp }),
     }],
     ultimateCards: unlockCards(progress, session, at),
     finishedSessionIds: [...(progress.finishedSessionIds ?? []), session.id], updatedAt: at,

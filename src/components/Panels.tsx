@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ArrowRight, BookOpen, ChevronRight, Download, Flag, Lightbulb, Medal, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, WifiOff } from 'lucide-react';
+import { ArrowRight, BookOpen, Download, Flag, Lightbulb, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, WifiOff } from 'lucide-react';
 import { chapters, levels } from '../content/levels';
 import { presentQuestion, questionById } from '../content';
 import type { CompletedRun, Level, Progress } from '../domain/types';
@@ -7,9 +7,11 @@ import { exportBackup, parseBackup } from '../domain/storage';
 import { useOffline } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
-import { chapterIcons, modeNames, statusNames } from '../App';
+import { chapterIcons, modeNames } from '../App';
 import { UltimateCollection } from './UltimateCollection';
 import { GrowthDashboard } from './GrowthDashboard';
+import { ThinkingFootprints } from './ThinkingFootprints';
+import { latestThinkingRecords } from '../domain/thinkingFootprints';
 
 export function downloadFile(name: string, text: string, mime: string) {
   const blob = new Blob([text], { type: mime });
@@ -24,15 +26,14 @@ function Heading({ eyebrow, title, children }: { eyebrow: string; title: string;
 }
 
 export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; onLevel: (level: Level) => void; onRun: (run: CompletedRun) => void }) {
-  const [filter, setFilter] = useState<'all' | 'practice'>('all');
-  const latest = new Map<string, (typeof progress.attempts)[number]>();
-  progress.attempts.forEach(attempt => latest.set(attempt.questionId + ':' + attempt.mode, attempt));
-  const needsPractice = [...latest.values()].filter(a => a.status === 'practice' || a.status === 'timeout');
+  const latest = latestThinkingRecords(progress.attempts);
+  const needsPractice = latest.filter(a => a.status === 'practice' || a.status === 'timeout');
   return <>
     <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看自己的進步，再挑戰一次！</Heading>
     <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / {levels.length}</small></strong><span>已完成關卡</span></div>
-      <div className="surface"><Lightbulb size={27} /><strong>{latest.size}</strong><span>已練習情境</span></div>
+      <div className="surface"><Lightbulb size={27} /><strong>{latest.length}</strong><span>已練習情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>待練習情境</span></div></div>
+    <ThinkingFootprints progress={progress} onLevel={onLevel} />
     <GrowthDashboard progress={progress} onLevel={onLevel} onRun={onRun} />
     <UltimateCollection cards={progress.ultimateCards ?? []} initialMode={progress.settings.mode} />
     <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
@@ -43,14 +44,6 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
         <Icon size={29} /><h3>{chapter.skill}</h3><p>{chapter.shortTitle}</p><span>{completed === 2 ? '已點亮' : completed + ' / 2 關'}</span>
       </div>;
     })}</div>
-    <div className="section-heading"><h2>我的思考足跡</h2><div className="segmented"><button className={filter === 'all' ? 'selected' : ''} onClick={() => setFilter('all')}>全部關卡</button><button className={filter === 'practice' ? 'selected' : ''} onClick={() => setFilter('practice')}>再練習</button></div></div>
-    <div className="surface growth-levels">{levels.filter(level => filter === 'all' || needsPractice.some(a => questionById.get(a.questionId)!.levelId === level.id)).map(level => {
-      const records = [...latest.values()].filter(a => questionById.get(a.questionId)!.levelId === level.id);
-      return <details key={level.id}><summary><span className="level-number">{String(level.id).padStart(2, '0')}</span><b>{level.title}</b><span className="status-badge">{progress.completed.includes(level.id) ? '已完成' : records.length ? '練習中' : '尚未探索'}</span><ChevronRight size={17} /></summary>
-        <div className="growth-level-content"><p>{level.objective}</p>{records.length ? <div className="growth-records">{records.map(record => <span key={record.questionId + record.mode}><em className={'status-badge ' + record.status}>{statusNames[record.status]}</em>{modeNames[record.mode]} · {questionById.get(record.questionId)!.objective}</span>)}</div> : <p className="muted">第一步，是開始觀察。</p>}
-          <button className="text-button" onClick={() => onLevel(level)}>探索這一關<ArrowRight size={17} /></button></div>
-      </details>;
-    })}{filter === 'practice' && !needsPractice.length && <div className="empty-state small"><Medal size={32} /><p>目前沒有待練習的示範題。也可以重玩關卡，挑戰不同情境。</p></div>}</div>
   </>;
 }
 
@@ -121,7 +114,7 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
       <div className="preference-row"><div><b>冒險與戰鬥背景音樂</b><p>主頁播放輕快的探索配樂，對戰時換成緊湊配樂。可用頁面上的音樂按鈕隨時關閉；關閉設定會保留。</p></div><Toggle label="冒險與戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
       <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
-      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟300HP最終魔王關。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階</option><option value="advanced">進階</option></select></div>
+      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟最終魔王關（初階200HP、進階300HP）。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階</option><option value="advanced">進階</option></select></div>
     </section>
   </>;
 }

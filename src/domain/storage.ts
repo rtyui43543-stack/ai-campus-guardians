@@ -1,7 +1,7 @@
 import { getQuestionsForHistory, presentQuestion, questionById } from '../content';
 import { levels } from '../content/levels';
 import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
-import { createProgress, finalBossUnlocked } from './engine';
+import { advanceSession, createProgress, finalBossUnlocked } from './engine';
 import { finalBossDamage, reconstructRuns } from './scoring';
 import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session, UltimateCardUnlock } from './types';
 
@@ -63,10 +63,30 @@ function selectedIndex(value: unknown, path: string, count: number): number | nu
   return value === null ? null : integer(value, path, 0, count - 1);
 }
 
+function savedEnemyMaxHp(raw: Record<string, unknown>, path: string, levelId: number): number | undefined {
+  if (raw.enemyMaxHp === undefined) return undefined;
+  const level = levels.find(item => item.id === levelId)!;
+  if (!level.finalBoss || raw.enemyMaxHp !== 300 && !(level.mode === 'starter' && raw.enemyMaxHp === 200)) reject(`${path}.enemyMaxHp與魔王等級不符`);
+  return raw.enemyMaxHp as number;
+}
+
+/** Each prior question must have ended before its then-current boss target was defeated. */
+function validateFinalTargets(records: readonly AttemptRecord[], target: number, path: string): void {
+  let damage = 0, priorTarget = 300;
+  for (const record of records) {
+    const recordTarget = record.enemyMaxHp ?? 300;
+    if (recordTarget > priorTarget || recordTarget < target || damage >= priorTarget) reject(`${path}最終魔王血量或題目順序不一致`);
+    damage += finalBossDamage([record]);
+    priorTarget = recordTarget;
+  }
+}
+
 function combatRecordFields(raw: Record<string, unknown>, path: string, levelId: number, slot: number): Partial<AttemptRecord> {
   const level = levels.find(item => item.id === levelId)!;
   const finalBoss = level.finalBoss === true;
   const fields: Partial<AttemptRecord> = {};
+  const enemyMaxHp = savedEnemyMaxHp(raw, path, levelId);
+  if (enemyMaxHp !== undefined) fields.enemyMaxHp = enemyMaxHp;
   for (const key of ['timed', 'timedOut', 'ultimateUsed', 'preventedDamage'] as const) {
     if (raw[key] !== undefined) fields[key] = boolean(raw[key], `${path}.${key}`);
   }
@@ -160,6 +180,8 @@ function activeSession(value: unknown): Session | null {
   if (step !== 'action' && step !== 'feedback' && step !== 'defeat') reject('active.step不是有效的直接作答階段');
   const success = boolean(raw.success, 'active.success');
   const extra: Partial<Session> = {};
+  const enemyMaxHp = savedEnemyMaxHp(raw, 'active', levelId);
+  if (enemyMaxHp !== undefined) extra.enemyMaxHp = enemyMaxHp;
   for (const key of ['timed', 'timedOut', 'ultimateUsed', 'barrier', 'preventedDamage'] as const) {
     if (raw[key] !== undefined) extra[key] = boolean(raw[key], `active.${key}`);
   }
@@ -225,7 +247,8 @@ function activeSession(value: unknown): Session | null {
     const priorEnergy = finalEnergy(records, 'active.records');
     const expectedEnergy = extra.timedOut ? Math.max(0, priorEnergy - 1) : success && !demoUsed ? priorEnergy === 3 ? 0 : priorEnergy + 1 : priorEnergy;
     if (extra.energy !== expectedEnergy || success && !demoUsed && (priorEnergy === 3) !== !!extra.ultimateUsed) reject('active必殺技與充能狀態不一致');
-    if (finalBossDamage(records) >= 300) reject('active最終魔王已經被擊敗');
+    validateFinalTargets(records, enemyMaxHp ?? 300, 'active');
+    if (finalBossDamage(records) >= (enemyMaxHp ?? 300)) reject('active最終魔王已經被擊敗');
     if (extra.timed !== (selectedMode === 'advanced')) reject('active最終關限時設定與模式不符');
   }
   validateStatusTicks(records, 'active.records');
@@ -281,14 +304,17 @@ function completedRun(value: unknown, path: string): CompletedRun {
   if ((!finalBoss && records.length !== expected.length) || !records.length || records.length > expected.length || records.some((record, i) => record.questionId !== expected[i] || record.mode !== selectedMode)) reject(`${path}需要完整且依序的本關作答紀錄`);
   // Never accept a caller's numeric score; scoring is derived from these records.
   const passed = raw.passed === undefined ? undefined : boolean(raw.passed, `${path}.passed`);
+  const enemyMaxHp = savedEnemyMaxHp(raw, path, levelId);
   if (finalBoss) {
     finalEnergy(records, path);
-    const defeated = finalBossDamage(records) >= 300;
-    if (passed !== defeated || !defeated && records.length !== expected.length || finalBossDamage(records.slice(0, -1)) >= 300) reject(`${path}最終魔王通關狀態與傷害或題目順序不一致`);
+    validateFinalTargets(records, enemyMaxHp ?? 300, path);
+    const defeated = finalBossDamage(records) >= (enemyMaxHp ?? 300);
+    if (passed !== defeated || !defeated && records.length !== expected.length || (records.at(-1)?.enemyMaxHp ?? 300) !== (enemyMaxHp ?? 300)) reject(`${path}最終魔王通關狀態與傷害或題目順序不一致`);
   } else if (passed !== undefined && passed !== !records.some(record => record.status === 'timeout')) reject(`${path}通關狀態與超時紀錄不一致`);
   validateStatusTicks(records, path);
   return { sessionId: text(raw.sessionId, `${path}.sessionId`, 256), levelId, mode: selectedMode,
-    review, records, at: timestamp(raw.at, `${path}.at`), ...(passed === undefined ? {} : { passed }) };
+    review, records, at: timestamp(raw.at, `${path}.at`), ...(passed === undefined ? {} : { passed }),
+    ...(enemyMaxHp === undefined ? {} : { enemyMaxHp }) };
 }
 
 function ultimateCard(value: unknown, path: string): UltimateCardUnlock {
@@ -353,6 +379,34 @@ function proposal(value: unknown, path: string): Proposal {
   return { at: timestamp(raw.at, `${path}.at`), mode: selectedMode, decisions, reflection: text(raw.reflection, `${path}.reflection`, 10000, true) };
 }
 
+/** This load-only notice is never written into a backup or the durable progress schema. */
+const starterBossMigrationResults = new WeakMap<Progress, CompletedRun>();
+export function getStarterBossMigrationResult(progress: Progress): CompletedRun | undefined {
+  return starterBossMigrationResults.get(progress);
+}
+
+/** Apply the easier starter target once, preserving all completed answers and old reports. */
+function migrateStarterBossHealth(progress: Progress): Progress {
+  const active = progress.active;
+  if (!active || active.levelId !== 13 || (active.enemyMaxHp ?? 300) !== 300) return progress;
+  const records = [...active.records];
+  if (active.step === 'feedback' && active.success) records.push(advanceSession(active).record);
+  if (finalBossDamage(records) < 200) return { ...progress, active: { ...active, enemyMaxHp: 200 } };
+  // A record-level target marks the exact transition without rewriting earlier scores.
+  records[records.length - 1] = { ...records[records.length - 1], enemyMaxHp: 200 };
+  const at = records[records.length - 1].at;
+  const run: CompletedRun = { sessionId: active.id, levelId: active.levelId, mode: active.mode,
+    review: false, records, at, passed: true, enemyMaxHp: 200 };
+  const migrated: Progress = { ...progress, active: null,
+    completed: [...new Set([...progress.completed, active.levelId])].sort((a, b) => a - b),
+    attempts: [...progress.attempts, ...records],
+    runs: [...(progress.runs ?? []), run],
+    finishedSessionIds: [...(progress.finishedSessionIds ?? []), active.id],
+  };
+  starterBossMigrationResults.set(migrated, run);
+  return migrated;
+}
+
 export function validateProgress(value: unknown): Progress {
   const raw = object(value, '進度');
   if (raw.schemaVersion === 1) reject('這是舊版十八關備份，無法套用新版十四關；舊進度仍保留在原儲存區');
@@ -375,7 +429,7 @@ export function validateProgress(value: unknown): Progress {
   const updatedAt = timestamp(raw.updatedAt, 'updatedAt');
   const ultimateCards = recoverEarnedUltimateCards(savedUltimateCards, runs, attempts, active, updatedAt);
   if (active && levels.find(level => level.id === active.levelId)?.finalBoss && !finalBossUnlocked({ ultimateCards }, active.mode)) reject('active最終關尚未解鎖本等級的六張收藏卡');
-  return {
+  return migrateStarterBossHealth({
     schemaVersion: 2, completed,
     attempts, runs, ...(ultimateCards === undefined ? {} : { ultimateCards }),
     active,
@@ -385,7 +439,7 @@ export function validateProgress(value: unknown): Progress {
       music: settings.music === undefined ? true : boolean(settings.music, 'settings.music'),
       narration: false, reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
     }, finishedSessionIds, updatedAt,
-  };
+  });
 }
 
 export function parseBackup(input: string): Progress {

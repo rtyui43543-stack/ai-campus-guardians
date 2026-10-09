@@ -182,3 +182,28 @@
 .ultimate-illustrated-summon.is-reduced .ultimate-summon-wake{opacity:.35;transform:none;animation:none}
 @media(max-width:600px){.ultimate-illustrated-summon .ultimate-tier-banner{top:103px;padding:7px 15px 9px}.ultimate-illustrated-summon .ultimate-tier-banner>span{font-size:13px}.ultimate-illustrated-summon .ultimate-tier-banner>strong{font-size:25px}.ultimate-summon-flight{width:min(70vw,90vh,540px)}}
 @media(prefers-reduced-motion:reduce){.ultimate-illustrated-summon .ultimate-summon-flight{left:52%;top:56%;opacity:1;transform:translate(-50%,-50%) scale(.76)}.ultimate-illustrated-summon .ultimate-summon-wake{opacity:.35;transform:none}}
+/* Card-specific refinements are scoped away from advanced phoenix and dragon. */
+.ultimate-leaf-heart-projection{position:absolute;left:32%;top:52%;width:min(53vw,670px);aspect-ratio:1.18;transform:translate(-50%,-50%);filter:drop-shadow(0 0 10px #b8ed7870)}
+.ultimate-leaf-heart-projection>svg{display:block;width:100%;height:100%;overflow:visible}
+.ultimate-leaf-heart{transform-origin:0 0;animation:ultimate-heart-assemble 3s both}
+.ultimate-heart-puzzle-orbit{transform-origin:0 0;animation:ultimate-heart-leaves-settle 3s both}
+.ultimate-card-mask-break{transform-origin:0 0;animation:ultimate-card-mask-break 3s both}
+.ultimate-starter-phoenix .ultimate-summon-flight{width:min(69vw,94vh,840px);animation:ultimate-card-starter-phoenix-flight 3s both}
+.ultimate-starter-phoenix .ultimate-summon-wake{opacity:.4}
+.ultimate-thunder-book{transform-origin:0 0;animation:ultimate-index-scroll-turn 3s both}
+.card-matched-castle .ultimate-castle-charge{top:51%;width:min(49vw,650px)}
+.card-matched-castle.is-upgraded .ultimate-castle-charge{opacity:0;animation:none}
+.ultimate-theme-1.scope-half .ultimate-field{width:62%;overflow:visible}
+.ultimate-theme-1.scope-half .ultimate-tier-banner{top:24%;left:31%}
+.ultimate-theme-2.scope-full:not(.ultimate-starter-combat) .ultimate-tier-banner,.ultimate-theme-3.scope-full .ultimate-tier-banner,.ultimate-theme-4.scope-full:not(.ultimate-starter-combat) .ultimate-tier-banner{top:18%}
+.ultimate-theme-2 .ultimate-lightning{filter:drop-shadow(0 0 7px #63cfff)}
+.ultimate-cinematic.is-reduced .ultimate-leaf-heart{transform:none;opacity:1}
+.ultimate-cinematic.is-reduced .ultimate-heart-puzzle-orbit{opacity:1;transform:none}
+.ultimate-cinematic.is-reduced .ultimate-card-mask-break{opacity:.3;transform:scale(.7)}
+.ultimate-cinematic.is-reduced.ultimate-theme-1.scope-half .ultimate-tier-banner{top:24%}
+.ultimate-cinematic.is-reduced .card-matched-castle.is-upgraded .ultimate-castle-charge{opacity:0}
+.ultimate-cinematic.is-reduced .ultimate-starter-phoenix .ultimate-summon-flight{left:66%;top:58%;opacity:1;transform:translate(-50%,-50%) scale(.7)}
+@keyframes ultimate-heart-assemble{0%{opacity:.6;transform:scale(.62) translateY(35px)}28%{opacity:1;transform:scale(1.06)}45%,83%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
+@keyframes ultimate-heart-leaves-settle{0%{transform:rotate(-22deg) scale(1.25);opacity:.6}33%,80%{transform:rotate(0) scale(1);opacity:1}100%{transform:rotate(6deg) scale(.9);opacity:0}}
+@keyframes ultimate-card-mask-break{0%,31%{opacity:1;transform:scale(1)}53%{opacity:.6;transform:scale(.85) rotate(-8deg)}77%,100%{opacity:0;transform:scale(.3) rotate(-16deg)}}
+@keyframes ultimate-card-starter-phoenix-flight{0%{left:32%;top:62%;opacity:.9;transform:translate(-50%,-50%) scale(.22)}13%{left:32%;top:52%;opacity:1;transform:translate(-50%,-50%) scale(.70)}23%{left:55%;top:52%;opacity:1;transform:translate(-50%,-50%) scale(.77)}30%{left:71%;top:61%;opacity:1;transform:translate(-50%,-50%) scale(.62)}37%,100%{left:75%;top:64%;opacity:0;transform:translate(-50%,-50%) scale(.28)}}

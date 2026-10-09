@@ -4,6 +4,7 @@ import type { Level } from '../domain/types';
 import type { StoryBeat } from '../content/stories';
 import { getChapter } from '../content/levels';
 import { getMissionBoss } from '../content/missionBosses';
+import { initialEnemyHp } from '../domain/battleHealth';
 import { Arena } from './Arena';
 import '../styles/story-cinematic.css';
 
@@ -100,7 +101,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
         <button type="button" className="story-close" onClick={() => leave(onClose)} aria-label="關閉故事"><X size={24} /></button>
       </header>
       <div className={'story-stage story-stage-' + (beat?.scene ?? 'campus') + (level?.finalBoss && level.mode === 'advanced' ? ' story-stage-nine-head' : '')} data-story-shot={shot}>
-        <Arena chapter={chapter.id} finalBoss={level?.finalBoss} mode={level?.mode ?? 'starter'} guardian={boss?.name ?? '米米'} companion={!level} playerHp={100} enemyHp={level?.finalBoss ? 300 : 100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
+        <Arena chapter={chapter.id} finalBoss={level?.finalBoss} mode={level?.mode ?? 'starter'} guardian={boss?.name ?? '米米'} companion={!level} playerHp={100} enemyHp={level ? initialEnemyHp(level.id) : 100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
         <div className="story-stage-vignette" />
         {!ready && beat && <div className="story-stage-moment" key={beat.id}><StoryProps scene={beat.scene} /></div>}
         {!ready && <div className="story-scene-number">第 {index + 1} 幕 / {beats.length} 幕</div>}
@@ -108,7 +109,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
           <span className="story-ready-symbol"><ShieldCheck size={34} /></span>
           <h3 id="story-ready-title" tabIndex={-1}>{level ? '任務準備完成！' : '準備好開始冒險了嗎？'}</h3>
           <p className="story-ready-objective">{level ? level.objective : '從聊天到寫作業，用你的觀察與判斷，練習正確使用 AI。'}</p>
-          {level && <div className="story-ready-rules"><span><BookOpen size={20} />{level.finalBoss ? '最多 15 道綜合題' : '5 道生活題'}</span><span><Sparkles size={20} />{level.finalBoss ? '能量滿 · 自選必殺' : '答對施展魔法'}</span><span><Flag size={20} />{level.finalBoss ? '魔王 300 HP' : '答錯扣血，可重試'}</span></div>}
+          {level && <div className="story-ready-rules"><span><BookOpen size={20} />{level.finalBoss ? '最多 15 道綜合題' : '5 道生活題'}</span><span><Sparkles size={20} />{level.finalBoss ? '能量滿 · 自選必殺' : '答對施展魔法'}</span><span><Flag size={20} />{level.finalBoss ? `魔王 ${initialEnemyHp(level.id)} HP` : '答錯扣血，可重試'}</span></div>}
           {level && savedLevelTitle && <p className="story-save-note">目前還有「{savedLevelTitle}」的中途存檔。開始新挑戰會取代這份中途存檔，已完成的關卡與得分仍會保留。</p>}
           <div className="story-ready-actions">
             {onResume && <button type="button" className="story-button story-button-secondary" onClick={() => leave(onResume)}><Play size={20} />繼續原本的挑戰</button>}

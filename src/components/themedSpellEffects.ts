@@ -236,21 +236,6 @@ function mask(parent: THREE.Object3D) {
   for (const side of [-1, 1]) box(result, .10, .046, .03, ink, side * .18, .08, .08).rotation.z = side * .22;
   return result;
 }
-function phoenix(parent: THREE.Object3D) {
-  const result = group(parent, 'wisdom-phoenix');
-  polygon(result, [[0, -.25], [-.17, .05], [-.11, .42], [0, .61], [.13, .41], [.18, .04]], 0xffce66, .10);
-  polygon(result, [[.06, .41], [.31, .32], [.13, .26]], 0xf47734);
-  for (const side of [-1, 1]) {
-    const wing = group(result, 'phoenix-wing'); wing.position.set(side * .12, .16, 0);
-    polygon(wing, [[0, -.08], [side * .45, .02], [side * .85, .48], [side * .72, .02], [side * .96, .14], [side * .50, -.33]], 0xf58535, .07);
-    for (let i = 0; i < 4; i++) {
-      const plume = feather(wing, i % 2 ? 0xffad3c : 0xffdf7a, .45 + i * .03);
-      plume.position.set(side * (.24 + i * .13), -.12 + i * .045, .07); plume.rotation.z = -side * (1.05 + i * .17);
-    }
-  }
-  for (let i = -1; i <= 1; i++) { const tail = feather(result, 0xf27b3b, .8); tail.position.set(i * .16, -.5, -.01); tail.rotation.z = i * .22; }
-  return result;
-}
 function note(parent: THREE.Object3D, color: number) {
   const result = group(parent, 'voice-note');
   body(result, new THREE.CircleGeometry(.09, 10), color, -.08, -.17, 0);
@@ -514,6 +499,52 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
   return { root, update(f) { update(f); accents.update(f); } };
 }
 
+/** Card-matched versions are ultimate-only: ordinary attacks retain their art. */
+function cardCastle(parent: THREE.Object3D, advanced: boolean) {
+  const result = group(parent, 'guardian-castle');
+  box(result, 1.65, .40, .15, advanced ? 0xefdda7 : 0x73dece, 0, .2, 0, .25, advanced ? 1 : .75);
+  for (const x of [-.72, -.36, 0, .36, .72]) {
+    const top = 1.08 - Math.abs(x)*.55;
+    box(result, .30, top, .24, advanced ? 0xffebc1 : 0x72e4d6, x, top*.5, 0, .3, advanced ? 1 : .75);
+    const roof = body(result, new THREE.ConeGeometry(.23, .42, 6), advanced ? 0x206c93 : 0x29b6cf, x, top+.20, 0, .45);
+    roof.name = 'card-pointed-tower';
+    box(result,.035,top,.02,cream,x,top*.5,.13);
+    box(result,.065,.18,.025,0x286679,x,top-.23,.15);
+  }
+  padlock(result,.70).position.set(0,.42,.22);
+  if (advanced) {
+    const dome = body(result, new THREE.SphereGeometry(1.22,16,8,0,Math.PI*2,0,Math.PI/2),0x8de6ff,0,.05,0,0,.14);
+    dome.name='card-sky-dome';
+  }
+  return result;
+}
+function cardIndexBook(parent: THREE.Object3D) {
+  const result = openBook(parent);
+  result.name='card-navy-index-book';
+  result.traverse(node => { if (node instanceof THREE.Mesh) {const m=node.material as THREE.MeshStandardMaterial;
+    if(m.color.getHex()===0xc96a36) {m.color.setHex(0x183960);m.emissive.setHex(0x183960);}
+  }});
+  const lens=group(result,'card-book-magnifier');
+  body(lens,new THREE.TorusGeometry(.105,.016,5,16),0xf1ca65,0,0,.12);
+  box(lens,.03,.15,.02,0xf1ca65,-.10,-.13,.12).rotation.z=-.6;
+  lens.position.set(.20,-.03,.02);
+  return result;
+}
+function cardFramedMirror(parent: THREE.Object3D) {
+  const result=group(parent,'card-gemmed-oval-mirror');
+  const outer=body(result,new THREE.CircleGeometry(.33,16),0xf2cf74);outer.scale.y=1.7;
+  const glass=body(result,new THREE.CircleGeometry(.29,16),0x9cdbed,0,0,.045);glass.scale.y=1.68;
+  for(const y of [-.52,.52]) {const jewel=polygon(result,[[0,-.10],[-.07,0],[0,.10],[.07,0]],0xab87dd,.035);jewel.position.set(0,y,.08);}
+  tube(result,[[-.11,0,.09],[-.02,-.10,.09],[.15,.13,.09]],.022,cream);
+  return result;
+}
+function cardLeafPuzzle(parent: THREE.Object3D, index:number) {
+  const result=group(parent,'card-botanical-puzzle');
+  polygon(result,[[-.2,-.2],[.2,-.2],[.2,-.06],[.28,-.06],[.30,0],[.28,.06],[.2,.06],[.2,.2],[.05,.2],[.05,.28],[-.05,.28],[-.05,.2],[-.2,.2]], index%3===2?0xe1c568:0x83dcb0,.04);
+  leaf(result,index%3===2?0x85892e:0x347d4a,.54).position.set(0,-.02,.05);
+  return result;
+}
+
 function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Variant {
   const root = group(parent, `ultimate-${theme}`);
   root.userData.identity = getUltimateSpell(theme, mode)?.name ?? ultimateSpellNames[theme - 1];
@@ -523,11 +554,11 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
   let update: Variant['update'];
   if (theme === 1) {
     root.userData.sequence = 'castle-shield-emblem-flight-seal-impact';
-    const fortress = castle(formation); fortress.name = 'summoned-castle-shield';
+    const fortress = cardCastle(formation, mode === 'advanced'); fortress.name = 'summoned-castle-shield';
     const shields = Array.from({ length: mode === 'advanced' ? 7 : 5 }, () => shield(root, 0x49bda0));
     const crest = group(strike, 'castle-emblem-projectile');
     shield(crest, 0x2ab99c).scale.setScalar(1.55);
-    const flyingKeep = castle(crest); flyingKeep.scale.setScalar(.46); flyingKeep.position.set(0, -.10, .23);
+    const flyingKeep = cardCastle(crest, mode === 'advanced'); flyingKeep.scale.setScalar(.46); flyingKeep.position.set(0, -.10, .23);
     padlock(crest, .58).position.set(0, -.20, .32);
     const impact = group(root, 'castle-seal-impact');
     const seal = padlock(impact, 1.4);
@@ -559,10 +590,10 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     };
   } else if (theme === 2 && mode === 'starter') {
     root.userData.sequence = 'thunder-book-charge-index-flight-lightning-impact';
-    const book = openBook(formation); book.scale.setScalar(1.45);
+    const book = cardIndexBook(formation); book.scale.setScalar(1.45);
     const array = ritualRing(formation, 'thunder-index-summoning-array', 0xe3bb5a, .78);
     const index = group(strike, 'colossal-thunder-index');
-    openBook(index).scale.setScalar(2.0);
+    cardIndexBook(index).scale.setScalar(2.0);
     const scrolls = Array.from({ length: 5 }, () => thunderPage(index));
     scrolls.forEach((page, i) => {
       page.position.set(-.55 - i * .12, (i - 2) * .19, .14);
@@ -595,10 +626,10 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       anchor(wave, ground, f, .95 + spread * .95); wave.visible = visibleDuring(f, .9, 2.80);
     };
   } else if (theme === 2) {
-    const pages = Array.from({ length: 8 }, (_, i) => card(root, i % 2 ? 0x32b3be : 0xc89b4b, i));
+    const pages = Array.from({ length: 8 }, () => cardIndexBook(root));
     const bolts = Array.from({ length: 7 }, (_, i) => lightning(strike, i === 0 ? 1.7 : .9));
     bolts.forEach((bolt, i) => { bolt.position.set((i % 3 - 1) * .46, Math.floor(i / 3) * .43 - .45, i * .015); bolt.rotation.z = (i % 3 - 1) * .35; });
-    openBook(formation);
+    cardIndexBook(formation);
     update = f => {
       const center = f.reducedMotion ? f.target.clone() : path(f); animateOrbit(pages, f, center, .80, 2.6, .04, 2.65);
       anchor(formation, f.start, f, 1.4); formation.visible = visibleDuring(f, .02, .80);
@@ -607,14 +638,17 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       // Lightning holds a solid tree-shaped silhouette instead of strobing.
     };
   } else if (theme === 3) {
-    const cards = Array.from({ length: 12 }, (_, i) => card(root, [0x64bc9f, 0xffc967, 0x88a5e6][i % 3], i));
+    const cards = Array.from({ length: 12 }, (_, i) => cardLeafPuzzle(root, i));
     const leaves = Array.from({ length: 8 }, (_, i) => leaf(root, i % 2 ? 0x62bc8b : 0x9bd276));
     for (let i = -1; i <= 1; i++) { const shoot = branch(formation); shoot.position.x = i * .45; shoot.scale.setScalar(.9); }
     update = f => {
-      const settle = f.reducedMotion ? 1 : smooth((f.time - .5) / .60), center = f.target.clone();
-      cards.forEach((piece, i) => { piece.visible = visibleDuring(f, .05, 2.80); const a = i * 1.6 + f.time * 1.3;
-        const point = center.clone(); point.x += THREE.MathUtils.lerp(Math.cos(a) * 1.0, (i % 4 - 1.5) * .37, settle) * f.scale;
-        point.y += THREE.MathUtils.lerp(Math.sin(a) * .7, (Math.floor(i / 4) - 1) * .43, settle) * f.scale;
+      const settle = f.reducedMotion ? 1 : smooth((f.time - .5) / .60), center = f.hero.clone(); center.y += 1.75*f.scale;
+      cards.forEach((piece, i) => { piece.visible = visibleDuring(f, .05, 2.80); const a = i * 1.6 + (f.reducedMotion ? 0 : f.time * 1.3);
+        const heartAngle = i * Math.PI*2 / cards.length;
+        const settledX = mode === 'starter' ? Math.pow(Math.sin(heartAngle),3)*.76 : (i%4-1.5)*.43;
+        const settledY = mode === 'starter' ? (13*Math.cos(heartAngle)-5*Math.cos(2*heartAngle)-2*Math.cos(3*heartAngle)-Math.cos(4*heartAngle))*.055 : (Math.floor(i/4)-1)*.44;
+        const point = center.clone(); point.x += THREE.MathUtils.lerp(Math.cos(a) * 1.0, settledX, settle) * f.scale;
+        point.y += THREE.MathUtils.lerp(Math.sin(a) * .7, settledY, settle) * f.scale;
         anchor(piece, point, f); if (!f.reducedMotion) piece.rotateZ((1 - settle) * Math.sin(a)); });
       animateOrbit(leaves, f, center, 1.05, .7, .4, 2.8);
       const ground = f.hero.clone(); ground.y += .1 * f.scale; anchor(formation, ground, f, 1.10); formation.visible = visibleDuring(f, .9, 2.8);
@@ -623,13 +657,13 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
   } else if (theme === 4 && mode === 'starter') {
     root.userData.sequence = 'mirror-array-charge-cleaver-flight-mask-shatter';
     ritualRing(formation, 'mirror-summoning-array', 0xc4a0e9, .76);
-    const orbit = Array.from({ length: 8 }, (_, i) => mirrorShard(formation, i));
+    const orbit = Array.from({ length: 8 }, () => cardFramedMirror(formation));
     orbit.forEach((piece, i) => {
       const a = i * Math.PI / 4; piece.position.set(Math.cos(a) * .74, Math.sin(a) * .74, .06);
       piece.rotation.z = a; piece.scale.setScalar(.64);
     });
     const cleaver = group(strike, 'colossal-mirror-cleaver');
-    const blade = mirrorShard(cleaver); blade.scale.setScalar(2.65); blade.rotation.z = -Math.PI / 2;
+    const blade = cardFramedMirror(cleaver); blade.scale.setScalar(2.65); blade.rotation.z = -Math.PI / 2;
     blade.position.x = -.98;
     for (const side of [-1, 1]) {
       const facet = mirrorShard(cleaver, 1); facet.position.set(-1.10, side * .34, -.05);
@@ -661,7 +695,7 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       anchor(wave, ground, f, 1 + spread * .90); wave.visible = visibleDuring(f, .9, 2.80);
     };
   } else if (theme === 4) {
-    const mirrors = Array.from({ length: 10 }, (_, i) => mirrorShard(root, i));
+    const mirrors = Array.from({ length: 10 }, () => cardFramedMirror(root));
     const masks = Array.from({ length: 3 }, () => mask(strike)); masks.forEach((m, i) => m.position.set((i - 1) * .48, (i % 2) * .35, .01));
     update = f => {
       const center = f.reducedMotion ? f.target.clone() : path(f), broken = smooth((f.time - .9) / .60);
@@ -680,7 +714,7 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       const a = i * Math.PI / 4; piece.position.set(Math.cos(a) * .70, Math.sin(a) * .70, .06);
       piece.rotation.z = a - Math.PI / 2;
     });
-    const bird = phoenix(strike); bird.position.x = -.31;
+    // The card-derived phoenix is the only creature; retain arena-space embers.
     const impact = group(root, 'phoenix-fire-impact');
     const flames = Array.from({ length: 14 }, () => flame(impact, .8));
     const cinders = Array.from({ length: 24 }, (_, i) => feather(impact, i % 2 ? 0xffc957 : 0xf47230, .52));
@@ -689,10 +723,7 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
       anchor(formation, f.start, f, 1.10); formation.visible = visibleDuring(f, .03, .70);
       if (!f.reducedMotion) formation.rotateZ(-f.time * .75);
       anchor(strike, f.reducedMotion ? f.target : path(f), f, 1.85);
-      strike.visible = visibleDuring(f, .25, 1.04);
-      bird.children.filter(piece => piece.name === 'phoenix-wing').forEach((wing, i) => {
-        wing.rotation.z = f.reducedMotion ? 0 : (i ? -1 : 1) * Math.sin(f.time * 8) * .25;
-      });
+      strike.visible = false;
       anchor(impact, f.target, f); impact.visible = visibleDuring(f, .9, 2.80);
       const spread = f.reducedMotion ? .65 : smooth((f.time - .9) / .75);
       flames.forEach((piece, i) => {

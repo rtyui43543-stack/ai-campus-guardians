@@ -155,7 +155,7 @@ describe('themed spell performances', () => {
   });
   it('constructs six concrete hero silhouettes and six separately recognizable ultimate formations', () => {
     const normalShapes = ['guardian-castle', 'thunder-book-page', 'leaf-puzzle-piece', 'mirror-blade', 'flame-feather', 'frost-crystal-spear'];
-    const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'wisdom-phoenix', 'ice-crystal-shard'];
+    const ultimateShapes = ['guardian-castle', 'branching-lightning', 'leaf', 'false-mask', 'phoenix-fire-impact', 'ice-crystal-shard'];
     for (let chapter = 1; chapter <= 6; chapter++) {
       const scene = new THREE.Scene(), fx = createThemedSpellEffects(scene, chapter, 'starter');
       fx.update(frame());
@@ -326,14 +326,12 @@ describe('themed spell performances', () => {
     }
   });
 
-  it('gives starter thunder, mirror and phoenix a giant travelling object followed by a separate fragment impact', () => {
+  it('gives starter thunder and mirror a giant travelling object followed by a separate fragment impact', () => {
     const cases = [
       { chapter: 2, normal: 'thunder-book-page', formation: 'thunder-index-summoning-array',
         projectile: 'colossal-thunder-index', impact: 'thunder-index-impact', wave: 'thunder-index-page-wave' },
       { chapter: 4, normal: 'mirror-blade', formation: 'mirror-summoning-array',
         projectile: 'colossal-mirror-cleaver', impact: 'mirror-mask-shatter-impact', wave: 'mirror-cleaver-ripple' },
-      { chapter: 5, normal: 'flaming-feather-projectile', formation: 'phoenix-summoning-array',
-        projectile: 'wisdom-phoenix', impact: 'phoenix-fire-impact', wave: 'phoenix-fire-shockwave' },
     ];
     for (const example of cases) {
       const fx = createThemedSpellEffects(new THREE.Scene(), example.chapter, 'starter');
@@ -370,6 +368,28 @@ describe('themed spell performances', () => {
       expect(fx.root.visible).toBe(false);
       fx.dispose();
     }
+  });
+
+  it('keeps card-matched supporting meshes, heals beside the hero and leaves the phoenix creature to its card sprite', () => {
+    for (const mode of ['starter','advanced'] as const) {
+      const forest=createThemedSpellEffects(new THREE.Scene(),3,mode);
+      forest.update(frame({ultimate:true,time:1.3,reducedMotion:true}));
+      const special=forest.root.getObjectByName('ultimate-3')!;
+      expect(special.getObjectByName('classification-card')).toBeUndefined();
+      const puzzle=special.getObjectByName('card-botanical-puzzle')!;
+      expect(puzzle.position.x).toBeLessThan(0);
+      forest.root.updateMatrixWorld(true); const before=visibleMeshes(special).map(mesh=>mesh.matrixWorld.elements.slice());
+      forest.update(frame({ultimate:true,time:1.8,reducedMotion:true})); forest.root.updateMatrixWorld(true);
+      expect(visibleMeshes(special).map(mesh=>mesh.matrixWorld.elements.slice())).toEqual(before);
+      forest.dispose();
+    }
+    const phoenix=createThemedSpellEffects(new THREE.Scene(),5,'starter');
+    phoenix.update(frame({ultimate:true,time:.7}));
+    expect(phoenix.root.getObjectByName('wisdom-phoenix')).toBeUndefined();
+    expect(phoenix.root.getObjectByName('ultimate-strike')!.visible).toBe(false);
+    phoenix.update(frame({ultimate:true,time:SPELL_IMPACT_SECONDS}));
+    expect(phoenix.root.getObjectByName('phoenix-fire-impact')!.visible).toBe(true);
+    phoenix.dispose();
   });
 
   it('holds the new starter impacts still in reduced motion while retaining elemental silhouettes', () => {

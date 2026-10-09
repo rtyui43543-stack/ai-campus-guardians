@@ -107,14 +107,14 @@ describe('elemental and support ultimate effects', () => {
       if (next.finished) break;
       session = next.session!;
     }
-    expect(session.index).toBe(11);
-    expect(session.enemyBurnDamage).toBe(32);
+    expect(session.index).toBe(8);
+    expect(session.enemyBurnDamage).toBe(20);
     const finished = finishSession(progress, session);
     expect(finished.runs![0]).toMatchObject({ passed: true });
-    expect(finalBossDamage(finished.runs![0].records)).toBe(302);
-    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, perfect: true, questionCount: 12 });
+    expect(finalBossDamage(finished.runs![0].records)).toBe(220);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, perfect: true, questionCount: 9 });
     expect(parseBackup(exportBackup(finished))).toEqual(finished);
-    expect(reconstructRuns(finished.attempts)[0].records).toHaveLength(12);
+    expect(reconstructRuns(finished.attempts)[0].records).toHaveLength(9);
   });
 
   it.each(['starter', 'advanced'] as const)('lightning marks exactly two next-question choices including an answer in %s without a hint penalty', mode => {

@@ -1,6 +1,7 @@
 import { getQuestions, getQuestionsForHistory, questionById } from '../content';
 import { levels } from '../content/levels';
 import { getUltimateSpell } from '../content/ultimateSpells';
+import { battleEnemyMaxHp } from './battleHealth';
 import type { AttemptRecord, CompletedRun, Progress, Session } from './types';
 
 export interface ScoredRow { record: AttemptRecord; points: number; maxPoints: number; bonusPoints: number; timeLimitPoints: number }
@@ -50,6 +51,7 @@ function recordsForScore(value: Session | CompletedRun): AttemptRecord[] {
       questionId: value.questionIds[value.index], mode: value.mode, action: value.selected, reason: null,
       status: value.timedOut ? 'timeout' : value.demoUsed ? 'practice' : value.hintUsed || value.retries > 0 ? 'supported' : 'first',
       retries: value.retries, hintUsed: value.hintUsed, at: new Date().toISOString(),
+      ...(value.enemyMaxHp === undefined ? {} : { enemyMaxHp: value.enemyMaxHp }),
       ...(value.demoUsed && value.demoRetriesKnown ? { demoUsed: true } : {}),
       ...(value.timed ? { timed: true, elapsedMs: value.elapsedMs ?? 0, timedOut: !!value.timedOut } : {}),
       ...(value.ultimateUsed ? { ultimateUsed: true, ultimateId: value.ultimateId } : {}),
@@ -85,7 +87,7 @@ export function scoreSession(value: Session | CompletedRun): SessionScore {
     score, maxScore: 100, firstTryCorrect, wrongAnswers, hints, demos, questionCount,
     bonusScore, totalScore: score + bonusScore, timeouts, ultimateUses: rows.filter(row => row.bonusPoints > 0).length,
     perfect: records.length === questionCount && firstTryCorrect === questionCount && score === 100
-      && (!finalBoss || finalBossDamage(records) >= 300),
+      && (!finalBoss || finalBossDamage(records) >= battleEnemyMaxHp(value)),
     unknownWrongAnswers, rows,
   };
 }
@@ -111,18 +113,20 @@ export function reconstructRuns(attempts: readonly AttemptRecord[]): CompletedRu
       count = 0;
       while (count < expected.length && attempts[index + count]?.questionId === expected[count] && attempts[index + count]?.mode === first.mode) {
         count++;
-        if (finalBossDamage(attempts.slice(index, index + count)) >= 300) break;
+        if (finalBossDamage(attempts.slice(index, index + count)) >= (attempts[index + count - 1].enemyMaxHp ?? 300)) break;
       }
     }
     const records = attempts.slice(index, index + count);
-    if (!records.length || (!finalBoss && records.length !== expected.length) || (finalBoss && count < expected.length && finalBossDamage(records) < 300)
+    const enemyMaxHp = records.at(-1)?.enemyMaxHp ?? 300;
+    if (!records.length || (!finalBoss && records.length !== expected.length) || (finalBoss && count < expected.length && finalBossDamage(records) < enemyMaxHp)
       || records.some((record, i) => record.questionId !== expected[i] || record.mode !== first.mode)) {
       index++; continue;
     }
     const at = records[records.length - 1].at;
     runs.push({ sessionId: `legacy-v2-${index}-${question.levelId}-${review ? 'review' : 'main'}-${at}`,
       levelId: question.levelId, mode: first.mode, review, records: [...records], at,
-      ...(finalBoss ? { passed: finalBossDamage(records) >= 300 } : records.some(record => record.status === 'timeout') ? { passed: false } : {}),
+      ...(finalBoss ? { passed: finalBossDamage(records) >= enemyMaxHp,
+        ...(records.at(-1)?.enemyMaxHp === undefined ? {} : { enemyMaxHp }) } : records.some(record => record.status === 'timeout') ? { passed: false } : {}),
     });
     index += records.length;
   }

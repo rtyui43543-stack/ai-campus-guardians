@@ -13,7 +13,7 @@ function testImage() {
 describe('card-derived creature readiness', () => {
   beforeEach(() => vi.resetModules());
 
-  it('requests only the selected advanced creature and both choices in the advanced final battle', async () => {
+  it('preloads the starter phoenix, the selected advanced creature and relevant final-battle choices', async () => {
     const { battleSummonKinds } = await import('./ultimateSummons');
     expect(battleSummonKinds({ mode: 'advanced', chapterId: 5 })).toEqual(['phoenix']);
     expect(battleSummonKinds({ mode: 'advanced', chapterId: 6 })).toEqual(['iceDragon']);
@@ -21,9 +21,9 @@ describe('card-derived creature readiness', () => {
     for (const mode of ['starter', 'advanced'] as const) {
       for (const chapterId of [1, 2, 3, 4]) expect(battleSummonKinds({ mode, chapterId })).toEqual([]);
     }
-    expect(battleSummonKinds({ mode: 'starter', chapterId: 5 })).toEqual([]);
+    expect(battleSummonKinds({ mode: 'starter', chapterId: 5 })).toEqual(['phoenix']);
     expect(battleSummonKinds({ mode: 'starter', chapterId: 6 })).toEqual([]);
-    expect(battleSummonKinds({ mode: 'starter', chapterId: 7, finalBoss: true })).toEqual([]);
+    expect(battleSummonKinds({ mode: 'starter', chapterId: 7, finalBoss: true })).toEqual(['phoenix']);
   });
 
   it('waits for loading and decoding, uses a project-scoped URL, and shares a successful preload across battles', async () => {

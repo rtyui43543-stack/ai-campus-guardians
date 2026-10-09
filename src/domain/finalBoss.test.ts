@@ -7,7 +7,7 @@ import {
   startSession, submitAction, tickQuestion,
 } from './engine';
 import { finalBossDamage, reconstructRuns, scoreSession } from './scoring';
-import { exportBackup, parseBackup, validateProgress } from './storage';
+import { exportBackup, getStarterBossMigrationResult, parseBackup, validateProgress } from './storage';
 import type { Mode, Progress, Session } from './types';
 
 function unlocked(mode: Mode): Progress {
@@ -61,7 +61,7 @@ describe('final mission entry and selected ultimate state', () => {
       const session = startFinalBossSession(progress, mode);
       expect(session).toMatchObject({ levelId: mode === 'starter' ? 13 : 14, mode, shield: 100, energy: 0, timed: mode === 'advanced', index: 0 });
       expect(session.questionIds).toHaveLength(15);
-      expect(battleHealth(session)).toEqual({ playerHp: 100, enemyHp: 300 });
+      expect(battleHealth(session)).toEqual({ playerHp: 100, enemyHp: mode === 'starter' ? 200 : 300 });
       checkpoint(progress, session);
     }
   });
@@ -84,7 +84,7 @@ describe('final mission entry and selected ultimate state', () => {
     const answered = checkpoint(progress, solve(retryQuestion(mistake), 5));
     expect(answered).toMatchObject({ energy: 0, ultimateUsed: true, ultimateId: 5, bonusPoints: 10, enemyBonusDamage: 10 });
     expect(answered.preparedUltimateId).toBeUndefined();
-    expect(battleHealth(answered).enemyHp).toBe(210);
+    expect(battleHealth(answered).enemyHp).toBe(110);
     expect(submitAction(answered)).toBe(answered);
     const next = checkpoint(progress, advanceSession(answered).session!);
     expect(next).toMatchObject({ energy: 0, repaired: 80 });
@@ -141,25 +141,26 @@ describe('final HP, early completion and actual-question scoring', () => {
     while (true) {
       session = checkpoint(progress, solve(session, 2));
       count++;
-      expect(battleHealth(session).enemyHp).toBe(Math.max(0, 300 - count * 20 - (session.enemyBonusDamage ?? 0)));
+      expect(battleHealth(session).enemyHp).toBe(Math.max(0, (mode === 'starter' ? 200 : 300) - count * 20 - (session.enemyBonusDamage ?? 0)));
       const next = advanceSession(session);
       if (next.finished) break;
       expect(battleHealth(next.session!)).toEqual(battleHealth(session));
       session = checkpoint(progress, next.session!);
     }
-    expect(count).toBe(mode === 'advanced' ? 13 : 14);
+    expect(count).toBe(mode === 'advanced' ? 13 : 9);
     const completed = finishSession(progress, session);
     expect(completed.completed).toEqual([session.levelId]);
     expect(completed.runs![0]).toMatchObject({ passed: true, review: false });
     expect(completed.runs![0].records).toHaveLength(count);
-    expect(scoreSession(completed.runs![0])).toMatchObject({ score: 100, totalScore: 130, bonusScore: 30, ultimateUses: 3, perfect: true, questionCount: count });
+    const ultimateUses = mode === 'advanced' ? 3 : 2;
+    expect(scoreSession(completed.runs![0])).toMatchObject({ score: 100, totalScore: 100 + ultimateUses * 10, bonusScore: ultimateUses * 10, ultimateUses, perfect: true, questionCount: count });
     expect(parseBackup(exportBackup(completed))).toEqual(completed);
     expect(finishSession(completed, session)).toBe(completed);
     const recovered = reconstructRuns(completed.attempts);
     expect(recovered[0]).toMatchObject({ passed: true, levelId: session.levelId });
     expect(recovered[0].records).toHaveLength(count);
     expect(reconstructRuns([...completed.attempts, ...completed.attempts])).toHaveLength(2);
-    expect(finalBossDamage(completed.runs![0].records)).toBeGreaterThanOrEqual(300);
+    expect(finalBossDamage(completed.runs![0].records)).toBeGreaterThanOrEqual(mode === 'starter' ? 200 : 300);
   });
 
   it('can defeat the advanced boss after one timeout without incorrectly applying ordinary timeout failure', () => {
@@ -224,6 +225,89 @@ describe('final HP, early completion and actual-question scoring', () => {
 });
 
 describe('final save validation and removed practice migration', () => {
+  function oldSession(index: number): { progress: Progress; session: Session } {
+    const progress = unlocked('starter');
+    let session = startFinalBossSession(progress, 'starter');
+    delete session.enemyMaxHp;
+    while (session.index < index) session = advanceSession(solve(session)).session!;
+    return { progress, session };
+  }
+
+  it('reduces an unfinished legacy starter battle to 200 without changing answers, energy or damage', () => {
+    const { progress, session } = oldSession(5);
+    const restored = validateProgress(applySession(progress, session));
+    expect(restored.active).toEqual({ ...session, enemyMaxHp: 200 });
+    expect(battleHealth(restored.active!).enemyHp).toBe(battleHealth(session).enemyHp - 100);
+    expect(getStarterBossMigrationResult(restored)).toBeUndefined();
+    expect(parseBackup(exportBackup(restored))).toEqual(restored);
+    let continued = restored.active!;
+    while (true) {
+      continued = solve(continued);
+      const next = advanceSession(continued);
+      if (next.finished) break;
+      continued = next.session!;
+    }
+    const completed = finishSession(restored, continued);
+    expect(completed.runs![0]).toMatchObject({ enemyMaxHp: 200, passed: true });
+    expect(completed.runs![0].records).toHaveLength(9);
+    expect(parseBackup(exportBackup(completed))).toEqual(completed);
+    expect(reconstructRuns(completed.attempts)[0].records).toEqual(completed.attempts);
+  });
+
+  it.each(['action', 'feedback', 'wrong', 'defeat'] as const)('finishes a legacy battle already over 200 HP from %s without inventing or dropping completed answers', phase => {
+    const { progress, session } = oldSession(11);
+    const active = phase === 'feedback' ? solve(session) : phase === 'wrong' ? wrong(session)
+      : phase === 'defeat' ? wrong({ ...session, shield: 1 }) : session;
+    const expectedRecords = phase === 'feedback' ? [...session.records, advanceSession(active).record] : session.records;
+    const migrated = validateProgress(applySession(progress, active));
+    expect(migrated.active).toBeNull();
+    expect(migrated.completed).toContain(13);
+    const run = migrated.runs![0];
+    expect(run).toMatchObject({ sessionId: session.id, enemyMaxHp: 200, passed: true });
+    expect(run.records).toHaveLength(expectedRecords.length);
+    expect(run.records.slice(0, -1)).toEqual(expectedRecords.slice(0, -1));
+    const { at: _at, ...last } = expectedRecords.at(-1)!;
+    expect(run.records.at(-1)).toMatchObject({ ...last, enemyMaxHp: 200 });
+    expect(migrated.attempts).toEqual(run.records);
+    expect(getStarterBossMigrationResult(migrated)).toBe(run);
+    expect(parseBackup(exportBackup(migrated))).toEqual(migrated);
+    expect(getStarterBossMigrationResult(validateProgress(migrated))).toBeUndefined();
+    expect(reconstructRuns(migrated.attempts)[0]).toMatchObject({ enemyMaxHp: 200, passed: true, records: run.records });
+    expect(scoreSession(run)).toMatchObject({ questionCount: expectedRecords.length, score: 100, perfect: true });
+  });
+
+  it('includes the current successful answer when it first crosses the new 200-HP target', () => {
+    const { progress, session } = oldSession(8);
+    expect(finalBossDamage(session.records)).toBe(180);
+    const migrated = validateProgress(applySession(progress, solve(session)));
+    expect(migrated.active).toBeNull();
+    expect(migrated.runs![0].records).toHaveLength(9);
+    expect(finalBossDamage(migrated.runs![0].records)).toBe(200);
+    expect(parseBackup(exportBackup(migrated))).toEqual(migrated);
+  });
+
+  it('keeps completed legacy 300-HP history and advanced battles unchanged', () => {
+    const { progress, session: prior } = oldSession(13);
+    const completed = finishSession(progress, solve(prior));
+    const beforeScore = scoreSession(completed.runs![0]);
+    const restored = validateProgress(completed);
+    expect(restored).toEqual(completed);
+    expect(scoreSession(restored.runs![0])).toEqual(beforeScore);
+    expect(reconstructRuns(completed.attempts)[0].records).toHaveLength(14);
+    const advanced = applySession(unlocked('advanced'), startFinalBossSession(unlocked('advanced'), 'advanced'));
+    delete advanced.active!.enemyMaxHp;
+    expect(validateProgress(advanced)).toEqual(advanced);
+    expect(battleHealth(advanced.active!).enemyHp).toBe(300);
+  });
+
+  it('rejects a forged boss target and still validates ordinary 100-HP battles', () => {
+    const advanced = applySession(unlocked('advanced'), startFinalBossSession(unlocked('advanced'), 'advanced'));
+    for (const enemyMaxHp of [0, 100, 200, 400]) expect(() => validateProgress({ ...advanced, active: { ...advanced.active!, enemyMaxHp } })).toThrow('enemyMaxHp');
+    const ordinary = applySession(createProgress(), startSession(1, 'starter'));
+    expect(battleHealth(validateProgress(ordinary).active!).enemyHp).toBe(100);
+    expect(() => validateProgress({ ...ordinary, active: { ...ordinary.active!, enemyMaxHp: 200 } })).toThrow('enemyMaxHp');
+  });
+
   it('rejects unearned final entries and inconsistent choices, energy, damage or completion', () => {
     const { progress, session } = reach('advanced', 3);
     const selected = applySession(progress, selectUltimate(session, 6));

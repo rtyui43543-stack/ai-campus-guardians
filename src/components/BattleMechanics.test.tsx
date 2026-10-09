@@ -41,6 +41,7 @@ describe('battle shield and ultimate status', () => {
       for (const text of ['第一次答錯扣 20 HP', '合計最多 30 HP', '答對後連錯計數歸零', '雷光提示不扣分',
         '後續每題完成扣 4 HP', '後續每題完成自動再回復 4 HP', '50% 機率落空', 'HP 傷害減半']) expect(html).toContain(text);
       if (timed) expect(html).toContain('超時不累計連錯');
+      expect(html).toContain(`最終魔王 ${timed ? 300 : 200} HP`);
     }
     expect(renderToStaticMarkup(<BattleRules timed />)).toContain('魔王攻擊扣 12 HP');
   });

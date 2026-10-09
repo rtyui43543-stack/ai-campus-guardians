@@ -62,6 +62,8 @@ export interface AttemptRecord {
   combatRulesVersion?: 2;
   turnBurnDamage?: number;
   turnHealing?: number;
+  /** Final-boss target saved with each attempt so legacy history can be reconstructed. */
+  enemyMaxHp?: number;
 }
 export interface Session {
   id: string; levelId: number; mode: Mode; questionIds: string[]; index: number;
@@ -106,12 +108,16 @@ export interface Session {
   lastTurnHealing?: number;
   /** The current question is settled once even if UI callbacks are repeated. */
   resolvedTurnIndex?: number;
+  /** An absent final-boss target belongs to the historical 300-HP rules. */
+  enemyMaxHp?: number;
 }
 export interface CompletedRun {
   sessionId: string; levelId: number; mode: Mode; review: boolean;
   records: AttemptRecord[]; at: string;
   /** A finished timed run can have a score without completing the mission. */
   passed?: boolean;
+  /** Keep completed scores tied to the target that was actually challenged. */
+  enemyMaxHp?: number;
 }
 export interface UltimateCardUnlock {
   ultimateId: number; unlockedAt: string; sessionId: string; questionId: string;

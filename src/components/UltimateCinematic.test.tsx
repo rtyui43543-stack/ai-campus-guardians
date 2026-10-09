@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { UltimateCinematic } from './UltimateCinematic';
@@ -7,8 +8,7 @@ import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING } from './ultimateSummons';
 vi.mock('../platform/urls', () => ({ appAssetUrl: (path: string) => `/ai-campus-guardians${path}` }));
 
 describe('upgraded ultimate battlefield presentation', () => {
-  it('keeps the unchanged starter support spell and ordinary counterattack cues out of these attack cinematics', () => {
-    expect(renderToStaticMarkup(<UltimateCinematic chapter={3} mode="starter" cue="ultimate-1-20" reducedMotion={false} />)).toBe('');
+  it('keeps ordinary counterattack cues out of these ultimate cinematics', () => {
     for (const cue of ['', 'success-1-20', 'retry-2-12', 'blocked-3-0']) {
       for (const mode of ['starter', 'advanced'] as const) {
         for (let chapter = 1; chapter <= 6; chapter++) {
@@ -20,9 +20,9 @@ describe('upgraded ultimate battlefield presentation', () => {
 
   it.each([
     { chapter: 1, object: 'ultimate-castle-crest', phases: ['castle-shield-charge', 'castle-crest-flight', 'castle-seal-impact'], fragments: 'ultimate-castle-brick-burst' },
-    { chapter: 2, object: 'ultimate-thunder-scroll', phases: ['great-book-charge', 'thunder-scroll-flight', 'branching-lightning-impact'], fragments: 'ultimate-index-hit-pages' },
-    { chapter: 4, object: 'ultimate-colossal-mirror-blade', phases: ['mirror-array-charge', 'colossal-mirror-blade-flight', 'false-mask-shatter'], fragments: 'ultimate-mirror-hit-fragments' },
-    { chapter: 5, object: 'ultimate-phoenix-wing', phases: ['fire-feather-array', 'summon-grow-flight', 'enemy-impact', 'fire-feather-burst'], fragments: 'ultimate-starter-fire-fragments' },
+    { chapter: 2, object: 'ultimate-thunder-book', phases: ['great-book-charge', 'thunder-book-flight', 'branching-lightning-impact'], fragments: 'ultimate-index-hit-pages' },
+    { chapter: 4, object: 'ultimate-colossal-mirror-blade', phases: ['mirror-array-charge', 'gemmed-mirror-flight', 'false-mask-shatter'], fragments: 'ultimate-mirror-hit-fragments' },
+    { chapter: 5, object: 'ultimate-summon-phoenix', phases: ['fire-feather-array', 'summon-grow-flight', 'enemy-impact', 'fire-feather-burst'], fragments: 'ultimate-starter-fire-fragments' },
   ])('gives starter chapter $chapter a summon, concrete flying object and themed impact without duplicating the skill banner', ({ chapter, object, phases, fragments }) => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
     expect(markup).toContain('data-ultimate-tier="starter"');
@@ -34,6 +34,38 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(markup).not.toContain('ultimate-tier-banner');
     expect(markup).not.toContain('<button');
+  });
+
+  it('preserves the approved advanced phoenix and ice dragon markup in both motion settings', () => {
+    // Fingerprints were captured before the collection-matching changes. Keep
+    // the two explicitly excluded creatures, sequencing and layer markup intact.
+    const protectedForms = [
+      'fd2afa118aba86f747c54a5f5185523cc428666b626a2ff5e0ea23d52fc2a5c6',
+      'b68249c199f7c642453510df4fe0e056c1c94208c6b2e7f5557c43396e84d8d4',
+      'bb47e9d3d8b502873ca104cdd6a70aa5b62c861e5c9685edc3b4cd1d2f2d913a',
+      'b8f907f85c5344a51749ebb5da25c9422640bdc043e827c32fbf177e79e2f765',
+    ];
+    const current = [5, 6].flatMap(chapter => [false, true].map(reducedMotion => {
+      const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-1-30" reducedMotion={reducedMotion} />).replaceAll('/ai-campus-guardians', '');
+      return createHash('sha256').update(markup).digest('hex');
+    }));
+    expect(current).toEqual(protectedForms);
+  });
+
+  it('matches every revised cast to concrete collection motifs in normal and reduced motion', () => {
+    const starter = [['card-crystal-castle', 'card-keyhole-shield'], ['card-navy-index-book', 'ultimate-index-orbit-pages'], ['card-leaf-puzzle-heart', 'card-botanical-puzzle'], ['card-gemmed-oval-mirror', 'card-mirror-false-mask'], ['ultimate-summon-phoenix', 'fire-feather-burst'], ['card-snowflake-lance', 'card-snowflake']];
+    const advanced = [['card-sky-castle', 'card-floating-foundation'], ['card-navy-index-book', 'ultimate-flying-pages'], ['card-botanical-puzzle', 'card-botanical-branches'], ['card-gemmed-oval-mirror', 'card-false-mirror-fragments']];
+    for (const mode of ['starter', 'advanced'] as const) for (const reducedMotion of [false,true]) {
+      (mode === 'starter' ? starter : advanced).forEach((motifs,i) => {
+        const markup = renderToStaticMarkup(<UltimateCinematic chapter={i+1} mode={mode} cue="ultimate-4-30" reducedMotion={reducedMotion} />);
+        for (const motif of motifs) expect(markup).toContain(motif);
+        const ids=[...markup.matchAll(/ id="([^"]+)"/g)].map(match=>match[1]);
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const match of markup.matchAll(/url\(#([^)]*)\)/g)) expect(ids).toContain(match[1]);
+      });
+    }
+    const ice=renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
+    expect(ice.match(/class="card-snowflake-lance"/g)).toHaveLength(4);
   });
 
   it('keeps starter phoenix fire around the enemy while preserving the advanced full-field burn', () => {
@@ -49,8 +81,9 @@ describe('upgraded ultimate battlefield presentation', () => {
 
   it('upgrades castle protection before launching an enlarged castle seal at the opponent, retaining its advanced banner', () => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={1} mode="advanced" cue="ultimate-4-30" reducedMotion={false} />);
-    expect(markup).toContain('ultimate-castle-projection is-upgraded');
-    expect(markup).toContain('ultimate-castle-extra-guards');
+    expect(markup).toContain('card-matched-castle is-upgraded');
+    expect(markup).toContain('card-sky-dome');
+    expect(markup).toContain('card-lock');
     const positions = ['castle-shield-charge', 'castle-crest-flight', 'castle-seal-impact'].map(phase => markup.indexOf(`data-phase="${phase}"`));
     expect(positions.every(position => position > -1)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
@@ -61,7 +94,7 @@ describe('upgraded ultimate battlefield presentation', () => {
   });
 
   it('preserves all four distinct starter projectile forms when reduced motion is enabled', () => {
-    for (const [chapter, form] of [[1, 'ultimate-castle-crest'], [2, 'ultimate-thunder-scroll'], [4, 'ultimate-colossal-mirror-blade'], [5, 'ultimate-phoenix-wing']] as const) {
+    for (const [chapter, form] of [[1, 'ultimate-castle-crest'], [2, 'ultimate-thunder-book'], [4, 'ultimate-colossal-mirror-blade'], [5, 'ultimate-summon-phoenix']] as const) {
       const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion />);
       expect(markup).toContain('is-reduced');
       expect(markup).toContain(form);
@@ -141,7 +174,7 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(markup).toContain(getUltimateSpell(6, 'advanced')!.name);
   });
 
-  it('reserves a crystal array, single colossal lance, shattering impact and frost wave for the starter ice ultimate', () => {
+  it('reserves a crystal array, colossal lance with three companion crystals, shattering impact and frost wave for the starter ice ultimate', () => {
     const markup = renderToStaticMarkup(<UltimateCinematic chapter={6} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
     expect(markup).toContain('data-ultimate-tier="starter"');
     expect(markup).toContain(`初階必殺技：${getUltimateSpell(6, 'starter')!.name}`);
@@ -180,7 +213,13 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(advanced).not.toContain('ultimate-ice-dragon-wing');
     const starter = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="starter" cue="ultimate-4-30" reducedMotion={false} />);
     expect(starter).not.toContain('ultimate-illustrated-summon');
-    expect(starter).not.toContain('ultimate-summon-creature');
-    expect(starter).not.toContain(ULTIMATE_SUMMON_ART[kind].path);
+    if (chapter === 5) {
+      expect(starter.match(/class="ultimate-summon-creature"/g)).toHaveLength(1);
+      expect(starter).toContain(ULTIMATE_SUMMON_ART.phoenix.path);
+      expect(starter).not.toContain('full-battlefield-burn');
+    } else {
+      expect(starter).not.toContain('ultimate-summon-creature');
+      expect(starter).not.toContain(ULTIMATE_SUMMON_ART[kind].path);
+    }
   });
 });

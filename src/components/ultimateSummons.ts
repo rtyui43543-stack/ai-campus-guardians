@@ -30,7 +30,7 @@ type SummonImage = Pick<HTMLImageElement, 'src' | 'onload' | 'onerror' | 'decode
 const preloaded = new Map<string, Promise<boolean>>();
 
 export function battleSummonKinds(level: SummonBattle): readonly UltimateSummonKind[] {
-  if (level.mode !== 'advanced') return [];
+  if (level.mode !== 'advanced') return level.finalBoss || level.chapterId === 5 ? ['phoenix'] : [];
   if (level.finalBoss) return ['phoenix', 'iceDragon'];
   return level.chapterId === 5 ? ['phoenix'] : level.chapterId === 6 ? ['iceDragon'] : [];
 }

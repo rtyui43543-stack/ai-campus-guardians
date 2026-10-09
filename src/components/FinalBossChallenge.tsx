@@ -3,6 +3,7 @@ import { ArrowRight, Crown, LockKeyhole, ShieldCheck, Sparkles } from 'lucide-re
 import type { Level, Progress, Session } from '../domain/types';
 import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
 import { finalBossUnlocked } from '../domain/engine';
+import { initialEnemyHp } from '../domain/battleHealth';
 import { getLevel } from '../content/levels';
 import { getMissionBoss } from '../content/missionBosses';
 import { appAssetUrl } from '../platform/urls';
@@ -20,7 +21,7 @@ export function FinalBossChallenge({ progress, onLevel }: { progress: Progress; 
   const count = [1, 2, 3, 4, 5, 6].filter(id => owned.has(`${mode}:${id}`)).length;
   const unlocked = finalBossUnlocked(progress, mode);
   return <section className={'final-boss-challenge ' + (unlocked ? 'unlocked' : 'locked')} aria-labelledby="final-boss-title">
-    <div className="final-boss-copy"><span className="final-boss-kicker"><Crown size={22} />{mode === 'starter' ? '初階' : '進階'}最終決戰 · 300 HP</span>
+    <div className="final-boss-copy"><span className="final-boss-kicker"><Crown size={22} />{mode === 'starter' ? '初階' : '進階'}最終決戰 · {initialEnemyHp(level.id)} HP</span>
       <h2 id="final-boss-title">{boss.name}</h2><p>{unlocked ? '六種魔法已集齊！帶著你的好判斷，迎接最後的綜合挑戰。' : '在這組六個主題關施放必殺技，集齊六張收藏卡，就能打開決戰之門。'}</p>
       <div className="final-unlock-meter"><b>{count}／6 張必殺收藏卡</b><progress max={6} value={count} aria-label="本組最終關解鎖進度" /></div>
       <div className="final-boss-tags"><span>最多 15 題</span><span>{mode === 'starter' ? '不限時' : '每題 30 秒'}</span><span>能量滿三點 · 自選必殺</span></div>
