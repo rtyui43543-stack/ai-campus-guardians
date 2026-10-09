@@ -15,6 +15,13 @@ export function loadAudio() {
 }
 function pauseNarration() { player?.pause(); if (player) player.currentTime = 0; setBattleMusicDucked(false); }
 export function stopAudio() { narrationRequest++; pauseNarration(); }
+/** A progress reset also stops scheduled synthesized battle sounds; later gestures create a fresh context. */
+export function stopAllAudio(): void {
+  stopAudio();
+  const previous = context;
+  context = null;
+  if (previous) void previous.close().catch(() => { /* Reset does not depend on optional sound support. */ });
+}
 export async function playAudio(key: string): Promise<void> {
   const request = ++narrationRequest;
   await loadAudio();

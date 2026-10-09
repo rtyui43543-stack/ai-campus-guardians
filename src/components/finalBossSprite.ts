@@ -25,6 +25,7 @@ export function createFinalBossSprite(mode: Mode, options: Omit<CoverHeroSpriteO
   rig.root.userData.mode = mode;
   rig.root.userData.finalBoss = true;
   const units = actorHeight / (art.frames.idle.foot[1] - art.frames.idle.topY);
+  rig.root.userData.outerLeftExtent = Math.max(...Object.values(art.frames).map(frame => (frame.foot[0] - frame.rect.x) * units));
   rig.root.userData.outerRightExtent = Math.max(...Object.values(art.frames).map(frame => (frame.rect.x + frame.rect.width - frame.foot[0]) * units));
   const update = rig.updateVisual;
   rig.updateVisual = state => update({ ...state, success: state.attackTime === undefined ? state.success : !state.success });

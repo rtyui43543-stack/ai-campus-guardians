@@ -40,10 +40,10 @@ function boundary(mode: Mode) {
 }
 
 describe.each(['starter', 'advanced'] as const)('final %s boss rendering', mode => {
-  it('constructs a different final boss identity from the locally packaged wide atlas', () => {
+  it('constructs a different final boss identity from the locally packaged image', () => {
     const { rig, art, load, loaded, onReady, mesh } = boundary(mode);
     expect(atlasDimensions(art.assetPath)).toEqual({ width: art.width, height: art.height });
-    expect(art.width).toBeGreaterThan(art.height);
+    expect(art.width).toBeGreaterThanOrEqual(art.height);
     expect(load).toHaveBeenCalledWith('/ai-campus-guardians' + art.assetPath,
       expect.any(Function), expect.any(Function));
     expect(rig.root.userData).toMatchObject({ finalBoss: true, mode,
@@ -66,8 +66,14 @@ describe.each(['starter', 'advanced'] as const)('final %s boss rendering', mode 
     };
     check(undefined, false, 'idle'); check(.2, false, 'windup'); check(.55, false, 'release');
     expect(art.frames.windup.rect).toEqual(art.frames.release.rect);
-    expect(art.frames.idle.rect).not.toEqual(art.frames.release.rect);
-    expect(art.frames.hurt.rect).not.toEqual(art.frames.release.rect);
+    if (mode === 'starter') {
+      expect(art.frames.idle.rect).not.toEqual(art.frames.release.rect);
+      expect(art.frames.hurt.rect).not.toEqual(art.frames.release.rect);
+    } else {
+      // One reviewed nine-head silhouette is retained throughout cast/recoil transforms.
+      expect(art.frames.idle.rect).toEqual(art.frames.release.rect);
+      expect(art.frames.hurt.rect).toEqual(art.frames.release.rect);
+    }
     check(.3, true, 'idle'); check(1, true, 'hurt'); check(1.6, false, 'idle');
     check(.2, false, 'release', true); check(1, true, 'hurt', true);
   });
@@ -106,4 +112,23 @@ describe.each(['starter', 'advanced'] as const)('final %s boss rendering', mode 
     expect(rig.root.getObjectByName('cover-identity-hero-atlas')).toBeUndefined();
     expect(onReady).toHaveBeenCalledTimes(1);
   });
+});
+
+it('retains all nine visually reviewed heads inside every advanced portrait and battle frame', () => {
+  const art = getFinalBossArt('advanced');
+  expect(art.assetPath).toBe('/art/final-dragon-v2.webp');
+  if (!('headCenters' in art)) throw new Error('Missing nine-head visual-review landmarks.');
+  expect(art.headCenters).toHaveLength(9);
+  expect(new Set(art.headCenters.map(point => point.join(','))).size).toBe(9);
+  const centerX = art.headCenters[0][0];
+  expect(art.headCenters.slice(1).filter(([x]) => x < centerX)).toHaveLength(4);
+  expect(art.headCenters.slice(1).filter(([x]) => x > centerX)).toHaveLength(4);
+  for (const frame of Object.values(art.frames)) {
+    expect(frame.rect).toEqual({ x: 0, y: 0, width: art.width, height: art.height });
+    for (const [x, y] of art.headCenters) {
+      expect(x).toBeGreaterThan(frame.rect.x); expect(x).toBeLessThan(frame.rect.x + frame.rect.width);
+      expect(y).toBeGreaterThan(frame.rect.y); expect(y).toBeLessThan(frame.rect.y + frame.rect.height);
+    }
+  }
+  expect(getFinalBossArt('starter').assetPath).toBe('/art/final-bosses-v1.webp');
 });

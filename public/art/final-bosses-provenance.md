@@ -4,7 +4,7 @@
 - 工具：Codex 內建 `image_gen.imagegen`；一次原創角色生成與一次保持原角色的透明背景修正呼叫，`transparent_background: true`。沒有 CLI、OpenAI API key 或手工像素修圖。
 - 風格參考：原創封面 `public/art/title-cover-v1.webp` 與原創進階雲巨人 `public/art/advanced-boss-6-v1.webp`；兩者先以 `view_image` 檢視，僅用其高品質圓潤 3D 材質、表情、金屬與自然光風格。
 - 上排：初階最終魔王「混沌魔典王」，翡翠硬皮魔法書、立體金邊、書頁翅膀、晶石皇冠。
-- 下排：進階最終魔王「幻象九頭龍」，同一龍身連接多個脖頸、至少三個明顯主頭與多個後排頭部，紫色鱗片、金邊紫晶甲、小翅膀與尾巴；親切 Q 版，沒有恐怖畫面。
+- 下排：舊版進階最終魔王素材，同一龍身連接七個可見龍頭，紫色鱗片、金邊紫晶甲、小翅膀與尾巴；親切 Q 版，沒有恐怖畫面。2026-10-09 因與「幻象九頭龍」名稱不一致，進階已改用獨立九頭素材 `final-dragon-v2.webp`（見 `final-dragon-v2-provenance.md`），此舊圖集只供初階魔典王使用。
 - 每排三姿勢按 idle、cast、hit 排列；材質、身形、面孔、晶石、翅膀與多頭身份保持一致。所有角色朝左以面對玩家。
 - 定稿 `public/art/final-bosses-v1.webp`，工具原生 **1536 × 1024 px RGBA**，沒有升頻、裁切或重排。
 - WebP 大小 1930930 bytes；SHA-256 `0aa4b573d6bda112ba106de1fffcc24e371a7210960e239643ab8693cd73307b`。

@@ -4,6 +4,7 @@ import { createCoverHero } from './coverHero';
 import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
+import { fitNineHeadStoryCamera } from './finalBossFraming';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
@@ -295,9 +296,19 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const desiredX = cinemaShot === 'hero' ? heroX : cinemaShot === 'enemy' ? enemyX : 0;
       const desiredY = cinemaShot === 'hero' ? 2.05 : cinemaShot === 'enemy' ? 1.75 : framingY;
       const desiredZoom = cinemaShot === 'hero' || cinemaShot === 'enemy' ? 1.6 : 1;
-      shotLookX = THREE.MathUtils.lerp(shotFromX, desiredX, travel);
-      shotLookY = THREE.MathUtils.lerp(shotFromY, desiredY, travel);
-      camera.zoom = THREE.MathUtils.lerp(shotFromZoom, desiredZoom, travel);
+      const requestedShot = {
+        x: THREE.MathUtils.lerp(shotFromX, desiredX, travel),
+        y: THREE.MathUtils.lerp(shotFromY, desiredY, travel),
+        zoom: THREE.MathUtils.lerp(shotFromZoom, desiredZoom, travel),
+      };
+      // A hero close-up formerly pushed half of the nine-headed dragon outside the
+      // right edge. Preserve actor positions, but fit both complete silhouettes.
+      const safeShot = finalBoss && mode === 'advanced'
+        ? fitNineHeadStoryCamera(camera.right - camera.left, camera.top - camera.bottom, requestedShot,
+          { heroX, enemyX, enemyLeft: Number(enemy.root.userData.outerLeftExtent) || 2,
+            enemyRight: Number(enemy.root.userData.outerRightExtent) || 2 }, framingElevation)
+        : requestedShot;
+      shotLookX = safeShot.x; shotLookY = safeShot.y; camera.zoom = safeShot.zoom;
       camera.position.set(shotLookX, shotLookY + framingElevation, 15);
       camera.lookAt(shotLookX, shotLookY, 0); camera.updateProjectionMatrix();
       if (!reducedMotion) {

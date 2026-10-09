@@ -5,15 +5,18 @@ import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finalBossUnlocked, finishSession, isDefeated, restartBattle, retryQuestion, selectUltimate, sessionSummary, startFinalBossSession, startSession, submitAction, tickQuestion, useHint } from './domain/engine';
-import { loadProgress, saveProgress } from './domain/storage';
+import { exportBackup, loadProgress, ResetPersistenceError, saveProgress } from './domain/storage';
+import { persistLearningReset, resetLearningProgress } from './domain/progressReset';
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
-import { battleSound, loadAudio, playAudio, stopAudio } from './platform/audio';
+import { battleSound, loadAudio, playAudio, stopAllAudio, stopAudio } from './platform/audio';
 import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/music';
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
 import { screenFromHash, type Screen } from './platform/navigation';
+import { forgetOpening, hasSeenOpening, rememberOpening } from './platform/openingStory';
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
-import { GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
+import { downloadFile, GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
+import { ResetProgress } from './components/ResetProgress';
 import { LevelScore, ScoreSummary } from './components/Scoring';
 import { StoryCinematic } from './components/StoryCinematic';
 import { getOpeningStory, getLevelStory } from './content/stories';
@@ -31,9 +34,6 @@ const navItems = [
   { id: 'proposals', label: '守護提案', icon: BookOpen },
   { id: 'settings', label: '離線與設定', icon: Settings }
 ] as const;
-const OPENING_SEEN_KEY = 'ai-campus-guardians:opening:v1';
-function hasSeenOpening() { try { return localStorage.getItem(OPENING_SEEN_KEY) === 'seen'; } catch { return false; } }
-function rememberOpening() { try { localStorage.setItem(OPENING_SEEN_KEY, 'seen'); } catch { /* The game remains playable without browser storage. */ } }
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
 export const statusNames = { first: '首次獨立答對', supported: '重試／提示後答對', practice: '看示範後完成', timeout: '超時未作答' };
 export const chapterIcons = { scan: ScanLine, compass: Compass, search: Search, shield: ShieldCheck, hand: HandHeart, spark: Sparkles };
@@ -55,6 +55,8 @@ export function App() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [clockPaused, setClockPaused] = useState(document.hidden);
   const [chooseSpellOpen, setChooseSpellOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const resettingRef = useRef(false);
   const progressRef = useRef<Progress | null>(null);
   const clockRef = useRef(new QuestionClock());
   const flushClockRef = useRef<() => void>(() => {});
@@ -87,6 +89,7 @@ export function App() {
   useEffect(() => {
     if (!progress) return;
     const followHistory = () => {
+      if (resettingRef.current) return;
       const previous = latestRun(progress);
       const next = screenFromHash(location.hash, { battle: Boolean(progress.active), results: Boolean(previous) });
       if (next === screen) return;
@@ -114,7 +117,7 @@ export function App() {
     return () => { window.removeEventListener(MUSIC_EVENT, updateMusic); stopMusic(); stopAudio(); };
   }, []);
   useEffect(() => {
-    if (progress?.settings.music && screen !== 'cover' && !opening && !intro) {
+    if (progress?.settings.music && screen !== 'cover' && !opening && !intro && !resetting) {
       const track = screen === 'battle' ? finalBattleTrack(progress.active ? getLevel(progress.active.levelId) : null) : 'adventure';
       if (track === 'adventure' || (progress.active && (!isDefeated(progress.active) || animating))) {
         // Restored pages can require a gesture; the visible music control can retry playback.
@@ -123,7 +126,7 @@ export function App() {
       }
     }
     stopMusic(); setMusicPlaying(false);
-  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating, opening, intro]);
+  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating, opening, intro, resetting]);
   useEffect(() => {
     if (!notice) return;
     const timeout = setTimeout(() => setNotice(''), 6500);
@@ -133,8 +136,36 @@ export function App() {
     progressRef.current = next; setProgress(next);
     if (persist) void saveProgress(next).catch(error => setNotice('存檔尚未成功，請先匯出備份。' + (error instanceof Error ? error.message : '')));
   };
+  const resetAllProgress = async () => {
+    const previous = progressRef.current;
+    if (!previous || resettingRef.current) return;
+    resettingRef.current = true; setResetting(true);
+    clockRef.current.pause(performance.now());
+    stopAllAudio(); stopMusic();
+    if (attackTimer.current) clearTimeout(attackTimer.current);
+    attackTimer.current = null; attackLock.current = false;
+    setAnimating(false); setCue(''); setVisibleBurnDamage(0); setMusicPlaying(false);
+    setOpening(false); setIntro(null); setRulesOpen(false); setChooseSpellOpen(false);
+    setHintOpen(false); setMobileMenu(false); setResult(null); setNotice('');
+    const fresh = resetLearningProgress(previous);
+    // Replace the live ref before awaiting storage so pagehide or a queued timer cannot save the old battle again.
+    commit(fresh, false);
+    try {
+      await persistLearningReset(fresh);
+      forgetOpening();
+      history.replaceState(null, '', '#cover'); setScreen('cover');
+      setNotice('全部學習進度已重置。離線內容與使用偏好已保留，從零開始冒險吧！');
+    } catch (cause) {
+      commit(previous, false);
+      if (cause instanceof ResetPersistenceError) throw cause;
+      throw new Error('重置尚未完成，無法確認存檔狀態。請先匯出目前進度備份。', { cause });
+    } finally {
+      resettingRef.current = false; setResetting(false);
+    }
+  };
   const playMusicFromGesture = (track: MusicTrack = finalBattleTrack(progressRef.current?.active ? getLevel(progressRef.current.active.levelId) : null)) => { void startMusic(track).catch(() => { setMusicPlaying(false); setNotice('音樂尚未播放，請再按一次音樂按鈕；離線時請確認已下載完整內容。'); }); };
   const navigate = (next: Screen, allowMusic = true) => {
+    if (resettingRef.current) return;
     flushClockRef.current(); clockRef.current.pause(performance.now()); setRulesOpen(false); setChooseSpellOpen(false);
     if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
     stopAudio();
@@ -251,7 +282,7 @@ export function App() {
     const eligible = screen === 'battle' && session?.timed && session.step === 'action' && !rulesOpen && !selecting && !intro && !opening;
     if (!eligible) { clockRef.current.pause(performance.now()); return; }
     const updateVisibility = () => {
-      if (document.hidden) { flushClockRef.current(); clockRef.current.pause(performance.now()); if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); }
+      if (document.hidden) { flushClockRef.current(); clockRef.current.pause(performance.now()); if (progressRef.current && !resettingRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); }
       else clockRef.current.resume(performance.now());
       setClockPaused(document.hidden);
     };
@@ -259,7 +290,7 @@ export function App() {
     if (!document.hidden) clockRef.current.resume(performance.now());
     const timer = setInterval(() => { if (!document.hidden) flushClockRef.current(); }, 250);
     document.addEventListener('visibilitychange', updateVisibility);
-    const saveOnExit = () => { flushClockRef.current(); if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); };
+    const saveOnExit = () => { flushClockRef.current(); if (progressRef.current && !resettingRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); };
     window.addEventListener('pagehide', saveOnExit);
     return () => { clearInterval(timer); clockRef.current.pause(performance.now()); document.removeEventListener('visibilitychange', updateVisibility); window.removeEventListener('pagehide', saveOnExit); };
   }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timed, progress?.active?.energy, progress?.active?.preparedUltimateId, chooseSpellOpen, rulesOpen, Boolean(intro), opening]);
@@ -367,7 +398,11 @@ export function App() {
         {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'growth' && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={openLevelStory} onNotice={setNotice} />}
-        {screen === 'settings' && <OfflinePanel progress={progress} offline={offline} onUpdate={next => { if (next.settings.music !== progress.settings.music) { if (next.settings.music) playMusicFromGesture('adventure'); else stopMusic(); } commit(next); }} onNotice={setNotice} onMap={() => navigate('map')} />}
+        {screen === 'settings' && <><OfflinePanel progress={progress} offline={offline} onUpdate={next => { if (next.settings.music !== progress.settings.music) { if (next.settings.music) playMusicFromGesture('adventure'); else stopMusic(); } commit(next); }} onNotice={setNotice} onMap={() => navigate('map')} />
+          <ResetProgress progress={progress} onReset={resetAllProgress} onExportBackup={() => {
+            downloadFile('AI校園守護隊-重置前備份-' + new Date().toISOString().slice(0, 10) + '.json', exportBackup(progressRef.current ?? progress), 'application/json');
+            setNotice('重置前的進度備份已匯出，請保存 JSON 檔。');
+          }} /></>}
       </main>
       <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span></footer>
     </div>

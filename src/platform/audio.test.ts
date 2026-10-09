@@ -47,4 +47,25 @@ describe('manual offline narration', () => {
     await request;
     expect(MockAudio.instances).toHaveLength(0);
   });
+
+  it('stops narration and closes all queued battle tones when progress is reset', async () => {
+    const contexts: { close: ReturnType<typeof vi.fn> }[] = [];
+    class MockContext {
+      currentTime = 0; destination = {};
+      close = vi.fn(async () => {}); resume = vi.fn(async () => {});
+      constructor() { contexts.push(this); }
+      createOscillator() { return { type: '', frequency: { value: 0 }, connect: vi.fn(), start: vi.fn(), stop: vi.fn() }; }
+      createGain() { return { gain: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: vi.fn() }; }
+    }
+    vi.stubGlobal('AudioContext', MockContext);
+    const audio = await import('./audio');
+    await audio.playAudio('question'); audio.tone(true);
+    audio.stopAllAudio();
+    expect(MockAudio.instances[0].paused).toBe(true);
+    expect(MockAudio.instances[0].currentTime).toBe(0);
+    expect(contexts[0].close).toHaveBeenCalledOnce();
+    audio.tone(true);
+    expect(contexts).toHaveLength(2);
+    expect(contexts[1].close).not.toHaveBeenCalled();
+  });
 });

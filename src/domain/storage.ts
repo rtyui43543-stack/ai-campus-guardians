@@ -431,7 +431,7 @@ async function readDb(): Promise<unknown> {
   });
 }
 
-async function writeDb(progress: Progress): Promise<void> {
+async function writeDb(progress: unknown): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, rejectWrite) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -439,6 +439,17 @@ async function writeDb(progress: Progress): Promise<void> {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => rejectWrite(transaction.error ?? new Error('IndexedDB write failed'));
     transaction.onabort = () => rejectWrite(transaction.error ?? new Error('IndexedDB write aborted'));
+  });
+}
+
+async function removeDbProgress(): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, rejectWrite) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    transaction.objectStore(STORE_NAME).delete(MAIN_KEY);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => rejectWrite(transaction.error ?? new Error('IndexedDB removal failed'));
+    transaction.onabort = () => rejectWrite(transaction.error ?? new Error('IndexedDB removal aborted'));
   });
 }
 
@@ -452,6 +463,70 @@ export async function saveProgress(progress: Progress): Promise<void> {
     try { await writeDb(snapshot); savedToDb = true; } catch { /* Use the local fallback. */ }
     try { globalThis.localStorage.setItem(LOCAL_KEY, JSON.stringify(snapshot)); savedLocally = true; } catch { /* IndexedDB may still have saved successfully. */ }
     if (!savedToDb && !savedLocally) throw new Error('目前裝置無法保存進度。請保留遊戲畫面，並先匯出備份。');
+  });
+  writes = operation;
+  return operation;
+}
+
+export class ResetPersistenceError extends Error {
+  constructor(public readonly rollbackComplete: boolean, cause: unknown) {
+    super(rollbackComplete
+      ? '重置未能完整保存；所有原有存檔已確認保留。請先匯出備份，再試一次。'
+      : '重置未能完整保存，且部分存檔無法確認還原。請立即匯出目前進度備份，暫勿關閉遊戲。', { cause });
+    this.name = 'ResetPersistenceError';
+  }
+}
+
+/** Reset must replace every existing checkpoint, rather than accepting only one successful fallback. */
+export async function saveResetProgress(progress: Progress): Promise<void> {
+  const snapshot = validateProgress(progress);
+  const operation = writes.catch(() => undefined).then(async () => {
+    let databaseExists = false;
+    let previousDb: unknown;
+    let local: Storage | undefined;
+    let previousLocal: string | null = null;
+    // Read both layers before mutating either; an unreadable store cannot safely be declared reset.
+    try {
+      databaseExists = !!globalThis.indexedDB;
+      if (databaseExists) previousDb = await readDb();
+      local = globalThis.localStorage;
+      if (local) previousLocal = local.getItem(LOCAL_KEY);
+    } catch (cause) { throw new ResetPersistenceError(true, cause); }
+    const expected = JSON.stringify(snapshot);
+    const sameDb = (value: unknown) => JSON.stringify(value) === expected;
+    let databaseSaved = false;
+    let localSaved = false;
+    const writeFailures: unknown[] = [];
+    if (databaseExists) {
+      try { await writeDb(snapshot); databaseSaved = sameDb(await readDb()); } catch (cause) { writeFailures.push(cause); }
+    }
+    if (local) {
+      try { local.setItem(LOCAL_KEY, expected); localSaved = local.getItem(LOCAL_KEY) === expected; } catch (cause) { writeFailures.push(cause); }
+    }
+    const complete = (databaseSaved || localSaved)
+      && (previousDb === undefined || databaseSaved)
+      && (previousLocal === null || localSaved);
+    if (complete) return;
+
+    // Failed writes can leave one layer changed. Restore its exact previous checkpoint, then verify both.
+    let rollbackComplete = true;
+    if (databaseExists) {
+      try {
+        if (JSON.stringify(await readDb()) !== JSON.stringify(previousDb)) {
+          if (previousDb === undefined) await removeDbProgress(); else await writeDb(previousDb);
+        }
+        if (JSON.stringify(await readDb()) !== JSON.stringify(previousDb)) rollbackComplete = false;
+      } catch { rollbackComplete = false; }
+    }
+    if (local) {
+      try {
+        if (local.getItem(LOCAL_KEY) !== previousLocal) {
+          if (previousLocal === null) local.removeItem(LOCAL_KEY); else local.setItem(LOCAL_KEY, previousLocal);
+        }
+        if (local.getItem(LOCAL_KEY) !== previousLocal) rollbackComplete = false;
+      } catch { rollbackComplete = false; }
+    }
+    throw new ResetPersistenceError(rollbackComplete, writeFailures[0] ?? new Error('Reset checkpoint verification failed'));
   });
   writes = operation;
   return operation;

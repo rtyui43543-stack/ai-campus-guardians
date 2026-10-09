@@ -1,0 +1,28 @@
+.reset-progress-section{margin-top:28px;padding:28px;border:2px solid #b96947;background:linear-gradient(135deg,#fff9ed,#fffdf7);color:#163f35}
+.reset-progress-title{display:flex;align-items:center;gap:12px;color:#8b3e24}
+.reset-progress-title h2{margin:0;font-size:27px;line-height:1.4}
+.reset-progress-section p{font-size:21px;line-height:1.75;margin:16px 0;max-width:900px}
+.reset-progress-keep,.reset-retain-note{display:flex;align-items:flex-start;gap:10px;color:#205346;font-weight:650}
+.reset-progress-keep svg,.reset-retain-note svg{flex-shrink:0;margin-top:6px}
+.reset-progress-section .reset-progress-entry{background:#914525;color:#fff9e6;border:2px solid #703219;font-size:21px;padding:15px 22px;min-height:56px}
+.reset-progress-dialog{width:min(740px,calc(100% - 28px));max-height:calc(100dvh - 30px);overflow:auto;padding:28px;border-radius:24px;border:3px solid #d7aa57;background:#fffdf2;color:#193e34;box-shadow:0 24px 80px #061e39aa}
+.reset-progress-dialog::backdrop{background:#081d2edb;backdrop-filter:blur(5px)}
+.reset-confirm-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.reset-confirm-top h2{font-size:28px;line-height:1.45;margin:0;color:#763b25}
+.reset-close{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:44px;height:44px;border-radius:12px;border:1px solid #87a294;background:#e9f3e9;color:#214d3d}
+.reset-progress-dialog p,.reset-clear-list,.reset-confirm-check{font-size:21px;line-height:1.65}
+.reset-progress-dialog p{margin:18px 0}
+.reset-clear-list{padding-left:30px;margin:15px 0 20px}
+.reset-clear-list li{margin:8px 0}
+.reset-retain-note{padding:13px 16px;border:1px solid #91b4a0;border-radius:12px;background:#eaf5e9}
+.reset-progress-dialog .button{font-size:20px;line-height:1.45;min-height:52px;padding:13px 18px;text-wrap:balance;border-radius:13px}
+.reset-backup{width:100%;background:#e3f1e8;color:#154c3c;border:2px solid #75a38b}
+.reset-confirm-check{display:flex;align-items:flex-start;gap:12px;margin:22px 0}
+.reset-confirm-check input{flex-shrink:0;width:25px;height:25px;margin-top:5px;accent-color:#914525;cursor:pointer}
+.reset-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.reset-cancel{background:#f3f6ef;color:#214d3d;border:2px solid #8aab96}
+.reset-confirm{background:#914525;color:#fff9e6;border:2px solid #703219}
+.reset-progress-dialog .button:disabled{opacity:.52;cursor:not-allowed}
+.reset-error{border:1px solid #bb5d48;background:#fff0e8;border-radius:10px;padding:12px;color:#8c3326;font-weight:700}
+.reset-progress-dialog button:focus-visible,.reset-progress-entry:focus-visible,.reset-confirm-check input:focus-visible{outline:4px solid #167b96;outline-offset:4px}
+@media(max-width:600px){.reset-progress-section{padding:20px}.reset-progress-title h2{font-size:25px}.reset-progress-dialog{padding:20px}.reset-confirm-top h2{font-size:25px}.reset-confirm-actions{grid-template-columns:1fr}.reset-progress-dialog p,.reset-clear-list,.reset-confirm-check,.reset-progress-section p{font-size:20px}.reset-progress-section .reset-progress-entry{font-size:20px;width:100%}}

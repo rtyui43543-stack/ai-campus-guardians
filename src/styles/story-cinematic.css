@@ -11,3 +11,8 @@
 @media(max-height:560px) and (min-width:641px){.story-stage[data-story-shot="hero"] .story-props,.story-stage[data-story-shot="enemy"] .story-props{width:200px;max-width:none;scale:.65;top:5%}.story-stage[data-story-shot="enemy"] .story-props{left:14%}.story-stage[data-story-shot="hero"] .story-props{left:86%}}
 .story-paused .story-props{animation-name:none;opacity:1;translate:0 0}
 @media(max-height:560px) and (min-width:641px){.story-stage[data-story-shot="wide"] .story-props{scale:.6;top:2%;transform-origin:center top}}
+
+/* Keep all nine faces unobstructed in every final-dragon story shot. */
+.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:55%;width:240px;max-width:28%;height:120px;scale:1;transform:translateX(-50%) scale(.8);transform-origin:center top}
+@media(max-width:640px){.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:57%;width:180px;max-width:none;height:110px;scale:1;transform:translateX(-50%) scale(.65);transform-origin:center top}}
+@media(max-height:560px) and (min-width:641px){.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:56%;width:200px;max-width:28%;height:110px;scale:1;transform:translateX(-50%) scale(.7);transform-origin:center top}}
