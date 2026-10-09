@@ -1,4 +1,4 @@
-export type Screen = 'cover' | 'map' | 'battle' | 'results' | 'growth' | 'proposals' | 'settings';
+export type Screen = 'cover' | 'map' | 'battle' | 'results' | 'growth' | 'settings';
 
 /** The app root is the title screen; explicit links still restore their destination. */
 export function screenFromHash(hash: string, saved: { battle: boolean; results: boolean }): Screen {
@@ -7,7 +7,7 @@ export function screenFromHash(hash: string, saved: { battle: boolean; results: 
     case '#battle': return saved.battle ? 'battle' : 'cover';
     case '#results': return saved.results ? 'results' : 'cover';
     case '#growth': return 'growth';
-    case '#proposals': return 'proposals';
+    case '#proposals': return 'map';
     case '#settings': return 'settings';
     default: return 'cover';
   }

@@ -158,7 +158,7 @@ body { font-size: 18px; }
 .app-shell:not(.battle-shell) .status-badge.supported { color: var(--student-orange); background: #fff1dc; }
 .app-shell:not(.battle-shell) .status-badge.practice { color: var(--student-purple); background: #f1eaf7; }
 
-/* Progress, proposals and the teacher guide share the same ink and supporting scale. */
+/* Progress and the teacher guide share the same ink and supporting scale. */
 .app-shell:not(.battle-shell) .growth-overview > .surface { color: var(--student-green); }
 .app-shell:not(.battle-shell) .growth-overview strong { font-size: 42px; color: var(--student-green); }
 .app-shell:not(.battle-shell) .growth-overview strong small { font-size: 18px; color: var(--student-secondary); }
@@ -172,18 +172,6 @@ body { font-size: 18px; }
 .app-shell:not(.battle-shell) .growth-level-content > p, .app-shell:not(.battle-shell) .growth-records > span { font-size: 18px; line-height: 1.85; }
 .app-shell:not(.battle-shell) .growth-records > span { flex-wrap: wrap; }
 .app-shell:not(.battle-shell) .empty-state p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
-.app-shell:not(.battle-shell) .proposal-toolbar label { font-size: 16px; color: var(--student-secondary); }
-.app-shell:not(.battle-shell) .proposal-card-head h2 { font-size: 30px; color: var(--student-ink); }
-.app-shell:not(.battle-shell) .proposal-card-head p { font-size: 18px; color: var(--student-secondary); }
-.app-shell:not(.battle-shell) .proposal-stamp { font-size: 16px; color: var(--student-green); }
-.app-shell:not(.battle-shell) .proposal-decisions h3 { font-size: 26px; color: var(--student-green); }
-.app-shell:not(.battle-shell) .proposal-decisions p { font-size: 18px; color: var(--student-ink); }
-.app-shell:not(.battle-shell) .proposal-decisions small { font-size: 16px; color: var(--student-secondary); }
-.app-shell:not(.battle-shell) .proposal-decisions > section > span { font-size: 16px; color: var(--student-green); }
-.app-shell:not(.battle-shell) .proposal-reflection label { font-size: 18px; color: var(--student-ink); }
-.app-shell:not(.battle-shell) .proposal-reflection textarea { font-size: 18px; color: var(--student-ink); line-height: 1.8; }
-.app-shell:not(.battle-shell) .proposal-reflection textarea::placeholder { color: #506556; opacity: 1; }
-.app-shell:not(.battle-shell) :is(.reflection-note, .proposal-card > footer) { font-size: 16px; color: var(--student-secondary); line-height: 1.85; }
 .app-shell:not(.battle-shell) .manual-principles h3 { font-size: 26px; color: var(--student-ink); }
 .app-shell:not(.battle-shell) .manual-principles p { font-size: 18px; color: var(--student-secondary); }
 .app-shell:not(.battle-shell) .manual-section > p { font-size: 18px; color: var(--student-secondary); line-height: 1.85; }
@@ -271,8 +259,6 @@ body { font-size: 18px; }
   .app-shell:not(.battle-shell) .growth-levels summary b { flex-basis: calc(100% - 58px); }
   .app-shell:not(.battle-shell) .growth-levels summary > .status-badge { margin-left: 40px; }
   .app-shell:not(.battle-shell) .growth-levels summary > svg { margin-left: auto; }
-  .app-shell:not(.battle-shell) .proposal-card-head h2 { font-size: 28px; }
-  .app-shell:not(.battle-shell) .proposal-card-head .eyebrow { font-size: 15px; }
   .app-shell:not(.battle-shell) .manual-section > .panel-title h2 { font-size: 26px; }
   .app-shell:not(.battle-shell) .source-question-list summary b { flex-basis: calc(100% - 28px); }
   .dialog-content > p, .dialog .intro-story { font-size: 16px !important; }

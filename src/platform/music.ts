@@ -8,9 +8,9 @@ export interface BattleMusicStatus { playing: boolean; error?: string }
 export interface MusicStatus extends BattleMusicStatus { track: MusicTrack | null }
 
 const TRACKS = {
-  adventure: { file: 'EpicBattle_Deity.mp3', volume: .20, ducked: .06, attack: .03, ultimate: .012 },
-  battle: { file: 'EpicBattle_Deity.mp3', volume: .27, ducked: .09, attack: .035, ultimate: .014 },
-  final: { file: 'Fight3.mp3', volume: .27, ducked: .09, attack: .035, ultimate: .014 },
+  adventure: { file: 'EpicBattle_Deity.mp3', volume: .20, ducked: .06, ultimate: .012 },
+  battle: { file: 'EpicBattle_Deity.mp3', volume: .27, ducked: .09, ultimate: .014 },
+  final: { file: 'Fight3.mp3', volume: .27, ducked: .09, ultimate: .014 },
 } as const;
 const players: Partial<Record<MusicTrack, HTMLAudioElement>> = {};
 let wantedTrack: MusicTrack | null = null;
@@ -26,7 +26,8 @@ let volumeGeneration = 0;
 function targetVolume(track: MusicTrack): number {
   const settings = TRACKS[track];
   let value: number = ducked ? settings.ducked : settings.volume;
-  for (const kind of battleDucks.values()) value = Math.min(value, settings[kind]);
+  for (const kind of battleDucks.values())
+    value = Math.min(value, kind === 'attack' ? settings.volume * .25 : settings.ultimate);
   return value;
 }
 

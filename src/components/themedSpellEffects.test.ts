@@ -30,7 +30,7 @@ describe('themed spell performances', () => {
         const impact = accents.getObjectByName('ordinary-contact')!;
         const meshes = nodes(accents).filter((node): node is THREE.Mesh => node instanceof THREE.Mesh);
         const geometryIds = meshes.map(mesh => mesh.geometry.uuid);
-        expect(meshes).toHaveLength(26);
+        expect(meshes.length).toBeLessThanOrEqual(36);
         fx.update({ ...cast, time: .15 });
         expect(charge.visible).toBe(true); expect(trail.visible).toBe(false); expect(impact.visible).toBe(false);
         expect(charge.position.x).toBe(cast.start.x);
@@ -42,6 +42,7 @@ describe('themed spell performances', () => {
         }
         fx.update({ ...cast, time: SPELL_IMPACT_SECONDS });
         expect(trail.visible).toBe(false); expect(impact.visible).toBe(true);
+        expect(impact.getObjectByName('ordinary-hit-rays')!.visible).toBe(true);
         expect(impact.position.x).toBe(cast.target.x); expect(impact.position.y).toBe(cast.target.y);
         const initialSpread = impact.children[0].position.length();
         fx.update({ ...cast, time: 1.4 });

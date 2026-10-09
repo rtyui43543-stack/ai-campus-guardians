@@ -47,7 +47,7 @@ export function ResetProgressDialog({ completed, onClose, onReset, onExportBacku
       <li>全部 14 關的通關進度與最終魔王解鎖</li>
       <li>所有闖關成績、逐題作答與待練習紀錄</li>
       <li>初階與進階必殺技、收藏卡與能力徽章</li>
-      <li>守護提案、故事觀看標記及中途挑戰存檔</li>
+      <li>故事觀看標記及中途挑戰存檔</li>
     </ul>
     <p className="reset-retain-note"><ShieldCheck size={24} />離線下載內容及使用偏好會保留，不需重新下載。</p>
     <button type="button" className="button reset-backup" disabled={busy} onClick={onExportBackup}><Download size={23} />先匯出目前進度備份</button>

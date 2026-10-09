@@ -16,3 +16,38 @@
 .story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:55%;width:240px;max-width:28%;height:120px;scale:1;transform:translateX(-50%) scale(.8);transform-origin:center top}
 @media(max-width:640px){.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:57%;width:180px;max-width:none;height:110px;scale:1;transform:translateX(-50%) scale(.65);transform-origin:center top}}
 @media(max-height:560px) and (min-width:641px){.story-stage.story-stage-nine-head[data-story-shot] .story-props{left:50%;top:56%;width:200px;max-width:28%;height:110px;scale:1;transform:translateX(-50%) scale(.7);transform-origin:center top}}
+
+.story-scene-visual{position:absolute;inset:0;min-height:0;border-radius:inherit;overflow:hidden}
+/* Phone props have their own row, so no shot can put them over either character. */
+@media(max-width:640px),(max-height:560px) and (max-width:1000px){
+  .story-cinematic:not(.story-ready) .story-stage{display:grid;grid-template-rows:minmax(0,1fr) 64px}
+  .story-cinematic:not(.story-ready) .story-scene-visual{position:relative;inset:auto;border-radius:0;grid-row:1}
+  .story-cinematic:not(.story-ready) .story-stage-moment{position:relative;inset:auto;grid-row:2;min-width:0;overflow:hidden;border-top:1px solid #eac67180;background:#123c42;display:flex;align-items:center;justify-content:center}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-props{position:relative;inset:auto;left:auto;top:auto;width:100%;max-width:none;height:100%;padding:7px 12px;gap:9px;transform:none;scale:1;animation:none;filter:none}
+  .story-cinematic:not(.story-ready) .story-props svg{width:22px;height:22px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-prop-label{display:block;position:static;transform:none;padding:0;border:0;border-radius:0;background:none;white-space:normal;font-size:12px;line-height:1.4;max-width:155px;text-align:left}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-signal{padding:7px 12px;gap:7px;font-size:13px;animation:none}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-signal>span{display:inline}
+  .story-cinematic:not(.story-ready) .story-signal-orbit{position:static;animation:none}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-data-cards,
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-sorting-cards{gap:5px;transform:none}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-data-cards>span,
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-sorting-cards>span{min-width:38px;padding:4px 5px;font-size:11px;gap:2px;animation:none}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-lock{position:static;padding:7px;gap:5px;font-size:12px;animation:none}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-lock>span{display:inline}
+  .story-cinematic:not(.story-ready) .story-clue,
+  .story-cinematic:not(.story-ready) .story-notebook{flex:none;width:46px;height:48px;padding:4px 6px;gap:3px;border-width:2px;transform:none;animation:none}
+  .story-cinematic:not(.story-ready) .story-clue>svg,
+  .story-cinematic:not(.story-ready) .story-notebook>svg{width:22px;height:18px}
+  .story-cinematic:not(.story-ready) .story-paper-line{height:3px;flex-shrink:0}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-search,
+  .story-cinematic:not(.story-ready) .story-thinking{position:static;animation:none}
+  .story-cinematic:not(.story-ready) .story-search svg{width:30px;height:30px}
+  .story-cinematic:not(.story-ready) .story-video{flex:none;width:78px;height:48px;padding:4px;border-width:2px;border-radius:9px;transform:none}
+  .story-cinematic:not(.story-ready) .story-video>svg{width:20px;height:20px}
+  .story-cinematic:not(.story-ready) .story-wave{height:14px;gap:2px}
+  .story-cinematic:not(.story-ready) .story-wave i{width:3px;max-height:14px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-team{padding:7px 10px;gap:7px;transform:none}
+  .story-cinematic:not(.story-ready) .story-team svg:nth-child(2){width:28px;height:28px}
+  .story-cinematic:not(.story-ready) .story-stage[data-story-shot] .story-team-stars{display:none}
+}

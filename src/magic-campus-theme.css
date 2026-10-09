@@ -155,7 +155,7 @@
 .app-shell.magic-campus .learning-promise { background: #edf9f6; border: 2px solid #93bfc1; box-shadow: 0 7px 20px #28547310; }
 .app-shell.magic-campus .promise-icon { background: #d5eee9; color: #245467; border: 1px solid #97c4bf; }
 
-.app-shell.magic-campus :is(.surface, .proposal-card) { background-color: #fffef9; box-shadow: 0 9px 24px #23447112; border-color: #b4c7d9; }
+.app-shell.magic-campus .surface { background-color: #fffef9; box-shadow: 0 9px 24px #23447112; border-color: #b4c7d9; }
 .app-shell.magic-campus .offline-pack { position: relative; isolation: isolate; overflow: hidden; background: linear-gradient(135deg, #fffdf8, #eaf8f9 72%, #e8ecff); border: 2px solid #9db9ce; box-shadow: 0 12px 26px #2b52751a; }
 .app-shell.magic-campus .offline-pack::before { content: ''; position: absolute; inset: 0 0 auto; height: 5px; background: linear-gradient(90deg, #398a93, #7b62a9, #e7bd65); }
 .app-shell.magic-campus .offline-pack-icon { color: #f0ffff; background: linear-gradient(135deg, #2b6481, #4e4b81); box-shadow: 0 4px 10px #284d6f20; }
@@ -175,10 +175,6 @@
 .app-shell.magic-campus .skill-card.unlocked { background: linear-gradient(135deg, #fffef9, #e2f6eb); border-color: #69a994; box-shadow: 0 5px 14px #408f7920; }
 .app-shell.magic-campus .run-history-list > button { background: #f0f5fc; border-color: #a9bfd6; }
 .app-shell.magic-campus .run-history-list > button:hover { background: #e4f0f8; }
-.app-shell.magic-campus .proposal-card { border: 3px double #a58b51; background: linear-gradient(180deg, #fffef9, #fff9e9); }
-.app-shell.magic-campus .proposal-card-head { border-color: #d5ba78; }
-.app-shell.magic-campus .proposal-stamp { color: #75511e; background: #fff2cb; border-color: #ba954f; }
-.app-shell.magic-campus .proposal-reflection { background: #edf7f8; border-color: #a9c8d2; }
 
 /* Score cards are school achievements, with existing legible numbers and wording. */
 .app-shell.magic-campus .score-summary { position: relative; isolation: isolate; overflow: hidden; background: linear-gradient(135deg, #fffef9, #edf8f9); border-color: #8499bd; box-shadow: 0 14px 28px #2546721a; }
@@ -231,5 +227,4 @@
 @media print {
   .app-shell.magic-campus { background: #fff; }
   .app-shell.magic-campus::before { display: none; }
-  .app-shell.magic-campus .proposal-card { background: #fff; box-shadow: none; }
 }

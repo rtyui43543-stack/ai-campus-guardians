@@ -1,5 +1,7 @@
 # 3D 十二關版本驗收
 
+手機劇情圖示、普通攻擊強化與提案功能移除的最新驗收見 [mobile-story-and-attacks-acceptance.md](mobile-story-and-attacks-acceptance.md)。普通攻擊配樂比例以該份紀錄的 25% 為準。
+
 平板直式／橫式與最新戰鬥混音驗收見 [tablet-combat-audio-acceptance.md](tablet-combat-audio-acceptance.md)，後續介面更新須檢查其中的平板尺寸矩陣。
 
 最新版文字閱讀與闖關評分的驗收見 [score-readability-acceptance.md](score-readability-acceptance.md)。

@@ -147,6 +147,13 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
     note('impact', .9, enhanced ? .42 : .27, fundamental * 1.6, 45, .23 * force, targetPan, 'triangle');
     air('impact', .9, profile.texture === 'flame' ? .47 : .19, profile.air, profile.air * .28,
       .17 * force, targetPan, profile.texture === 'flame' ? 'lowpass' : 'bandpass');
+    if (!enhanced) {
+      // A crisp contact transient and a short low follow-through give an
+      // ordinary strike weight without borrowing a summon's long explosion.
+      texture('impact', 'contact-snap', .9, .07, Math.max(2100, profile.air), 750,
+        .10, targetPan, 'highpass');
+      note('tail', 1.015, .22, 92, 42, .11, targetPan, 'sine');
+    }
     switch (profile.texture) {
       case 'metal':
         [1, 1.48, 2.09].forEach((ratio, i) => note('impact', .905 + i * .013, .57 - i * .08,

@@ -1,13 +1,11 @@
 import { useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Download, Flag, Lightbulb, Printer, RotateCcw, Settings, ShieldCheck, Sparkles, Upload, WifiOff } from 'lucide-react';
+import { Download, Flag, Lightbulb, RotateCcw, Settings, ShieldCheck, Upload, WifiOff } from 'lucide-react';
 import { chapters, levels } from '../content/levels';
-import { presentQuestion, questionById } from '../content';
 import type { CompletedRun, Level, Progress } from '../domain/types';
 import { exportBackup, parseBackup } from '../domain/storage';
 import { useOffline } from '../platform/offline';
-import { appAssetUrl } from '../platform/urls';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
-import { chapterIcons, modeNames } from '../App';
+import { chapterIcons } from '../App';
 import { UltimateCollection } from './UltimateCollection';
 import { GrowthDashboard } from './GrowthDashboard';
 import { ThinkingFootprints } from './ThinkingFootprints';
@@ -44,37 +42,6 @@ export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; 
         <Icon size={29} /><h3>{chapter.skill}</h3><p>{chapter.shortTitle}</p><span>{completed === 2 ? '已點亮' : completed + ' / 2 關'}</span>
       </div>;
     })}</div>
-  </>;
-}
-
-const proposalStages = ['保護參與者', '核對活動資訊', '善用 AI 分工', '分辨可疑影像', '誠實完成學習'];
-export function ProposalPanel({ progress, onUpdate, onLevel, onNotice }: {
-  progress: Progress; onUpdate: (p: Progress) => void; onLevel: (l: Level) => void; onNotice: (s: string) => void;
-}) {
-  const [index, setIndex] = useState(Math.max(0, progress.proposals.length - 1));
-  const proposal = progress.proposals[index];
-  const exportProposal = () => {
-    if (!proposal) return;
-    const text = '# 我的 AI 使用約定\n\n為班級活動訂一份安心使用 AI 的約定\n\n' + proposal.decisions.map((d, i) =>
-      '## ' + (i + 1) + '. ' + proposalStages[i] + '\n\n' + d.action + (d.reason ? '\n\n理由：' + d.reason : '')).join('\n\n') +
-      '\n\n## 我還想補充\n\n' + (proposal.reflection || '（尚未填寫）') +
-      '\n\n《AI 校園守護隊》離線學習模擬 · ' + modeNames[proposal.mode] + '模式\n';
-    downloadFile('我的 AI 使用約定.md', text, 'text/markdown;charset=utf-8'); onNotice('守護提案已匯出。也可以使用「列印提案」存成 PDF。');
-  };
-  return <>
-    <Heading eyebrow="YOUR GUARDIAN PROPOSAL" title="我的好方法，讓 AI 幫上忙。">完成進階第六關，就能得到自己的 AI 使用約定卡。把查證、個資與學習誠信，一起帶進班級生活。</Heading>
-    {!proposal ? <div className="surface empty-state"><BookOpen size={45} /><h2>你的第一份守護提案，在這裡等你。</h2><p>為班級活動選擇能保護同學、核對資訊，又能自己學會的做法。</p><button className="button primary" onClick={() => onLevel(levels[11])}>前往進階第 6 關<ArrowRight size={18} /></button></div> : <>
-      <div className="proposal-toolbar"><label>選擇提案 <select value={index} onChange={e => setIndex(Number(e.target.value))}>{progress.proposals.map((p, i) => <option key={p.at} value={i}>第 {i + 1} 份 · {modeNames[p.mode]} · {new Date(p.at).toLocaleDateString('zh-TW')}</option>)}</select></label>
-        <div><button className="button secondary" onClick={exportProposal}><Download size={17} />匯出文字</button><button className="button primary" onClick={() => window.print()}><Printer size={17} />列印提案</button></div></div>
-      <article className="proposal-card" id="printable-proposal"><div className="proposal-card-head"><img src={appAssetUrl('/icon-192.png')} alt="" /><div><span className="eyebrow">MY CAMPUS, OUR FUTURE</span><h2>我的 AI 使用約定</h2><p>為班級活動訂一份安心使用 AI 的約定</p></div><span className="proposal-stamp"><ShieldCheck size={28} />校園守護隊</span></div>
-        <div className="proposal-decisions">{proposal.decisions.map((d, i) => <section key={d.questionId}><span>{String(i + 1).padStart(2, '0')}</span><div><h3>{proposalStages[i]}</h3><p>{d.action}</p><small>{d.reason || presentQuestion(questionById.get(d.questionId)!, proposal.mode).explanation}</small></div></section>)}</div>
-        <div className="proposal-reflection"><label htmlFor="reflection"><Sparkles size={18} />我還想補充的保障或新點子</label><textarea id="reflection" maxLength={4000} rows={4} placeholder="例如：我想先問同學有哪些需要，再和老師一起試用。" value={proposal.reflection} onChange={e => {
-          const proposals = progress.proposals.map((p, i) => i === index ? { ...p, reflection: e.target.value } : p);
-          onUpdate({ ...progress, proposals, updatedAt: new Date().toISOString() });
-        }} /><p className="print-reflection">{proposal.reflection || '我會繼續觀察、詢問與修正。'}</p><small className="reflection-note">自由文字只保存在這台裝置，作為反思紀錄，不交給 AI 判分。</small></div>
-        <footer>我的好主意，也會隨新資訊繼續改進。<span>{modeNames[proposal.mode]}模式 · {new Date(proposal.at).toLocaleDateString('zh-TW')}</span></footer>
-      </article>
-    </>}
   </>;
 }
 

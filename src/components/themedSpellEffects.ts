@@ -326,8 +326,8 @@ const attackMotifs: Record<AttackMotif, number[][]> = {
   web: [[0, -.18], [-.055, -.05], [-.18, 0], [-.055, .05], [0, .18], [.055, .05], [.18, 0], [.055, -.05]],
 };
 
-/** Local, pooled accents make an ordinary cast read as charge → flight → contact.
- * The original elemental objects stay in front; only 26 simple meshes are added,
+/** Pooled accents make an ordinary cast read as charge → flight → contact.
+ * Stronger local trails and contact rays retain the elemental silhouette,
  * without lights, screen flashes, per-frame geometry or changes to hit timing. */
 function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: AttackMotif) {
   const root = group(parent, 'ordinary-attack-accents');
@@ -352,17 +352,32 @@ function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: Att
   const waves = Array.from({ length: 2 }, () => {
     const part = new THREE.Mesh(waveGeometry, waveMaterial); impact.add(part); return part;
   });
+  const emphasis = group(impact, 'ordinary-hit-rays');
+  const rayGeometry = new THREE.PlaneGeometry(.54, .08);
+  const rayMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .9, depthWrite: false,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+  const rays = Array.from({ length: 8 }, () => {
+    const part = new THREE.Mesh(rayGeometry, rayMaterial); emphasis.add(part); return part;
+  });
+  const chargeHalo = new THREE.Mesh(new THREE.TorusGeometry(.32, .025, 4, 24), rayMaterial);
+  chargeHalo.name = 'ordinary-charge-halo'; charge.add(chargeHalo);
   // Reused scratch vectors avoid per-frame vector allocation in the accent layer.
   const flightPoint = new THREE.Vector3(), direction = new THREE.Vector3();
   return { root, update(f: SpellFrame) {
+    const ordinary = !f.enemyCritical;
+    // The existing enemy critical choreography keeps its original accent size.
+    template.material.emissiveIntensity = ordinary ? .7 : .42;
     const prepare = f.reducedMotion ? .6 : smooth(f.time / .42);
     anchor(charge, f.start, f); charge.visible = visibleDuring(f, .02, .50);
     charges.forEach((part, i) => {
       const angle = i * Math.PI / 3 + (f.reducedMotion ? 0 : f.time * 1.2);
       const radius = .50 - prepare * .21;
       part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius, -.03);
-      part.rotation.z = angle; part.scale.setScalar(.65 + prepare * .55);
+      part.rotation.z = angle; part.scale.setScalar((.65 + prepare * .55) * (ordinary ? 1.18 : 1));
     });
+    chargeHalo.visible = ordinary;
+    chargeHalo.scale.setScalar(f.reducedMotion ? 1.3 : 1.55 - prepare * .4);
+    chargeHalo.position.z = -.05;
     trail.visible = !f.reducedMotion && visibleDuring(f, .43, SPELL_IMPACT_SECONDS);
     path(f, flightPoint); direction.copy(f.target).sub(f.start).normalize();
     const angle = Math.atan2(direction.y, direction.x);
@@ -372,21 +387,31 @@ function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: Att
       part.position.copy(flightPoint).addScaledVector(direction, -lag * f.scale);
       part.position.x -= direction.y * side * f.scale; part.position.y += direction.x * side * f.scale;
       part.position.z = .81; part.quaternion.copy(f.camera.quaternion); part.rotateZ(angle);
-      part.scale.set(f.scale * (1.05 - i * .06), f.scale * (1 - i * .06), f.scale);
+      part.scale.set(f.scale * (1.05 - i * .06) * (ordinary ? 1.55 : 1),
+        f.scale * (1 - i * .06) * (ordinary ? 1.45 : 1), f.scale);
     });
     const spread = f.reducedMotion ? .62 : smooth((f.time - SPELL_IMPACT_SECONDS) / .62);
     anchor(impact, f.target, f); impact.visible = visibleDuring(f, SPELL_IMPACT_SECONDS, 1.88);
     fragments.forEach((part, i) => {
-      const angle = i * Math.PI / 6 + .15, radius = .22 + spread * (.52 + i % 3 * .08);
+      const angle = i * Math.PI / 6 + .15, radius = .22 + spread * (.52 + i % 3 * .08) * (ordinary ? 1.3 : 1);
       part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * .78, .03);
       part.rotation.z = angle + (f.reducedMotion ? 0 : spread * .45);
-      part.scale.setScalar((i % 2 ? .80 : 1.12) * (1 - spread * .35));
+      part.scale.setScalar((i % 2 ? .80 : 1.12) * (1 - spread * .35) * (ordinary ? 1.25 : 1));
     });
     waves.forEach((part, i) => {
-      const scale = .62 + spread * 1.45 + i * .20;
+      const scale = (.62 + spread * 1.45 + i * .20) * (ordinary ? 1.18 : 1);
       part.scale.set(scale, scale * .72, 1); part.rotation.z = i * Math.PI;
       part.position.z = -.035 - i * .012;
     });
+    emphasis.visible = ordinary && visibleDuring(f, SPELL_IMPACT_SECONDS, f.reducedMotion ? 1.88 : 1.55);
+    const contact = f.reducedMotion ? .4 : smooth((f.time - SPELL_IMPACT_SECONDS) / .48);
+    rays.forEach((part, i) => {
+      const angle = i * Math.PI / 4 + .12, radius = .20 + contact * .86;
+      part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * .83, .075);
+      part.rotation.z = angle; part.scale.set(1.1 - contact * .2, 1 - contact * .5, 1);
+    });
+    rayMaterial.blending = f.reducedMotion ? THREE.NormalBlending : THREE.AdditiveBlending;
+    rayMaterial.opacity = f.reducedMotion ? .35 : .9 * (1 - contact);
     waveMaterial.opacity = f.reducedMotion ? .38 : .7 * (1 - smooth((f.time - 1.25) / .6));
   } };
 }

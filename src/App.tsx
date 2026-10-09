@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X, Zap } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X, Zap } from 'lucide-react';
 import type { Chapter, CompletedRun, Level, Mode, Progress, Session } from './domain/types';
 import { chapters, levels, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
@@ -17,7 +17,7 @@ import { forgetOpening, hasSeenOpening, rememberOpening } from './platform/openi
 import { Arena, GuardianPortrait, abilityNames } from './components/Arena';
 import { battleVisibility } from './components/battleVisibility';
 import { MusicCredits } from './components/MusicCredits';
-import { downloadFile, GrowthPanel, OfflinePanel, ProposalPanel } from './components/Panels';
+import { downloadFile, GrowthPanel, OfflinePanel } from './components/Panels';
 import { ResetProgress } from './components/ResetProgress';
 import { LevelScore, ScoreSummary } from './components/Scoring';
 import { StoryCinematic } from './components/StoryCinematic';
@@ -36,7 +36,6 @@ import './styles/combat-status.css';
 
 const navItems = [
   { id: 'map', label: '冒險地圖', icon: Map }, { id: 'growth', label: '我的成長', icon: Medal },
-  { id: 'proposals', label: '守護提案', icon: BookOpen },
   { id: 'settings', label: '離線與設定', icon: Settings }
 ] as const;
 export const modeNames: Record<Mode, string> = { starter: '初階', advanced: '進階' };
@@ -265,19 +264,7 @@ export function App() {
     const next = advanceSession(active);
     stopAudio(); setHintOpen(false);
     if (next.finished) {
-      let finished = finishSession(snapshot, active);
-      if (active.levelId === 12 && !active.review && latestRun(finished)?.passed !== false) {
-        const records = [...active.records, next.record];
-        const proposal = {
-          at: new Date().toISOString(), mode: active.mode, reflection: '',
-          decisions: records.map(record => {
-            const q = presentQuestion(questionById.get(record.questionId)!, record.mode);
-            return { questionId: record.questionId, action: record.action === null ? '' : q.choices[record.action].text,
-              reason: record.reason === null ? '' : q.reasons[record.reason].text };
-          }),
-        };
-        finished = { ...finished, proposals: [...finished.proposals, proposal] };
-      }
+      const finished = finishSession(snapshot, active);
       setResult(latestRun(finished));
       commit(finished); setScreen('results');
     } else if (next.session) {
@@ -421,10 +408,9 @@ export function App() {
           {isDefeated(active) && !animating && <DefeatDialog level={battleLevel} hint={question.hint} onRestart={restart} onHome={() => navigate('cover')} />}
         </section>}
         {screen === 'battle' && !active && <div className="empty-state"><ShieldCheck size={40} /><h1>你的冒險，從這裡開始</h1><button className="button primary" onClick={() => navigate('map')}>前往冒險地圖<ArrowRight size={18} /></button></div>}
-        {screen === 'results' && result && <Results session={result} onLevel={openLevelStory} onMap={() => navigate('map')} onProposal={() => navigate('proposals')} />}
+        {screen === 'results' && result && <Results session={result} onLevel={openLevelStory} onMap={() => navigate('map')} />}
         {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'growth' && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
-        {screen === 'proposals' && <ProposalPanel progress={progress} onUpdate={commit} onLevel={openLevelStory} onNotice={setNotice} />}
         {screen === 'settings' && <><OfflinePanel progress={progress} offline={offline} onUpdate={next => { if (next.settings.music !== progress.settings.music) { if (next.settings.music) playMusicFromGesture('adventure'); else stopMusic(); } commit(next); }} onNotice={setNotice} onMap={() => navigate('map')} />
           <ResetProgress progress={progress} onReset={resetAllProgress} onExportBackup={() => {
             downloadFile('AI校園守護隊-重置前備份-' + new Date().toISOString().slice(0, 10) + '.json', exportBackup(progressRef.current ?? progress), 'application/json');
@@ -515,8 +501,8 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
   </article>;
 }
 
-function Results({ session, onLevel, onMap, onProposal }: {
-  session: CompletedRun; onLevel: (level: Level) => void; onMap: () => void; onProposal: () => void;
+function Results({ session, onLevel, onMap }: {
+  session: CompletedRun; onLevel: (level: Level) => void; onMap: () => void;
 }) {
   const level = getLevel(session.levelId)!;
   const chapter = getChapter(level.chapterId)!;
@@ -533,7 +519,7 @@ function Results({ session, onLevel, onMap, onProposal }: {
       return <details key={q.id}><summary><div className="result-question"><strong>第 {i + 1} 題</strong><b>{text.prompt}</b><small>{describeAttempt(r)}{r.timed ? ' · 作答 ' + ((r.elapsedMs ?? 0) / 1000).toFixed(1) + ' 秒' : ''}</small></div><span className="result-question-score">{score.rows[i].points}／{Number(score.rows[i].maxPoints.toFixed(2))} 分{score.rows[i].bonusPoints > 0 && <small>必殺＋{score.rows[i].bonusPoints}</small>}</span><ChevronRight size={18} /></summary><p><b>你的答案：</b>{r.action === null ? '超時，未完成作答' : text.choices[r.action].text}<br />{text.explanation}</p></details>;
     })}</div></section>
     <div className="results-actions"><button className="button secondary" onClick={onMap}><Home size={18} />回冒險地圖</button>
-      {session.passed === false ? <button className="button primary" onClick={() => onLevel(level)}>再挑戰這一關<RotateCcw size={18} /></button> : level.id === 12 && !session.review ? <button className="button primary" onClick={onProposal}>我的 AI 使用約定<ArrowRight size={18} /></button>
+      {session.passed === false ? <button className="button primary" onClick={() => onLevel(level)}>再挑戰這一關<RotateCcw size={18} /></button>
         : !level.finalBoss && level.id < 12 && <button className="button primary" onClick={() => onLevel(getLevel(level.id + 1)!)}>前往{modeNames[getLevel(level.id + 1).mode]}{levelLabel(getLevel(level.id + 1))}<ArrowRight size={18} /></button>}</div>
   </div>;
 }

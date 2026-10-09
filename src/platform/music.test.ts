@@ -141,7 +141,7 @@ describe('offline battle music lifecycle', () => {
     vi.useFakeTimers();
     await music.startBattleMusic();
     const releaseAttack = music.acquireBattleMusicDuck('attack');
-    expect(instances[0].volume).toBe(.035);
+    expect(instances[0].volume).toBe(.27 * .25);
     const releaseUltimate = music.acquireBattleMusicDuck('ultimate');
     expect(instances[0].volume).toBe(.014);
     releaseAttack(); vi.advanceTimersByTime(300);
@@ -170,6 +170,22 @@ describe('offline battle music lifecycle', () => {
     expect(instances[0].volume).toBeCloseTo(.09);
     music.setBattleMusicDucked(false);
     expect(instances[0].volume).toBe(.27);
+  });
+
+  it.each(['adventure', 'battle', 'final'] as const)('keeps ordinary attacks at a quarter of the %s track volume', async track => {
+    vi.useFakeTimers();
+    await music.startMusic(track);
+    const original = instances[0].volume;
+    const release = music.acquireBattleMusicDuck('attack');
+    expect(instances[0].volume / original).toBe(.25);
+    music.setBattleMusicDucked(true);
+    music.setBattleMusicDucked(false);
+    expect(instances[0].volume).toBe(original * .25);
+    music.stopMusic();
+    await music.startMusic(track);
+    expect(instances[0].volume).toBe(original * .25);
+    release(); vi.advanceTimersByTime(300);
+    expect(instances[0].volume).toBe(original);
   });
 
   it('cancels an old recovery on the next hit and keeps a cast duck when music is toggled back on', async () => {

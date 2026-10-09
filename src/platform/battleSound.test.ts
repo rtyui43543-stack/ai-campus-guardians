@@ -65,6 +65,20 @@ describe('battle sound choreography', () => {
     expect(blocked.voices.filter(v => v.phase === 'impact' && v.kind !== 'noise').every(v => v.kind === 'sine' && v.to > 400)).toBe(true);
     expect(missed.voices.some(v => v.phase === 'impact' && v.kind === 'triangle')).toBe(false);
     expect(blocked.voices.some(v => v.phase === 'impact' && v.kind === 'triangle')).toBe(false);
+    expect([missed, blocked].every(sound => !sound.voices.some(v => v.layer === 'contact-snap'))).toBe(true);
+  });
+
+  it('adds a precise contact transient for ordinary hits from either side without changing summon layers', () => {
+    for (const success of [true, false]) for (const mode of ['starter', 'advanced'] as const) {
+      for (let theme = 1; theme <= 6; theme++) {
+        const normal = buildBattleSound(success, theme, false, { mode });
+        const enhanced = buildBattleSound(success, theme, false, { mode, ultimate: true, enemyCritical: true });
+        expect(normal.voices.find(v => v.layer === 'contact-snap')).toMatchObject({
+          phase: 'impact', kind: 'noise', at: normal.impact, duration: .07,
+        });
+        expect(enhanced.voices.some(v => v.layer === 'contact-snap')).toBe(false);
+      }
+    }
   });
 
   it('gives firebird casts a creature call, moving wings, timed explosion and sustained crackling burn', () => {
@@ -188,8 +202,25 @@ describe('battle Web Audio scheduling and cancellation', () => {
     });
     expect(context.nodes[1].threshold.value).toBe(-10);
     expect(context.nodes[1].ratio.value).toBe(8);
+    expect(context.nodes[0].gain.value).toBe(.85);
     battleSound(false, 6);
     expect(context.createBuffer).toHaveBeenCalledOnce();
+  });
+
+  it('raises only ordinary hero and enemy mixes while keeping the same compressor headroom', async () => {
+    const { battleSound } = await import('./audio');
+    for (const success of [true, false]) {
+      const before = MockContext.instances[0]?.nodes.length ?? 0;
+      battleSound(success, 4);
+      const context = MockContext.instances[0];
+      expect(context.nodes[before].gain.value).toBe(1.20);
+      const limiter = context.nodes[before + 1];
+      expect(limiter.threshold.value).toBe(-10);
+      expect(limiter.ratio.value).toBe(8);
+      const start = context.nodes.length;
+      battleSound(success, 4, false, { ultimate: true, enemyCritical: true });
+      expect(context.nodes[start].gain.value).toBe(.85);
+    }
   });
 
   it('disconnects finished cast nodes and cancels old queued strikes on a new cast, leaving no delayed hit', async () => {

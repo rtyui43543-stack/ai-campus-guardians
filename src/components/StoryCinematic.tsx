@@ -101,10 +101,12 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
         <button type="button" className="story-close" onClick={() => leave(onClose)} aria-label="關閉故事"><X size={24} /></button>
       </header>
       <div className={'story-stage story-stage-' + (beat?.scene ?? 'campus') + (level?.finalBoss && level.mode === 'advanced' ? ' story-stage-nine-head' : '')} data-story-shot={shot}>
-        <Arena chapter={chapter.id} finalBoss={level?.finalBoss} mode={level?.mode ?? 'starter'} guardian={boss?.name ?? '米米'} companion={!level} playerHp={100} enemyHp={level ? initialEnemyHp(level.id) : 100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
-        <div className="story-stage-vignette" />
+        <div className="story-scene-visual">
+          <Arena chapter={chapter.id} finalBoss={level?.finalBoss} mode={level?.mode ?? 'starter'} guardian={boss?.name ?? '米米'} companion={!level} playerHp={100} enemyHp={level ? initialEnemyHp(level.id) : 100} reducedMotion={reducedMotion} cue="" cinemaShot={shot} cinemaPaused={!playing || ready} />
+          <div className="story-stage-vignette" />
+          {!ready && <div className="story-scene-number">第 {index + 1} 幕 / {beats.length} 幕</div>}
+        </div>
         {!ready && beat && <div className="story-stage-moment" key={beat.id}><StoryProps scene={beat.scene} /></div>}
-        {!ready && <div className="story-scene-number">第 {index + 1} 幕 / {beats.length} 幕</div>}
         {ready && <section className="story-ready-card" aria-labelledby="story-ready-title">
           <span className="story-ready-symbol"><ShieldCheck size={34} /></span>
           <h3 id="story-ready-title" tabIndex={-1}>{level ? '任務準備完成！' : '準備好開始冒險了嗎？'}</h3>
