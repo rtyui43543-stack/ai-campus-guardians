@@ -114,16 +114,16 @@ describe('final mission entry and selected ultimate state', () => {
     let current = advanceSession(castle).session!;
     for (let hit = 0; hit < (mode === 'advanced' ? 2 : 1); hit++) {
       current = wrong(current);
-      expect(current.shield).toBe(hit === 0 ? 92 : 74);
+      expect(current.shield).toBe(100);
       expect(current.preventedDamage).toBe(true);
       current = retryQuestion(checkpoint(progress, current));
     }
     current = wrong(current);
-    expect(current.shield).toBe(mode === 'advanced' ? 44 : 62);
+    expect(current.shield).toBe(70);
     current = retryQuestion(checkpoint(progress, current));
     while (current.index < 7) current = advanceSession(solve(current)).session!;
     const restored = checkpoint(progress, solve(current, 3));
-    expect(restored).toMatchObject({ ultimateId: 3, energy: 0, bonusPoints: 20, shield: mode === 'advanced' ? 68 : 74 });
+    expect(restored).toMatchObject({ ultimateId: 3, energy: 0, bonusPoints: 20, shield: mode === 'advanced' ? 94 : 82 });
     // A separate naturally damaged checkpoint verifies the full 12/24-HP recovery amount.
     let damaged = selectUltimate(reach(mode, 3).session, 3);
     damaged = retryQuestion(wrong(damaged));

@@ -189,7 +189,7 @@ describe('new campaign storage and backups', () => {
     const firstHit = wrong(fifth);
     expect(firstHit).toMatchObject({ shield: 100, barrier: false, barrierCharges: 0, preventedDamage: true });
     const secondHit = wrong(retryQuestion(firstHit));
-    expect(secondHit).toMatchObject({ shield: 88, preventedDamage: false });
+    expect(secondHit).toMatchObject({ shield: 78, preventedDamage: false });
     expect(storage.parseBackup(storage.exportBackup(applySession(restored, secondHit))).active).toEqual(secondHit);
   });
 

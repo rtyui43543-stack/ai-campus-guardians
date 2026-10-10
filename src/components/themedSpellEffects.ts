@@ -1039,23 +1039,34 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
   // compressed air complete the previously empty impact groups.
   const collision = signature.clone(true); landing.add(collision); collision.name = 'enemy-contact-form';
   const ground = impactWave(root, 'enemy-local-pressure-wave', advanced ? 0xaaa0de : 0xd6b76f);
+  const pursuit = group(root, 'enemy-species-pursuit');
+  const pursuitForms = [-1, 1].map(side => {
+    const copy = signature.clone(true); pursuit.add(copy);
+    copy.name = 'enemy-pursuit-form-' + side; return copy;
+  });
+  const followUpWave = ground.clone(true); root.add(followUpWave); followUpWave.name = 'enemy-pursuit-contact';
   root.userData.sequence = 'species-charge-leading-projectile-material-contact';
   const flightPoint = new THREE.Vector3(), partPoint = new THREE.Vector3();
   return { root, update(frame) {
     const f = heldOrdinaryFrame(frame);
+    const critical = !!f.enemyCritical;
+    const strength = critical ? 1.24 : 1;
+    root.userData.critical = critical;
+    root.userData.identity = enemySpellNames[mode][theme - 1] + (critical ? '追擊' : '');
+    root.userData.sequence = critical ? 'species-charge-leading-projectile-material-contact-paired-pursuit' : 'species-charge-leading-projectile-material-contact';
     accents.update(f);
     const hit = f.reducedMotion ? .62 : smooth((f.time - .9) / .40);
     const travel = limit((f.time - ORDINARY_LAUNCH_SECONDS) / (SPELL_IMPACT_SECONDS - ORDINARY_LAUNCH_SECONDS));
     ordinaryPath(f, flightPoint);
-    anchor(charge, f.start, f, .55 + smooth(f.time / ORDINARY_LAUNCH_SECONDS) * .32);
+    anchor(charge, f.start, f, (.55 + smooth(f.time / ORDINARY_LAUNCH_SECONDS) * .32) * strength);
     charge.visible = visibleDuring(f, .02, ORDINARY_LAUNCH_SECONDS);
     if (!f.reducedMotion) charge.rotateZ((theme === 6 || theme === 2 ? -.20 : .10) * (1 - smooth(f.time / ORDINARY_LAUNCH_SECONDS)));
-    anchor(projectile, f.reducedMotion ? f.target : flightPoint, f);
+    anchor(projectile, f.reducedMotion ? f.target : flightPoint, f, strength);
     projectile.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, .98);
     if (!f.reducedMotion) {
       if (theme === 6 && !advanced) projectile.rotateZ(-travel * Math.PI * 1.5);
       else if (theme === 3 && !advanced) projectile.rotateZ(-.35 * (1 - travel));
-      else if (theme === 5 && advanced) projectile.scale.set(f.scale * (1 + travel * .25), f.scale * (1 - travel * .12), f.scale);
+      else if (theme === 5 && advanced) projectile.scale.set(f.scale * strength * (1 + travel * .25), f.scale * strength * (1 - travel * .12), f.scale * strength);
     }
     pieces.forEach((piece, i) => {
       piece.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, .97);
@@ -1072,7 +1083,7 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
       if (theme === 3 && advanced) piece.rotateZ(Math.PI / 2);
       else if (!f.reducedMotion) piece.rotateZ((i % 2 ? .25 : -.25) * travel);
     });
-    anchor(landing, f.target, f); landing.visible = !f.blocked && visibleDuring(f, .9, 1.83);
+    anchor(landing, f.target, f, critical ? 1.14 : 1); landing.visible = !f.blocked && visibleDuring(f, .9, 1.83);
     collision.visible = !f.missed;
     collision.scale.copy(signature.scale).multiplyScalar(.88 - hit * .55);
     if (theme === 3 && !advanced) collision.scale.y *= .5;
@@ -1085,8 +1096,23 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
       part.scale.setScalar(size * (1 - hit * .15));
     });
     const floor = partPoint.copy(f.target); floor.y -= .40 * f.scale;
-    anchor(ground, floor, f, .7 + hit * .70);
+    anchor(ground, floor, f, (.7 + hit * .70) * (critical ? 1.14 : 1));
     ground.visible = !f.blocked && !f.missed && visibleDuring(f, .9, 1.72);
+    // One registered counterattack gets a visible material follow-up. The engine
+    // applies its total damage once at .9; these pooled forms never change HP.
+    const contact = !f.blocked && !f.missed;
+    pursuit.visible = critical && contact && !f.reducedMotion && visibleDuring(f, 1.02, 1.30);
+    const followTravel = limit((f.time - 1.02) / .20);
+    ordinaryPath({ ...f, time: ORDINARY_LAUNCH_SECONDS + followTravel * (SPELL_IMPACT_SECONDS - ORDINARY_LAUNCH_SECONDS) }, flightPoint);
+    pursuitForms.forEach((part, i) => {
+      const point = partPoint.copy(flightPoint); point.y += (i ? 1 : -1) * .19 * f.scale * (1 - followTravel);
+      anchor(part, point, f, .67);
+      part.scale.multiply(signature.scale);
+    });
+    const followHit = f.reducedMotion ? .62 : smooth((f.time - 1.22) / .33);
+    const followFloor = partPoint.copy(f.target); followFloor.y -= .36 * f.scale;
+    anchor(followUpWave, followFloor, f, .84 + followHit * .83);
+    followUpWave.visible = critical && contact && visibleDuring(f, f.reducedMotion ? .9 : 1.22, 1.90);
   } };
 }
 

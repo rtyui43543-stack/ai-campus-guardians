@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { EnemyCinematic, ENEMY_CINEMATIC_TIMING } from './EnemyCinematic';
+import { mainBossPursuitForms } from './MainBossPursuit';
+import { enemyAttackName } from './combatChoreography';
 
 describe('final enemy critical cinematics', () => {
   it('leaves student casts and ordinary/blocked enemy attacks out of the critical layer', () => {
@@ -81,5 +83,47 @@ describe('final enemy critical cinematics', () => {
     const ids = [...markup.matchAll(/ id="([^"]+)"/g)].map(match => match[1]);
     expect(new Set(ids).size).toBe(ids.length);
     for (const match of markup.matchAll(/url\(#([^)]*)\)/g)) expect(ids).toContain(match[1]);
+  });
+
+  it.each(['starter', 'advanced'] as const)('gives all six %s chapter pursuits their own material and ordered follow-up phases', mode => {
+    const silhouettes = new Set<string>();
+    for (let chapter = 1; chapter <= 6; chapter++) {
+      for (const reducedMotion of [false, true]) {
+        const markup = renderToStaticMarkup(<EnemyCinematic mode={mode} chapter={chapter} finalBoss={false} cue="enemy-ultimate-2-22" reducedMotion={reducedMotion} />);
+        const form = mainBossPursuitForms[mode][chapter - 1]; silhouettes.add(form);
+        expect(markup).toContain(`data-boss="${mode}-chapter-${chapter}"`);
+        expect(markup).toContain(`data-pursuit-form="${form}"`);
+        expect(markup).toContain(`data-form="${form}"`);
+        expect(markup).toContain(enemyAttackName(mode, chapter, false, true));
+        const phases = ['species-pursuit-charge', 'species-pursuit-flight', 'species-material-impact', 'species-follow-up-flight', 'species-follow-up-impact']
+          .map(phase => markup.indexOf(`data-phase="${phase}"`));
+        expect(phases.every(position => position >= 0)).toBe(true);
+        expect(phases).toEqual([...phases].sort((a, b) => a - b));
+        expect(markup.includes('is-reduced')).toBe(reducedMotion);
+        expect(markup).not.toMatch(/chaos-grimoire|nine-headed-phantom|phoenix|ice-dragon/);
+      }
+    }
+    expect(silhouettes.size).toBe(6);
+  });
+
+  it.each(['starter', 'advanced'] as const)('intercepts or dissipates a %s pursuit before either body-contact phase', mode => {
+    for (let chapter = 1; chapter <= 6; chapter++) {
+      for (const outcome of ['blocked', 'missed'] as const) {
+        const markup = renderToStaticMarkup(<EnemyCinematic mode={mode} chapter={chapter} finalBoss={false} cue="enemy-ultimate-2-0" reducedMotion={false} blocked={outcome === 'blocked'} missed={outcome === 'missed'} />);
+        expect(markup).toContain(`data-outcome="${outcome}"`);
+        expect(markup).toContain(outcome === 'blocked' ? 'data-phase="guard-intercept"' : 'data-phase="missed-cast-dissipates"');
+        expect(markup).not.toMatch(/data-phase="species-material-impact"|data-phase="species-follow-up-flight"|data-phase="species-follow-up-impact"/);
+      }
+    }
+  });
+
+  it('synchronizes the second contact at 1220 ms and removes secondary flight for both reduced-motion preferences', () => {
+    const css = readFileSync(new URL('../styles/enemy-cinematic.css', import.meta.url), 'utf8');
+    expect(2050 * .595122).toBeCloseTo(1220, 2);
+    expect(css).toContain('59.5122%');
+    expect(css).toContain('.enemy-cinematic.is-reduced .enemy-main-pursuit,.enemy-cinematic.is-reduced .enemy-main-afterstrike{display:none}');
+    expect(css).toContain('.enemy-cinematic .enemy-main-pursuit,.enemy-cinematic .enemy-main-afterstrike{display:none}');
+    const source = readFileSync(new URL('./MainBossPursuit.tsx', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/setTimeout|setInterval|useEffect|requestAnimationFrame|<audio|<video/);
   });
 });

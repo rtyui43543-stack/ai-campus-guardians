@@ -64,7 +64,7 @@ export interface AttemptRecord {
   ultimateId?: number;
   preventedDamage?: boolean;
   /** Damage-over-time is saved per completed question, never recalculated on reload. */
-  combatRulesVersion?: 2;
+  combatRulesVersion?: 2 | 3;
   turnBurnDamage?: number;
   turnHealing?: number;
   /** Final-boss target saved with each attempt so legacy history can be reconstructed. */
@@ -97,14 +97,20 @@ export interface Session {
   timedOut?: boolean;
   preventedDamage?: boolean;
   /** Versioned additions do not grant old casts new effects retroactively. */
-  combatRulesVersion?: 2;
+  combatRulesVersion?: 2 | 3;
   wrongStreak?: number;
   enemyBurning?: boolean;
   enemyBurnDamage?: number;
   playerRegeneration?: boolean;
   frostGuard?: boolean;
+  /** Remaining landed attacks; legacy boolean-only ice retains one charge. */
+  frostGuardCharges?: number;
   mirrorGuard?: boolean;
+  /** Each incoming attack spends one chance and rolls once, including a miss. */
+  mirrorGuardCharges?: number;
   lightningHintQueued?: boolean;
+  /** Future questions still to highlight; the current highlighted question is already spent. */
+  lightningHintQuestions?: number;
   lightningHintChoices?: number[];
   lastEnemyDamage?: number;
   lastEnemyCritical?: boolean;

@@ -94,11 +94,12 @@ function combatRecordFields(raw: Record<string, unknown>, path: string, levelId:
   if (fields.timed && (level.mode !== 'advanced' || !finalBoss && slot > 5 || fields.elapsedMs === undefined)) reject(`${path}限時紀錄與關卡不一致`);
   if (fields.timedOut && (!fields.timed || fields.elapsedMs !== 30_000)) reject(`${path}超時紀錄缺少限時結束時間`);
   if (raw.ultimateId !== undefined) fields.ultimateId = integer(raw.ultimateId, `${path}.ultimateId`, 1, 6);
-  if (raw.combatRulesVersion !== undefined) fields.combatRulesVersion = integer(raw.combatRulesVersion, `${path}.combatRulesVersion`, 2, 2) as 2;
-  if (raw.turnBurnDamage !== undefined) fields.turnBurnDamage = integer(raw.turnBurnDamage, `${path}.turnBurnDamage`, 0, 4);
+  if (raw.combatRulesVersion !== undefined) fields.combatRulesVersion = integer(raw.combatRulesVersion, `${path}.combatRulesVersion`, 2, 3) as 2 | 3;
+  const burnPerTurn = fields.combatRulesVersion === 3 && levelId === 14 ? 6 : 4;
+  if (raw.turnBurnDamage !== undefined) fields.turnBurnDamage = integer(raw.turnBurnDamage, `${path}.turnBurnDamage`, 0, burnPerTurn);
   if (raw.turnHealing !== undefined) fields.turnHealing = integer(raw.turnHealing, `${path}.turnHealing`, 0, 4);
-  if ((fields.turnBurnDamage !== undefined || fields.turnHealing !== undefined) && fields.combatRulesVersion !== 2) reject(`${path}持續效果缺少戰鬥版本`);
-  if (fields.turnBurnDamage !== undefined && fields.turnBurnDamage !== 0 && fields.turnBurnDamage !== 4) reject(`${path}燃燒傷害不是每題四點`);
+  if ((fields.turnBurnDamage !== undefined || fields.turnHealing !== undefined) && fields.combatRulesVersion === undefined) reject(`${path}持續效果缺少戰鬥版本`);
+  if (fields.turnBurnDamage !== undefined && fields.turnBurnDamage !== 0 && fields.turnBurnDamage !== burnPerTurn) reject(`${path}燃燒傷害與戰鬥版本不符`);
   if (fields.ultimateUsed && (fields.ultimateId === undefined || !finalBoss && fields.ultimateId !== level.chapterId || slot < 4 || !finalBoss && slot > 5)) reject(`${path}必殺技與本關主題或充能順序不符`);
   if (fields.ultimateId !== undefined && !fields.ultimateUsed) reject(`${path}未施放卻帶有必殺技編號`);
   return fields;
@@ -122,8 +123,9 @@ function validateStatusTicks(records: readonly AttemptRecord[], path: string): v
   let burning = false;
   let regeneration = false;
   for (const [index, record] of records.entries()) {
-    if (record.combatRulesVersion === 2) {
-      if ((record.turnBurnDamage ?? 0) !== (burning ? 4 : 0)) reject(`${path}[${index}]燃燒傷害與先前施放紀錄不一致`);
+    if (record.combatRulesVersion !== undefined) {
+      const burnPerTurn = record.combatRulesVersion === 3 && questionById.get(record.questionId)?.levelId === 14 ? 6 : 4;
+      if ((record.turnBurnDamage ?? 0) !== (burning ? burnPerTurn : 0)) reject(`${path}[${index}]燃燒傷害與先前施放紀錄不一致`);
       if (!regeneration && (record.turnHealing ?? 0) !== 0) reject(`${path}[${index}]回血效果尚未啟動`);
       if (record.ultimateUsed && record.ultimateId === 5) burning = true;
       if (record.ultimateUsed && record.ultimateId === 3) regeneration = true;
@@ -188,11 +190,12 @@ function activeSession(value: unknown): Session | null {
   for (const key of ['enemyBurning', 'playerRegeneration', 'frostGuard', 'mirrorGuard', 'lightningHintQueued', 'lastEnemyCritical', 'lastEnemyMissed'] as const) {
     if (raw[key] !== undefined) extra[key] = boolean(raw[key], `active.${key}`);
   }
-  if (raw.combatRulesVersion !== undefined) extra.combatRulesVersion = integer(raw.combatRulesVersion, 'active.combatRulesVersion', 2, 2) as 2;
+  if (raw.combatRulesVersion !== undefined) extra.combatRulesVersion = integer(raw.combatRulesVersion, 'active.combatRulesVersion', 2, 3) as 2 | 3;
   if (raw.wrongStreak !== undefined) extra.wrongStreak = integer(raw.wrongStreak, 'active.wrongStreak', 0, 1000000);
-  if (raw.enemyBurnDamage !== undefined) extra.enemyBurnDamage = integer(raw.enemyBurnDamage, 'active.enemyBurnDamage', 0, 60);
-  if (raw.lastEnemyDamage !== undefined) extra.lastEnemyDamage = integer(raw.lastEnemyDamage, 'active.lastEnemyDamage', 0, finalBoss ? 30 : 12);
-  if (raw.lastTurnBurnDamage !== undefined) extra.lastTurnBurnDamage = integer(raw.lastTurnBurnDamage, 'active.lastTurnBurnDamage', 0, 4);
+  if (raw.enemyBurnDamage !== undefined) extra.enemyBurnDamage = integer(raw.enemyBurnDamage, 'active.enemyBurnDamage', 0, levelId === 14 ? 90 : 60);
+  if (raw.lastEnemyDamage !== undefined) extra.lastEnemyDamage = integer(raw.lastEnemyDamage, 'active.lastEnemyDamage', 0, finalBoss ? 30 : extra.combatRulesVersion === 3 ? 22 : 12);
+  const burnPerTurn = extra.combatRulesVersion === 3 && levelId === 14 ? 6 : 4;
+  if (raw.lastTurnBurnDamage !== undefined) extra.lastTurnBurnDamage = integer(raw.lastTurnBurnDamage, 'active.lastTurnBurnDamage', 0, burnPerTurn);
   if (raw.lastTurnHealing !== undefined) extra.lastTurnHealing = integer(raw.lastTurnHealing, 'active.lastTurnHealing', 0, 4);
   if (raw.resolvedTurnIndex !== undefined) extra.resolvedTurnIndex = integer(raw.resolvedTurnIndex, 'active.resolvedTurnIndex', index, index);
   if (raw.lightningHintChoices !== undefined) {
@@ -207,6 +210,18 @@ function activeSession(value: unknown): Session | null {
   } else if (extra.barrier !== undefined) {
     // Keep old saves at their original strength, including the former tree shield.
     extra.barrierCharges = extra.barrier ? 1 : 0;
+  }
+  for (const [counter, enabled] of [
+    ['frostGuardCharges', 'frostGuard'], ['mirrorGuardCharges', 'mirrorGuard'], ['lightningHintQuestions', 'lightningHintQueued'],
+  ] as const) {
+    if (raw[counter] !== undefined) {
+      extra[counter] = integer(raw[counter], `active.${counter}`, 0, selectedMode === 'advanced' ? 2 : 1);
+      if (extra[enabled] !== undefined && extra[enabled] !== (extra[counter]! > 0)) reject(`active.${enabled}開關與剩餘次數不一致`);
+      extra[enabled] = extra[counter]! > 0;
+    } else if (extra[enabled] === true) {
+      // Old active effects have exactly one remaining use, irrespective of their level.
+      extra[counter] = 1;
+    }
   }
   if (raw.energy !== undefined) extra.energy = integer(raw.energy, 'active.energy', 0, 3);
   if (raw.elapsedMs !== undefined) extra.elapsedMs = integer(raw.elapsedMs, 'active.elapsedMs', 0, 30_000);
@@ -252,18 +267,18 @@ function activeSession(value: unknown): Session | null {
     if (extra.timed !== (selectedMode === 'advanced')) reject('active最終關限時設定與模式不符');
   }
   validateStatusTicks(records, 'active.records');
-  if (extra.combatRulesVersion === 2) {
+  if (extra.combatRulesVersion !== undefined) {
     const settled = step === 'feedback' && (success || extra.timedOut) || step === 'defeat' && extra.timedOut;
     if (settled !== (extra.resolvedTurnIndex === index)) reject('active持續效果與本題結算狀態不一致');
     if ((extra.enemyBurnDamage ?? 0) !== records.reduce((sum, record) => sum + (record.turnBurnDamage ?? 0), 0) + (extra.lastTurnBurnDamage ?? 0)) reject('active累積燃燒傷害與逐題紀錄不一致');
     if (!settled && ((extra.lastTurnBurnDamage ?? 0) !== 0 || (extra.lastTurnHealing ?? 0) !== 0)) reject('active未完成題目不能結算持續效果');
-    if (extra.lastEnemyMissed && (extra.lastEnemyDamage !== 0 || extra.mirrorGuard)) reject('active鏡界落空結果不一致');
-    if (extra.lastEnemyCritical && (!finalBoss || (extra.wrongStreak ?? 0) < 2 || success || extra.timedOut)) reject('active魔王連錯必殺與狀態不一致');
-    const priorBurning = records.some(record => record.combatRulesVersion === 2 && record.ultimateUsed && record.ultimateId === 5);
-    const priorRegeneration = records.some(record => record.combatRulesVersion === 2 && record.ultimateUsed && record.ultimateId === 3);
+    if (extra.lastEnemyMissed && extra.lastEnemyDamage !== 0) reject('active鏡界落空結果不一致');
+    if (extra.lastEnemyCritical && (extra.combatRulesVersion === 2 && !finalBoss || (extra.wrongStreak ?? 0) < 2 || success || extra.timedOut)) reject('active魔王連錯必殺與狀態不一致');
+    const priorBurning = records.some(record => record.combatRulesVersion !== undefined && record.ultimateUsed && record.ultimateId === 5);
+    const priorRegeneration = records.some(record => record.combatRulesVersion !== undefined && record.ultimateUsed && record.ultimateId === 3);
     if (extra.enemyBurning !== undefined && extra.enemyBurning !== (priorBurning || !!extra.ultimateUsed && extra.ultimateId === 5)) reject('active燃燒狀態與施放紀錄不一致');
     if (extra.playerRegeneration !== undefined && extra.playerRegeneration !== (priorRegeneration || !!extra.ultimateUsed && extra.ultimateId === 3)) reject('active恢復狀態與施放紀錄不一致');
-    if ((extra.lastTurnBurnDamage ?? 0) !== (settled && step !== 'defeat' && priorBurning ? 4 : 0)) reject('active本題燃燒與先前施放紀錄不一致');
+    if ((extra.lastTurnBurnDamage ?? 0) !== (settled && step !== 'defeat' && priorBurning ? burnPerTurn : 0)) reject('active本題燃燒與先前施放紀錄不一致');
     if (!priorRegeneration && (extra.lastTurnHealing ?? 0) !== 0) reject('active本題持續回血尚未啟動');
   }
   const releaseCount = records.filter(record => record.ultimateUsed).length + (extra.ultimateUsed ? 1 : 0);

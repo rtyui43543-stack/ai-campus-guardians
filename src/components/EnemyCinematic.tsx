@@ -1,5 +1,7 @@
 import { useId } from 'react';
 import type { Mode } from '../domain/types';
+import { enemyAttackName } from './combatChoreography';
+import { MainBossPursuit, mainBossPursuitForms } from './MainBossPursuit';
 import '../styles/enemy-cinematic.css';
 
 export interface EnemyCinematicProps {
@@ -8,6 +10,9 @@ export interface EnemyCinematicProps {
   reducedMotion: boolean;
   blocked?: boolean;
   missed?: boolean;
+  chapter?: number;
+  /** Older callers supply only final bosses; chapter callers explicitly opt out. */
+  finalBoss?: boolean;
 }
 
 /** Shares the ordinary enemy clock: no extra timer or delayed turn transition. */
@@ -65,17 +70,20 @@ function NineDragonSequence({contact = true}: {contact?: boolean}) {
   </>;
 }
 
-export function EnemyCinematic({ mode, cue, reducedMotion, blocked = false, missed = false }: EnemyCinematicProps) {
+export function EnemyCinematic({ mode, cue, reducedMotion, blocked = false, missed = false, chapter = 1, finalBoss = true }: EnemyCinematicProps) {
   const id = `enemy-cinematic-${useId().replaceAll(':', '')}`;
   if (!cue.startsWith('enemy-ultimate-') && !(missed && cue.startsWith('miss-'))) return null;
-  const description = mode === 'starter' ? '魔典王必殺：巨書張開，符文書頁扇形飛向主角' : '九頭龍必殺：九首幻影聚能，多束幻焰朝左匯聚';
-  const outcome = missed ? '主角閃避，法術在身旁消散' : blocked ? '守護盾攔截，主角免傷' : mode === 'starter' ? '命中後封陣局部破裂' : '命中主角後局部爆裂';
-  return <div className={`enemy-cinematic enemy-cinematic-${mode}${reducedMotion ? ' is-reduced' : ''}${missed ? ' is-missed' : blocked ? ' is-blocked' : ''}`}
+  const theme = Math.max(1, Math.min(6, Math.trunc(Number.isFinite(chapter) ? chapter : 1)));
+  const description = finalBoss ? mode === 'starter' ? '魔典王必殺：巨書張開，符文書頁扇形飛向主角' : '九頭龍必殺：九首幻影聚能，多束幻焰朝左匯聚'
+    : `${enemyAttackName(mode, theme, false, true)}：魔王聚能，專屬法術朝左衝刺後追加追擊`;
+  const outcome = missed ? '主角閃避，法術在身旁消散' : blocked ? '守護盾攔截，主角免傷' : finalBoss ? mode === 'starter' ? '命中後封陣局部破裂' : '命中主角後局部爆裂' : '命中後同種法術追加追擊';
+  return <div className={`enemy-cinematic enemy-cinematic-${mode}${!finalBoss ? ' enemy-main-critical' : ''}${reducedMotion ? ' is-reduced' : ''}${missed ? ' is-missed' : blocked ? ' is-blocked' : ''}`}
     role="img" aria-label={`${description}，${outcome}`}
-    data-boss={mode === 'starter' ? 'chaos-grimoire-king' : 'illusion-nine-dragon'} data-cue={cue}
+    data-boss={finalBoss ? mode === 'starter' ? 'chaos-grimoire-king' : 'illusion-nine-dragon' : `${mode}-chapter-${theme}`} data-cue={cue}
+    data-pursuit-form={!finalBoss ? mainBossPursuitForms[mode][theme - 1] : undefined}
     data-duration-ms={ENEMY_CINEMATIC_TIMING.durationMs} data-launch-ms={ENEMY_CINEMATIC_TIMING.launchMs} data-impact-ms={ENEMY_CINEMATIC_TIMING.impactMs}
     data-facing="left" data-scope="combat-window" data-outcome={missed ? 'missed' : blocked ? 'blocked' : 'hit'}>
-    {mode === 'starter' ? <GrimoireSequence id={id} contact={!blocked && !missed} /> : <NineDragonSequence contact={!blocked && !missed} />}
+    {!finalBoss ? <MainBossPursuit mode={mode} chapter={theme} contact={!blocked && !missed} /> : mode === 'starter' ? <GrimoireSequence id={id} contact={!blocked && !missed} /> : <NineDragonSequence contact={!blocked && !missed} />}
     {!missed && blocked && <div className="enemy-cinematic-impact enemy-guard-intercept" data-phase="guard-intercept"><svg viewBox="-130 -140 260 280" aria-hidden="true" focusable="false"><path d="M0-119 93-76 75 41 0 120-75 41-93-76Z" fill="#174c4e57" stroke="#fce6a3" strokeWidth="9" /><path d="M0-88 67-56 53 26 0 84-53 26-67-56Z" fill="none" stroke="#9af0e8" strokeWidth="4" /><path d="M-39-9-7 25 46-42" fill="none" stroke="#fff0b6" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" /></svg></div>}
     {missed && <div className="enemy-cinematic-impact enemy-missed-dissipation" data-phase="missed-cast-dissipates"><svg viewBox="-130 -90 260 180" aria-hidden="true" focusable="false"><g fill="none" stroke="#b69bc9" strokeWidth="4" strokeLinecap="round"><path d="M-94 0Q-63-31-32-9T37-11T99 0M-68 17Q-34-7 4 15T78 15M-40-32 8-44 57-28" /></g></svg></div>}
   </div>;

@@ -43,7 +43,7 @@ describe('themed spell performances', () => {
 
   it('launches every ordinary and final-boss counterattack at .48, including critical and reduced casts', () => {
     for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
-      for (const finalBoss of [false, ...(chapter === 6 ? [true] : [])]) for (const enemyCritical of finalBoss ? [false, true] : [false]) {
+      for (const finalBoss of [false, ...(chapter === 6 ? [true] : [])]) for (const enemyCritical of [false, true]) {
         const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode, finalBoss);
         const projectile = fx.root.getObjectByName(finalBoss ? 'final-boss-projectile' : 'enemy-signature-projectile')!;
         const charge = fx.root.getObjectByName(finalBoss ? 'final-boss-summoning-seal' : 'enemy-species-charge')!;
@@ -153,12 +153,50 @@ describe('themed spell performances', () => {
     fx.dispose();
   });
 
+  it('enlarges each chapter spell and adds a pooled same-material pursuit within the original enemy clock', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      const boss = fx.root.getObjectByName(`enemy-${chapter}-${mode}`)!;
+      const projectile = boss.getObjectByName('enemy-signature-projectile')!;
+      const pursuit = boss.getObjectByName('enemy-species-pursuit')!;
+      const followUp = boss.getObjectByName('enemy-pursuit-contact')!;
+      const cast = frame({ success: false, start: new THREE.Vector3(2.3, 1.9, .5), target: new THREE.Vector3(-2.3, 1.4, .5) });
+      fx.update({ ...cast, time: .7 });
+      const ordinaryScale = projectile.scale.x;
+      expect(pursuit.visible).toBe(false); expect(followUp.visible).toBe(false);
+      fx.update({ ...cast, enemyCritical: true, time: .7 });
+      expect(projectile.scale.x).toBeGreaterThan(ordinaryScale);
+      expect(boss.userData.identity).toBe(enemySpellNames[mode][chapter - 1] + '追擊');
+      expect(boss.userData.sequence).toContain('paired-pursuit');
+      fx.update({ ...cast, enemyCritical: true, time: 1.02 });
+      expect(pursuit.visible).toBe(true); expect(followUp.visible).toBe(false);
+      const first = pursuit.children[0].position.x;
+      fx.update({ ...cast, enemyCritical: true, time: 1.21 });
+      expect(pursuit.children[0].position.x).toBeLessThan(first);
+      expect(followUp.visible).toBe(false);
+      fx.update({ ...cast, enemyCritical: true, time: 1.22 });
+      expect(followUp.visible).toBe(true); expect(followUp.position.x).toBe(cast.target.x);
+      for (const outcome of [{ blocked: true }, { missed: true }]) {
+        fx.update({ ...cast, enemyCritical: true, time: 1.24, ...outcome });
+        expect(pursuit.visible).toBe(false); expect(followUp.visible).toBe(false);
+      }
+      fx.update({ ...cast, enemyCritical: true, reducedMotion: true, time: 1.24 });
+      expect(pursuit.visible).toBe(false); expect(followUp.visible).toBe(true);
+      fx.root.updateMatrixWorld(true);
+      const held = visibleMeshes(boss).map(mesh => mesh.matrixWorld.elements.slice());
+      fx.update({ ...cast, enemyCritical: true, reducedMotion: true, time: 1.75 }); fx.root.updateMatrixWorld(true);
+      expect(visibleMeshes(boss).map(mesh => mesh.matrixWorld.elements.slice())).toEqual(held);
+      fx.update({ ...cast, enemyCritical: true, time: 2.05 }); expect(fx.root.visible).toBe(false);
+      fx.dispose();
+    }
+  });
+
   it('holds complete ordinary/critical material effects still in reduced motion and bounds narrow-screen casts', () => {
     for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
       for (const finalBoss of [false, ...(chapter === 6 ? [true] : [])]) {
         const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode, finalBoss);
-        for (const success of [true, false]) {
-          const cast = frame({ success, scale: .42, enemyCritical: finalBoss && !success,
+        for (const success of [true, false]) for (const enemyCritical of success ? [false] : [false, true]) {
+          const cast = frame({ success, scale: .42, enemyCritical,
             start: new THREE.Vector3(success ? -1.1 : 1.1, 1, .5), target: new THREE.Vector3(success ? 1.1 : -1.1, .63, .5) });
           for (const time of [.20, .62, .9, 1.30]) {
             fx.update({ ...cast, time }); fx.root.updateMatrixWorld(true);

@@ -7,7 +7,7 @@
 .ultimate-collection-rule { margin: 18px 0 8px; font-size: 18px; line-height: 1.8; color: #234638; font-weight: 700; }
 .ultimate-collection-note { margin: 0 0 24px; color: #395c4f; font-size: 16px; line-height: 1.7; }
 .ultimate-collection-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
-.ultimate-collection-card { min-width: 0; border: 1px solid #c8b071; border-radius: 16px; overflow: hidden; background: #fffef7; box-shadow: 0 5px 14px #133b2812; }
+.ultimate-collection-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid #c8b071; border-radius: 16px; overflow: hidden; background: #fffef7; box-shadow: 0 5px 14px #133b2812; }
 .ultimate-card-art-button { display: block; padding: 0; margin: 0; width: 100%; position: relative; aspect-ratio: 2 / 3; border: 0; border-radius: 0; overflow: hidden; cursor: pointer; color: #fff5c8; background: #173b39; }
 .ultimate-card-art-button img, .ultimate-card-large-art img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .ultimate-card-art-button > .ultimate-card-title-layer, .ultimate-card-large-art > .ultimate-card-title-layer { position: absolute; inset: 0; display: block; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
@@ -18,7 +18,10 @@
 .ultimate-card-locked-art { aspect-ratio: 2 / 3; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 17px; padding: 20px; background: radial-gradient(ellipse at 50% 36%, #315953, #153d3a 68%); border: 10px double #c8b16a; color: #ffe9ad; text-align: center; }
 .ultimate-card-locked-art strong { font-size: 23px; }
 .ultimate-card-locked-art span { font-size: 17px; line-height: 1.7; color: #fff4d4; }
-.ultimate-card-details { padding: 18px; }
+.ultimate-card-details { display: flex; flex-direction: column; align-items: flex-start; flex: 1; min-width: 0; padding: 18px; }
+.ultimate-card-badges { display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.ultimate-card-badges > :is(.ultimate-category, .ultimate-tier) { display: inline-flex; align-items: center; min-height: 40px; margin: 0; padding: 6px 9px; font-size: 15px; line-height: 1.5; white-space: nowrap; }
+.ultimate-card-badges svg { flex-shrink: 0; }
 .ultimate-category { display: inline-flex; gap: 6px; align-items: center; border-radius: 9px; padding: 5px 9px; background: #e8f1ea; color: #254c35; font-size: 15px; font-weight: 800; }
 .ultimate-category.attack { background: #fff0db; color: #86420b; }
 .ultimate-category.support { background: #e5f1f3; color: #20505c; }
@@ -26,6 +29,22 @@
 .ultimate-card-details p { margin: 0 0 13px; color: #355a4b; line-height: 1.7; font-size: 16px; }
 .ultimate-card-status { display: inline-block; font-size: 15px; font-weight: 800; padding: 5px 10px; color: #505c4c; border-radius: 9px; background: #e9ecdf; }
 .ultimate-card-status.collected { background: #dcf4d8; color: #205930; }
+/* Each row shares content tracks: different upgrade text lengths must not
+   push the skill descriptions and collection labels out of alignment. */
+@supports (grid-template-rows: subgrid) {
+  .ultimate-collection-card { display: grid; grid-row: span 6; grid-template-rows: subgrid; row-gap: 0; }
+  .ultimate-collection-card.advanced { grid-row: span 7; }
+  .ultimate-card-details { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 0; align-items: start; }
+  .ultimate-collection-card.advanced .ultimate-card-details { grid-row: span 6; }
+  .ultimate-card-details > .ultimate-card-badges { grid-row: 1; }
+  .ultimate-card-details > h3 { grid-row: 2; }
+  .ultimate-card-details > .ultimate-card-chapter { grid-row: 3; }
+  .ultimate-card-details > .ultimate-upgrade-explanation { grid-row: 4; align-self: stretch; }
+  .ultimate-card-details > .ultimate-card-description { grid-row: 4; }
+  .ultimate-card-details > .ultimate-card-status { grid-row: 5; justify-self: start; }
+  .ultimate-collection-card.advanced .ultimate-card-description { grid-row: 5; }
+  .ultimate-collection-card.advanced .ultimate-card-status { grid-row: 6; }
+}
 .ultimate-card-dialog { width: min(920px, calc(100vw - 32px)); max-width: 920px; max-height: calc(100dvh - 32px); margin: auto; padding: 24px; background: #fffdf1; color: #173b32; border: 2px solid #d6b766; border-radius: 22px; box-shadow: 0 25px 100px #001b22a8; overflow: auto; }
 .ultimate-card-dialog::backdrop { background: #051d27d9; }
 .ultimate-card-modal-content { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(230px, .85fr); align-items: center; gap: 28px; min-width: 0; }

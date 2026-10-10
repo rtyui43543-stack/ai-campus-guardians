@@ -86,7 +86,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(session.energy).toBe(3);
     for (let retries = 1; retries <= 3; retries++) {
       const mistake = wrong(session);
-      expect(mistake).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0, retries, shield: 100 - retries * 12 });
+      expect(mistake).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0, retries, shield: 100 - 12 - (retries - 1) * 22 });
       expect(mistake.ultimateId).toBeUndefined();
       expect(roundTrip(mistake).ultimateCards).toEqual([]);
       session = roundTrip(retryQuestion(mistake)).active!;
@@ -159,7 +159,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(protectedHit.energy).toBe(0);
     fifth = roundTrip(retryQuestion(protectedHit)).active!;
     const secondHit = wrong(fifth);
-    expect(secondHit).toMatchObject({ shield: 88, preventedDamage: false, barrier: false, retries: 2 });
+    expect(secondHit).toMatchObject({ shield: 78, preventedDamage: false, barrier: false, retries: 2 });
   });
 
   it('saves the upgraded castle across questions and blocks two distinct mistakes, not a third', () => {
@@ -177,9 +177,9 @@ describe('per-run energy and ultimate rewards', () => {
       fifth = roundTrip(retryQuestion(defended)).active!;
     }
     const third = wrong(fifth);
-    expect(third).toMatchObject({ shield: 88, barrier: false, barrierCharges: 0, preventedDamage: false, retries: 3 });
+    expect(third).toMatchObject({ shield: 78, barrier: false, barrierCharges: 0, preventedDamage: false, retries: 3 });
     const corrected = solve(retryQuestion(roundTrip(third).active!));
-    expect(corrected).toMatchObject({ shield: 88, barrierCharges: 0 });
+    expect(corrected).toMatchObject({ shield: 78, barrierCharges: 0 });
     const finished = finishSession(createProgress(), corrected);
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 88, bonusScore: 10, wrongAnswers: 3 });
     expect(parseBackup(exportBackup(finished))).toEqual(finished);
@@ -230,7 +230,8 @@ describe('per-run energy and ultimate rewards', () => {
     expect(submitAction(released)).toBe(released);
     const fifth = roundTrip(advanceSession(released).session!).active!;
     const hit = wrong(fifth);
-    expect(hit).toMatchObject({ shield: 94, preventedDamage: true, barrierCharges: 0, frostGuard: false });
+    expect(hit).toMatchObject({ shield: 94, preventedDamage: true, barrierCharges: 0, frostGuard: levelId === 12,
+      frostGuardCharges: levelId === 12 ? 1 : 0 });
     expect(roundTrip(hit).ultimateCards).toHaveLength(1);
   });
 

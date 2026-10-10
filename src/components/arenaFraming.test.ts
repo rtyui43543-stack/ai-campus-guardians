@@ -51,9 +51,18 @@ const landscape6040Cases = [
   { width: 589.0625, height: 682.667, minHeroHeight: 200, minEnemyHeight: 140 },
   { width: 691.0625, height: 748.667, minHeroHeight: 200, minEnemyHeight: 140 },
 ];
+// Desktop allocations subtract the full-width HUD, safe padding, and pane gap.
+// Exercise every silhouette against the complete 60% pane, not the old full
+// screen camera whose question and answers overlaid the actors.
+const desktop6040Cases = [
+  { width: 793.6, height: 682, minHeroHeight: 250, minEnemyHeight: 170 }, // 1366 × 768
+  { width: 826, height: 778, minHeroHeight: 250, minEnemyHeight: 170 }, // 1440 × 900
+  { width: 1114, height: 958, minHeroHeight: 300, minEnemyHeight: 200 }, // 1920 × 1080
+];
+const dedicated6040Cases = [...landscape6040Cases, ...desktop6040Cases];
 
 describe('battle framing', () => {
-  it.each(landscape6040Cases)('keeps both actors readable and apart in a 60/40 landscape pane at $width × $height',
+  it.each(dedicated6040Cases)('keeps both actors readable and apart in a 60/40 landscape pane at $width × $height',
     ({ width, height, minHeroHeight, minEnemyHeight }) => {
     const hero = createCoverHeroSprite({ loadTexture: () => undefined });
     for (const mode of ['starter', 'advanced'] as const) for (const chapter of [1, 2, 3, 4, 5, 6, 'final'] as const) {
@@ -144,7 +153,7 @@ describe('battle framing', () => {
     { width: 328, height: 320, viewport: 'dedicated' },
     { width: 370, height: 330, viewport: 'dedicated' }, { width: 417, height: 368, viewport: 'dedicated' },
     { width: 450, height: 532, viewport: 'dedicated' },
-    ...landscape6040Cases.map(({ width, height }) => ({ width, height, viewport: 'dedicated' as const })),
+    ...dedicated6040Cases.map(({ width, height }) => ({ width, height, viewport: 'dedicated' as const })),
     { width: 976, height: 240, viewport: 'dedicated' }, { width: 1024, height: 300, viewport: 'dedicated' },
   ])('$width × $height $viewport', ({ width, height, viewport }) => {
     it.each(['starter', 'advanced'] as const)('fits the actual %s final-boss cast deformation and contact responses', mode => {

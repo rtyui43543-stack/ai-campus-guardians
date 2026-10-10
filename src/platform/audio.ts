@@ -230,8 +230,10 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     const mix = current.createGain(), limiter = current.createDynamicsCompressor();
     nodes.push(mix, limiter);
     // Normal casts need a clear strike above the quarter-volume music bed.
-    // Summons/criticals already have dense layers and keep their existing mix.
-    mix.gain.value = plan.enhanced ? .85 : 1.20;
+    // Chapter pursuits retain ordinary contact weight and add their own second
+    // material strike. Hero summons and both final bosses retain their old mix.
+    const chapterPursuit = !success && !!options.enemyCritical && !options.finalBoss;
+    mix.gain.value = plan.enhanced && !chapterPursuit ? .85 : 1.20;
     limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8;
     limiter.attack.value = .003; limiter.release.value = .14;
     mix.connect(limiter); limiter.connect(current.destination);

@@ -215,6 +215,39 @@ export function buildMaterialAttack(settings: MaterialAttack): BattleSoundVoice[
     if (id === 'chaos-grimoire') [1.21, 1.38, 1.57].forEach((at, i) =>
       tail('grimoire-barrage', at, .13, 3100 - i * 350, 1200, .07 - i * .014, 'highpass'));
     if (id === 'spectral-dragon') tail('dragon-frost-wave', 1.15, .67, 2700, 550, .10, 'bandpass', 'gust');
+    if (!success && id !== 'chaos-grimoire' && id !== 'spectral-dragon') {
+      // Chapter counterattacks gain a distinct second physical contact at 1.22 s.
+      // Keep the material intact: paper cuts, web plucks, ink splashes and cloud
+      // pressure never borrow the phoenix or dragon samples. This section is
+      // reached only after the dodge/block branches, so it cannot imply damage
+      // when an entire counterattack was prevented.
+      const followUps: Record<string, { layer: string; filter: BiquadFilterType; length: number; resonance: number }> = {
+        'box-chain': { layer: 'chain-relock', filter: 'bandpass', length: .19, resonance: 1.5 },
+        'deceptive-pages': { layer: 'page-barrage', filter: 'highpass', length: .16, resonance: .8 },
+        'confusing-stamp': { layer: 'stamp-double-slam', filter: 'lowpass', length: .20, resonance: .7 },
+        'mask-shards': { layer: 'mask-refract', filter: 'highpass', length: .17, resonance: 1.4 },
+        'paper-wing': { layer: 'wing-cross-cut', filter: 'highpass', length: .18, resonance: .8 },
+        'disorder-gears': { layer: 'gear-double-bite', filter: 'bandpass', length: .22, resonance: 1.3 },
+        'spider-web': { layer: 'silk-cocoon-snap', filter: 'highpass', length: .16, resonance: 1.6 },
+        'hourglass-sand': { layer: 'sand-reversal', filter: 'highpass', length: .24, resonance: .8 },
+        'vine-whip': { layer: 'thorn-cross-whip', filter: 'highpass', length: .16, resonance: 1.4 },
+        'mimic-shadow': { layer: 'echo-tail-cut', filter: 'bandpass', length: .24, resonance: 1.5 },
+        'ink-burst': { layer: 'ink-double-splash', filter: 'lowpass', length: .21, resonance: 1.8 },
+        'storm-fist': { layer: 'storm-double-punch', filter: 'lowpass', length: .28, resonance: .75 },
+      };
+      const followUp = followUps[id];
+      if (followUp) {
+        noise('launch', `${id}-follow-up-flight`, 1.02, .19, air * .85, air * 1.7,
+          .10, origin, 'bandpass', 'swell', target);
+        tone('impact', `${id}-pursuit-contact`, 1.22, .23, Math.max(220, fundamental * 2) / pitch,
+          86 / pitch, .20, target, 'triangle');
+        noise('impact', followUp.layer, 1.22, followUp.length, Math.max(1800, air * 1.3),
+          followUp.filter === 'highpass' ? 1100 : 410, .14, target, followUp.filter,
+          'punch', undefined, followUp.resonance);
+        tone('tail', `${id}-pursuit-resonance`, 1.25, .32, shimmer * 1.2, shimmer * .76,
+          .045, target, metal ? 'triangle' : 'sine');
+      }
+    }
   }
   return voices;
 }

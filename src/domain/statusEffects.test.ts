@@ -53,11 +53,11 @@ describe('final-boss attacks and consecutive mistakes', () => {
     expect(next).toMatchObject({ shield: 0, wrongStreak: 1, lastEnemyDamage: 20, lastEnemyCritical: false, step: 'defeat' });
   });
 
-  it('keeps ordinary attacks at 12 HP regardless of the mistake streak', () => {
+  it('adds a 10 HP pursuit to ordinary attacks from the second consecutive mistake', () => {
     let session = startSession(1, 'starter');
     for (let count = 1; count <= 3; count++) {
       session = wrong(session);
-      expect(session).toMatchObject({ shield: 100 - 12 * count, lastEnemyDamage: 12, lastEnemyCritical: false });
+      expect(session).toMatchObject({ shield: 100 - 12 - 22 * (count - 1), lastEnemyDamage: count === 1 ? 12 : 22, lastEnemyCritical: count >= 2 });
       session = retryQuestion(session);
     }
   });
@@ -77,6 +77,7 @@ describe('final-boss attacks and consecutive mistakes', () => {
 
 describe('elemental and support ultimate effects', () => {
   it.each(['starter', 'advanced'] as const)('fire burns once on each later completed %s question, never on a retry or the cast turn', mode => {
+    const burn = mode === 'advanced' ? 6 : 4;
     const cast = saved(solve(reach(mode, 3), 5));
     expect(cast).toMatchObject({ enemyBurning: true, enemyBurnDamage: 0, lastTurnBurnDamage: 0 });
     let next = advanceSession(cast).session!;
@@ -85,16 +86,16 @@ describe('elemental and support ultimate effects', () => {
     expect(mistake.enemyBurnDamage).toBe(0);
     expect(battleHealth(mistake).enemyHp).toBe(initialHp);
     next = saved(solve(retryQuestion(mistake)));
-    expect(next).toMatchObject({ enemyBurnDamage: 4, lastTurnBurnDamage: 4 });
+    expect(next).toMatchObject({ enemyBurnDamage: burn, lastTurnBurnDamage: burn });
     expect(submitAction(next)).toBe(next);
     expect(demonstrate(next)).toBe(next);
     const advanced = advanceSession(next);
-    expect(advanced.record).toMatchObject({ turnBurnDamage: 4, combatRulesVersion: 2 });
+    expect(advanced.record).toMatchObject({ turnBurnDamage: burn, combatRulesVersion: 3 });
     const demo = saved(demonstrate(advanced.session!));
-    expect(demo).toMatchObject({ enemyBurnDamage: 8, lastTurnBurnDamage: 4 });
+    expect(demo).toMatchObject({ enemyBurnDamage: burn * 2, lastTurnBurnDamage: burn });
     const nextAgain = advanceSession(demo).session!;
-    if (mode === 'advanced') expect(saved(tickQuestion(nextAgain, 30_000))).toMatchObject({ enemyBurnDamage: 12, lastTurnBurnDamage: 4 });
-    else expect(saved(solve(nextAgain))).toMatchObject({ enemyBurnDamage: 12, lastTurnBurnDamage: 4 });
+    if (mode === 'advanced') expect(saved(tickQuestion(nextAgain, 30_000))).toMatchObject({ enemyBurnDamage: burn * 3, lastTurnBurnDamage: burn });
+    else expect(saved(solve(nextAgain))).toMatchObject({ enemyBurnDamage: burn * 3, lastTurnBurnDamage: burn });
   });
 
   it('recasting fire does not stack its per-question damage and burning can finish a boss early', () => {
@@ -130,32 +131,38 @@ describe('elemental and support ultimate effects', () => {
     const correct = solve(retried);
     const record = advanceSession(correct).record;
     expect(record.hintUsed).toBe(false);
-    expect(advanceSession(correct).session!.lightningHintChoices).toEqual([]);
+    const following = saved(advanceSession(correct).session!);
+    if (mode === 'advanced') {
+      expect(following.lightningHintChoices).toHaveLength(2);
+      expect(following.lightningHintQueued).toBe(false);
+      expect(advanceSession(solve(following)).session!.lightningHintChoices).toEqual([]);
+    } else expect(following.lightningHintChoices).toEqual([]);
   });
 
-  it.each(['starter', 'advanced'] as const)('ice halves only the next attack that hits in %s', mode => {
+  it.each(['starter', 'advanced'] as const)('ice halves one starter or two advanced landed attacks in %s', mode => {
     const cast = saved(solve(reach(mode, 3), 6));
     expect(cast.frostGuard).toBe(true);
     const next = advanceSession(cast).session!;
     const hit = saved(wrong(next));
-    expect(hit).toMatchObject({ shield: 90, frostGuard: false, lastEnemyDamage: 10 });
+    expect(hit).toMatchObject({ shield: 90, frostGuard: mode === 'advanced', lastEnemyDamage: 10 });
     const critical = wrong(retryQuestion(hit));
-    expect(critical).toMatchObject({ shield: 60, lastEnemyDamage: 30 });
+    expect(critical).toMatchObject({ shield: mode === 'advanced' ? 75 : 60, lastEnemyDamage: mode === 'advanced' ? 15 : 30,
+      frostGuard: false, frostGuardCharges: 0 });
   });
 
-  it('halves a 30 HP combo to 15 and applies the castle flat 12 HP reduction afterwards', () => {
-    const combo = wrong({ ...reach('starter', 4), wrongStreak: 1, frostGuard: true });
+  it('halves a 30 HP combo to 15 while castle blocks the full hit irrespective of its damage', () => {
+    const combo = wrong({ ...reach('starter', 4), wrongStreak: 1, frostGuard: true, frostGuardCharges: 1 });
     expect(combo).toMatchObject({ shield: 85, lastEnemyDamage: 15 });
-    const combined = wrong({ ...reach('starter', 4), wrongStreak: 1, frostGuard: true, barrier: true, barrierCharges: 1 });
-    expect(combined).toMatchObject({ shield: 97, lastEnemyDamage: 3, barrierCharges: 0, frostGuard: false });
+    const combined = wrong({ ...reach('starter', 4), wrongStreak: 1, frostGuard: true, frostGuardCharges: 1, barrier: true, barrierCharges: 1 });
+    expect(combined).toMatchObject({ shield: 100, lastEnemyDamage: 0, barrierCharges: 0, frostGuard: false });
     const castleOnly = wrong({ ...reach('starter', 4), barrier: true, barrierCharges: 1 });
-    expect(castleOnly).toMatchObject({ shield: 92, lastEnemyDamage: 8 });
+    expect(castleOnly).toMatchObject({ shield: 100, lastEnemyDamage: 0 });
   });
 
   it('mirror misses at 50%, consumes its chance, preserves ice/castle, and does not redraw after restoration', () => {
     const roll = vi.spyOn(Math, 'random').mockReturnValue(0.4999);
     const cast = solve(reach('starter', 3), 4);
-    const next = { ...advanceSession(cast).session!, frostGuard: true, barrier: true, barrierCharges: 1 };
+    const next = { ...advanceSession(cast).session!, frostGuard: true, frostGuardCharges: 1, barrier: true, barrierCharges: 1 };
     const missed = saved(wrong(next));
     expect(missed).toMatchObject({ shield: 100, lastEnemyDamage: 0, lastEnemyMissed: true, mirrorGuard: false, frostGuard: true, barrierCharges: 1 });
     expect(roll).toHaveBeenCalledTimes(1);
@@ -163,15 +170,15 @@ describe('elemental and support ultimate effects', () => {
     expect(submitAction(restored)).toBe(restored);
     expect(roll).toHaveBeenCalledTimes(1);
     const hit = wrong(retryQuestion(restored));
-    expect(hit).toMatchObject({ shield: 97, lastEnemyDamage: 3, lastEnemyMissed: false, frostGuard: false, barrierCharges: 0 });
+    expect(hit).toMatchObject({ shield: 100, lastEnemyDamage: 0, lastEnemyMissed: false, frostGuard: false, barrierCharges: 0 });
     expect(roll).toHaveBeenCalledTimes(1);
   });
 
-  it('the upper half of mirror chances hits normally and consumes the mirror', () => {
+  it('the upper half of mirror chances hits normally and consumes one of the advanced mirror chances', () => {
     const cast = solve(reach('advanced', 3), 4);
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
     const hit = saved(wrong(advanceSession(cast).session!));
-    expect(hit).toMatchObject({ shield: 80, lastEnemyDamage: 20, lastEnemyMissed: false, mirrorGuard: false });
+    expect(hit).toMatchObject({ shield: 80, lastEnemyDamage: 20, lastEnemyMissed: false, mirrorGuard: true, mirrorGuardCharges: 1 });
   });
 
   it.each(['starter', 'advanced'] as const)('recovery heals immediately, then 4 HP per later completed %s question, capped at 100', mode => {
@@ -200,13 +207,14 @@ describe('elemental and support ultimate effects', () => {
   });
 
   it.each(['starter', 'advanced'] as const)('continues fire and regeneration together across saves and later %s ultimate choices', mode => {
+    const burn = mode === 'advanced' ? 6 : 4;
     const progress = unlocked(mode);
     let session = startFinalBossSession(progress, mode);
     for (let index = 0; index < 15; index++) {
       if (index === 4) session = retryQuestion(saved(wrong(session)));
       session = saved(solve(session, index === 3 ? 5 : index === 7 ? 3 : 6));
-      if (index === 7) expect(session).toMatchObject({ enemyBurning: true, playerRegeneration: true, lastTurnBurnDamage: 4, lastTurnHealing: 0 });
-      if (index > 7) expect(session.lastTurnBurnDamage).toBe(4);
+      if (index === 7) expect(session).toMatchObject({ enemyBurning: true, playerRegeneration: true, lastTurnBurnDamage: burn, lastTurnHealing: 0 });
+      if (index > 7) expect(session.lastTurnBurnDamage).toBe(burn);
       const next = advanceSession(session);
       if (next.finished) break;
       session = saved(next.session!);

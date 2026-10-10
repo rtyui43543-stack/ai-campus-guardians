@@ -70,18 +70,18 @@ describe('direct-answer battle engine', () => {
   });
 
   it('permits correction below 8 HP and records it as supported before a lethal hit', () => {
-    let session = startSession(1, 'starter');
-    for (let i = 0; i < 8; i++) {
+    let session = { ...startSession(1, 'starter'), shield: 82 };
+    for (let i = 0; i < 4; i++) {
       session = submitAction(chooseAction(session, wrongIndex(session)));
       expect(battleHealth(session).enemyHp).toBe(100);
       expect(session.step).toBe('feedback');
       session = retryQuestion(session);
     }
     expect(session.shield).toBe(4);
-    expect(session.retries).toBe(8);
+    expect(session.retries).toBe(4);
     expect(isDefeated(session)).toBe(false);
     const next = advanceSession(solve(useHint(session)));
-    expect(next.record).toMatchObject({ status: 'supported', hintUsed: true, retries: 8 });
+    expect(next.record).toMatchObject({ status: 'supported', hintUsed: true, retries: 4 });
     expect(next.session).toMatchObject({ shield: 4, repaired: 25, retries: 0, hintUsed: false });
   });
 
@@ -114,13 +114,13 @@ describe('direct-answer battle engine', () => {
     expect(() => finishSession(createProgress(), answered)).toThrow('挑戰已結束');
   });
 
-  it('ends the ninth consecutive wrong answer instead of keeping the player at 8 HP', () => {
+  it('ends the fifth consecutive wrong answer after the 10-HP pursuit starts on the second', () => {
     let session = startSession(1, 'starter');
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 5; i++) {
       session = submitAction(chooseAction(session, wrongIndex(session)));
-      if (i < 8) session = retryQuestion(session);
+      if (i < 4) session = retryQuestion(session);
     }
-    expect(session).toMatchObject({ step: 'defeat', shield: 0, retries: 9 });
+    expect(session).toMatchObject({ step: 'defeat', shield: 0, retries: 5, lastEnemyDamage: 22 });
   });
 
   it('restarts the same advanced challenge at full health without erasing existing progress', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contactReaction, enemyAttackName, enemyCastMotion } from './combatChoreography';
+import { contactReaction, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
 
 describe('visible combat contact', () => {
   it('holds the reaction after contact and recovers before the cast finishes', () => {
@@ -35,5 +35,26 @@ describe('visible combat contact', () => {
       expect(enemyAttackName('starter', chapter, true, true)).toBe('混沌魔典追擊');
       expect(enemyAttackName('advanced', chapter, true, true)).toBe('九首幻焰追擊');
     }
+  });
+  it('announces chapter pursuit names while retaining each of the twelve original boss identities', () => {
+    const names = new Set<string>();
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const normal = enemyAttackName(mode, chapter);
+      const pursuit = enemyAttackName(mode, chapter, false, true);
+      expect(pursuit).toBe(normal + '追擊'); names.add(pursuit);
+    }
+    expect(names.size).toBe(12);
+  });
+  it('announces shield or mirror protection through both pursuit contacts instead of reporting a false hit', () => {
+    for (const time of [.9, 1.02, 1.22, 1.5, 1.74]) {
+      expect(enemyPursuitPhase(time, true)).toBe('守護盾攔截');
+      expect(enemyPursuitPhase(time, false, true)).toBe('鏡像閃避 · 魔王落空');
+      expect(enemyPursuitPhase(time)).toBe('魔王追擊必殺命中');
+    }
+    for (const time of [0, .2, .42, .7, .899]) {
+      expect(enemyPursuitPhase(time, true)).toBe(enemyPursuitPhase(time));
+      expect(enemyPursuitPhase(time, false, true)).toBe(enemyPursuitPhase(time));
+    }
+    expect(enemyPursuitPhase(1.75, true)).toBe('魔王追擊收勢');
   });
 });

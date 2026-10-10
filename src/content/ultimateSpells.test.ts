@@ -79,4 +79,22 @@ describe('chapter ultimate collectible definitions', () => {
     expect(getUltimateCardMode({ mode: 'advanced' })).toBe('advanced');
     expect(getUltimateCardMode({})).toBe('starter');
   });
+  it('describes the upgraded charge counts and final-boss-only burn without altering other rewards', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const castle = getUltimateSpell(1, mode)!;
+      expect(castle.description).toContain(`完整抵擋下${mode === 'advanced' ? '兩次' : '一次'}魔王命中攻擊`);
+      expect(castle.description).toContain('不限傷害數值，主角不扣血');
+      expect(castle.description).not.toContain('抵擋 12 HP');
+    }
+    expect(getUltimateSpell(2, 'advanced')!.effectDescription).toContain('下兩題');
+    expect(getUltimateSpell(4, 'advanced')!.effectDescription).toContain('下兩次');
+    expect(getUltimateSpell(4, 'advanced')!.description).toContain('每次攻擊的機會只判定一次');
+    expect(getUltimateSpell(6, 'advanced')!.effectDescription).toContain('下兩次命中');
+    expect(getUltimateSpell(6, 'advanced')!.description).toContain('再計算城堡護盾的抵擋');
+    expect(getUltimateSpell(5, 'advanced')!.description).toContain('進階最終大魔王時改為每回合 6 HP');
+    expect(getUltimateSpell(2)!.description).toContain('下一題有兩個');
+    expect(getUltimateSpell(4)!.description).toContain('魔王下次攻擊');
+    expect(getUltimateSpell(6)!.description).toContain('魔王下次命中');
+    expect(getUltimateSpell(5)!.effectDescription).toContain('4 HP');
+  });
 });

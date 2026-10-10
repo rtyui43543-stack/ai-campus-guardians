@@ -37,6 +37,7 @@ export interface ArenaCombatStatus {
 export interface ArenaAttackOutcome {
   damage?: number;
   critical?: boolean;
+  blocked?: boolean;
   missed?: boolean;
   burnDamage?: number;
   healing?: number;
@@ -107,7 +108,7 @@ export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode
     if (!cue || cue === lastCue.current) return;
     lastCue.current = cue;
     const ultimate = cue.startsWith('ultimate');
-    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, cue.startsWith('blocked-'), spellChapter, {
+    scene.current?.play(cue.startsWith('success') || ultimate, ultimate, attackOutcome?.blocked ?? cue.startsWith('blocked-'), spellChapter, {
       critical: attackOutcome?.critical ?? cue.startsWith('enemy-ultimate-'),
       missed: attackOutcome?.missed ?? cue.startsWith('miss-'),
     });

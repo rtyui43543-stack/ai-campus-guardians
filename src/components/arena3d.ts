@@ -8,7 +8,7 @@ import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActor
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
-import { contactReaction, enemyAttackName, enemyCastMotion } from './combatChoreography';
+import { contactReaction, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -404,7 +404,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const phoenixCast = success && effectTheme === 5;
       const iceCast = success && effectTheme === 6;
       emitPhase(!success && attack.missed && t >= .9 ? '鏡像閃避 · 魔王落空'
-        : !success && attack.critical ? t < .42 ? '魔王追擊必殺蓄勢' : t < .9 ? '魔王追擊必殺飛襲' : t < 1.75 ? '魔王追擊必殺命中' : '魔王追擊收勢'
+        : !success && attack.critical ? enemyPursuitPhase(t, attack.blocked, attack.missed)
         : attack.ultimate
         ? phoenixCast ? t < .42 ? '烈焰鳳召喚' : t < .9 ? '烈焰鳳飛襲' : t < 2.65 ? '烈焰命中燃燒' : '烈焰收勢'
         : iceCast ? t < .42 ? '寒晶凝結' : t < .9 ? mode === 'advanced' ? '極寒冰龍飛襲' : '冰矛飛襲' : t < 2.65 ? '碎冰寒霜蔓延' : '寒霜收勢'

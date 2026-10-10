@@ -1,10 +1,10 @@
 /* A dedicated combat viewport prevents question length from shrinking actors.
-   display:contents preserves the existing portrait and large-desktop layout. */
+   display:contents preserves the existing portrait layout. */
 .duel-combat-window,.duel-reading-panel{display:contents}
 .duel-narrate-caption{display:none}
 .duel-stage:has(.ultimate-illustrated-summon) :is(.duel-hud,.duel-answer-area,.duel-damage){z-index:7}
 
-@media (orientation:landscape) and (max-width:1366px), (orientation:landscape) and (min-width:480px) and (max-height:650px){
+@media (orientation:landscape){
   .duel-stage{
     display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);
     grid-template-rows:56px minmax(0,1fr);
@@ -103,6 +103,36 @@
   .duel-stage .burn-pop{left:var(--enemy-lane-x,73.5%);transform:translateX(-50%)}
   .duel-stage .healing-pop{left:var(--hero-lane-x,26.5%);transform:translateX(-50%)}
   .duel-stage .arena-turn-pop.critical-pop{top:45px;font-size:12px}
+}
+
+/* Desktop uses the same allocated 60/40 panes as landscape phones and tablets.
+   Extra height permits larger reading text and a full-size status header. */
+@media (orientation:landscape) and (min-width:1367px) and (min-height:651px){
+  .duel-stage{
+    grid-template-rows:76px minmax(0,1fr);gap:12px;
+    padding:max(16px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left));
+  }
+  .duel-stage .duel-hud{grid-template-columns:96px minmax(0,1fr) 190px minmax(0,1fr);gap:14px}
+  .duel-stage .duel-back{font-size:16px;gap:7px}
+  .duel-stage .duel-back span{display:inline}
+  .duel-stage .duel-meter{padding:10px 16px}
+  .duel-stage .duel-meter>div{margin-bottom:8px}
+  .duel-stage .duel-meter span{font-size:18px}
+  .duel-stage .duel-meter b{font-size:34px}
+  .duel-stage .duel-meter small{font-size:12px}
+  .duel-stage .duel-meter progress{height:10px}
+  .duel-stage .duel-round{font-size:15px}
+  .duel-stage .duel-round b{font-size:23px}
+  .duel-stage .duel-bubble{padding:16px 20px;gap:8px}
+  .duel-stage .duel-bubble h1{font-size:clamp(24px,1.7vw,30px);line-height:1.5}
+  .duel-stage .duel-choice{font-size:clamp(19px,1.25vw,24px);padding:14px 16px;gap:12px}
+  .duel-stage .duel-letter{width:35px;height:35px;font-size:19px}
+  .duel-stage .duel-answer-area,.duel-stage .duel-choices,.duel-stage .duel-reading-panel{gap:12px}
+  .duel-stage :is(.duel-hint-button,.duel-next,.duel-explanation-actions button){font-size:16px}
+  .duel-stage .duel-score{font-size:18px}
+  .duel-stage .duel-select-note{font-size:15px}
+  .duel-stage .duel-hint,.duel-stage .duel-evidence,.duel-stage .duel-feedback{font-size:17px}
+  .duel-stage .duel-attack-name{font-size:22px;padding:8px 18px}
 }
 
 /* Browser bars can leave a landscape phone only a few hundred pixels high.

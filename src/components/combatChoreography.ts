@@ -26,5 +26,13 @@ export function enemyAttackName(mode: Mode, chapter: number, finalBoss = false, 
     ? mode === 'starter' ? '混沌魔典追擊' : '九首幻焰追擊'
     : mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';
   const index = Math.max(0, Math.min(5, Math.trunc(Number.isFinite(chapter) ? chapter : 1) - 1));
-  return enemySpellNames[mode][index];
+  return enemySpellNames[mode][index] + (critical ? '追擊' : '');
+}
+
+/** A prevented pursuit is announced as a defense outcome, never a body hit. */
+export function enemyPursuitPhase(time: number, blocked = false, missed = false): string {
+  if (time >= SPELL_IMPACT_SECONDS && missed) return '鏡像閃避 · 魔王落空';
+  if (time >= SPELL_IMPACT_SECONDS && time < 1.75 && blocked) return '守護盾攔截';
+  return time < .42 ? '魔王追擊必殺蓄勢' : time < SPELL_IMPACT_SECONDS ? '魔王追擊必殺飛襲'
+    : time < 1.75 ? '魔王追擊必殺命中' : '魔王追擊收勢';
 }

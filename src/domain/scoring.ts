@@ -56,7 +56,7 @@ function recordsForScore(value: Session | CompletedRun): AttemptRecord[] {
       ...(value.timed ? { timed: true, elapsedMs: value.elapsedMs ?? 0, timedOut: !!value.timedOut } : {}),
       ...(value.ultimateUsed ? { ultimateUsed: true, ultimateId: value.ultimateId } : {}),
       ...(value.preventedDamage ? { preventedDamage: true } : {}),
-      ...(value.combatRulesVersion === 2 ? { combatRulesVersion: 2 as const,
+      ...(value.combatRulesVersion !== undefined ? { combatRulesVersion: value.combatRulesVersion,
         turnBurnDamage: value.lastTurnBurnDamage ?? 0, turnHealing: value.lastTurnHealing ?? 0 } : {}),
     });
   }

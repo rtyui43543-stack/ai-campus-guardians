@@ -21,3 +21,10 @@ it('uses final-boss attack identity even when the learner last chose ice or fire
     expect(html).not.toContain('獎勵');
   }
 });
+it('marks all chapter pursuits as enemy enhanced moves without hero bonus text', () => {
+  for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+    const html = renderToStaticMarkup(<CombatAttackLabel success={false} ultimate={false} critical finalBoss={false} mode={mode} chapter={chapter} />);
+    expect(html).toContain('追擊'); expect(html).toContain('is-ultimate'); expect(html).toContain('is-enemy');
+    expect(html).not.toContain('獎勵');
+  }
+});

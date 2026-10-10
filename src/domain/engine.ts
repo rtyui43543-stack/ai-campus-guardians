@@ -46,9 +46,9 @@ export function startSession(levelId: number, mode: Mode, review = false, progre
     energy: 0, ultimateUsed: false, barrier: false, barrierCharges: 0, bonusPoints: 0, enemyBonusDamage: 0,
     timed: curriculumMode === 'advanced' && !review,
     remainingMs: QUESTION_TIME_MS, elapsedMs: 0, timedOut: false, preventedDamage: false,
-    combatRulesVersion: 2, wrongStreak: 0, enemyBurning: false, enemyBurnDamage: 0,
-    playerRegeneration: false, frostGuard: false, mirrorGuard: false,
-    lightningHintQueued: false, lightningHintChoices: [], lastEnemyDamage: 0,
+    combatRulesVersion: 3, wrongStreak: 0, enemyBurning: false, enemyBurnDamage: 0,
+    playerRegeneration: false, frostGuard: false, frostGuardCharges: 0, mirrorGuard: false, mirrorGuardCharges: 0,
+    lightningHintQueued: false, lightningHintQuestions: 0, lightningHintChoices: [], lastEnemyDamage: 0,
     lastEnemyCritical: false, lastEnemyMissed: false, lastTurnBurnDamage: 0, lastTurnHealing: 0,
   };
 }
@@ -81,21 +81,43 @@ export function remainingBarrierCharges(session: Pick<Session, 'barrier' | 'barr
   return session.barrierCharges ?? (session.barrier ? 1 : 0);
 }
 
-/** Mirror consumes its one chance; ice and castle charges are spent only on a hit. */
+export function remainingFrostGuardCharges(session: Pick<Session, 'frostGuard' | 'frostGuardCharges'>): number {
+  return session.frostGuardCharges ?? (session.frostGuard ? 1 : 0);
+}
+
+export function remainingMirrorGuardCharges(session: Pick<Session, 'mirrorGuard' | 'mirrorGuardCharges'>): number {
+  return session.mirrorGuardCharges ?? (session.mirrorGuard ? 1 : 0);
+}
+
+export function remainingLightningHintQuestions(session: Pick<Session, 'lightningHintQueued' | 'lightningHintQuestions'>): number {
+  return session.lightningHintQuestions ?? (session.lightningHintQueued ? 1 : 0);
+}
+
+/** Historical ticks stay saved; new completed turns use the current rule for this boss. */
+export function enemyBurnDamagePerTurn(session: Pick<Session, 'levelId' | 'mode'>): number {
+  return session.levelId === 14 && session.mode === 'advanced' ? 6 : 4;
+}
+
+/** Mirror rolls once per attack; ice and castle charges are spent only on a hit. */
 function enemyAttack(session: Session, consecutiveWrong: boolean): Partial<Session> & Pick<Session, 'shield'> {
   const finalBoss = levels.find(level => level.id === session.levelId)?.finalBoss === true;
   const wrongStreak = consecutiveWrong ? (session.wrongStreak ?? 0) + 1 : 0;
-  const lastEnemyCritical = finalBoss && consecutiveWrong && wrongStreak >= 2;
+  const lastEnemyCritical = consecutiveWrong && wrongStreak >= 2;
   const rawDamage = (finalBoss ? 20 : 12) + (lastEnemyCritical ? 10 : 0);
-  const lastEnemyMissed = session.mirrorGuard === true && Math.random() < 0.5;
-  if (lastEnemyMissed) return { combatRulesVersion: 2, wrongStreak, mirrorGuard: false,
+  const mirrorCharges = remainingMirrorGuardCharges(session);
+  const mirrorGuardCharges = Math.max(0, mirrorCharges - 1);
+  const lastEnemyMissed = mirrorCharges > 0 && Math.random() < 0.5;
+  if (lastEnemyMissed) return { combatRulesVersion: 3, wrongStreak, mirrorGuard: mirrorGuardCharges > 0, mirrorGuardCharges,
     shield: session.shield, preventedDamage: true, lastEnemyDamage: 0, lastEnemyCritical, lastEnemyMissed: true };
-  const afterIce = session.frostGuard ? Math.ceil(rawDamage / 2) : rawDamage;
+  const frostCharges = remainingFrostGuardCharges(session);
+  const afterIce = frostCharges > 0 ? Math.ceil(rawDamage / 2) : rawDamage;
   const charges = remainingBarrierCharges(session);
-  const calculatedDamage = Math.max(0, afterIce - (charges > 0 ? 12 : 0));
+  const calculatedDamage = charges > 0 ? 0 : afterIce;
   const damage = Math.min(session.shield, calculatedDamage);
   const barrierCharges = Math.max(0, charges - 1);
-  return { combatRulesVersion: 2, wrongStreak, mirrorGuard: false, frostGuard: false,
+  const frostGuardCharges = Math.max(0, frostCharges - 1);
+  return { combatRulesVersion: 3, wrongStreak, mirrorGuard: mirrorGuardCharges > 0, mirrorGuardCharges,
+    frostGuard: frostGuardCharges > 0, frostGuardCharges,
     shield: Math.max(0, session.shield - damage), barrier: barrierCharges > 0, barrierCharges,
     preventedDamage: calculatedDamage < rawDamage, lastEnemyDamage: damage, lastEnemyCritical, lastEnemyMissed: false };
 }
@@ -103,9 +125,9 @@ function enemyAttack(session: Session, consecutiveWrong: boolean): Partial<Sessi
 /** A turn ends only on a completed question; retries never duplicate status ticks. */
 function settleTurn(updated: Session, before: Session): Session {
   if (updated.resolvedTurnIndex === updated.index) return updated;
-  const lastTurnBurnDamage = before.enemyBurning && updated.shield > 0 ? 4 : 0;
+  const lastTurnBurnDamage = before.enemyBurning && updated.shield > 0 ? enemyBurnDamagePerTurn(before) : 0;
   const lastTurnHealing = before.playerRegeneration && updated.shield > 0 ? Math.min(4, 100 - updated.shield) : 0;
-  return { ...updated, combatRulesVersion: 2, resolvedTurnIndex: updated.index,
+  return { ...updated, combatRulesVersion: 3, resolvedTurnIndex: updated.index,
     enemyBurnDamage: (updated.enemyBurnDamage ?? 0) + lastTurnBurnDamage,
     shield: updated.shield + lastTurnHealing, lastTurnBurnDamage, lastTurnHealing };
 }
@@ -113,8 +135,9 @@ function settleTurn(updated: Session, before: Session): Session {
 function attackFeedback(attack: Partial<Session>, timedOut = false): string {
   const prefix = timedOut ? '時間到了！' : '';
   if (attack.lastEnemyMissed) return `${prefix}鏡界讓魔王這次攻擊落空，沒有損失 HP。`;
-  const critical = attack.lastEnemyCritical ? '連續答錯，魔王施放必殺技！' : '魔王攻擊！';
-  const defense = attack.preventedDamage ? '寒冰／城堡減輕了傷害，' : '';
+  const critical = attack.lastEnemyCritical ? '連續答錯，魔王追加追擊，原傷害再加 10 HP！' : '魔王攻擊！';
+  if (attack.preventedDamage && attack.lastEnemyDamage === 0) return `${prefix}${critical}城堡護盾完整抵擋，主角不扣血。`;
+  const defense = attack.preventedDamage ? '寒冰減輕了傷害，' : '';
   return `${prefix}${critical}${defense}扣 ${attack.lastEnemyDamage} HP。`;
 }
 
@@ -189,6 +212,9 @@ function successful(session: Session, feedback: string): Session {
   const defensive = ultimateId === 1;
   const recovery = ultimateId === 3;
   const barrierCharges = defensive ? session.mode === 'advanced' ? 2 : 1 : remainingBarrierCharges(session);
+  const frostGuardCharges = ultimateId === 6 ? session.mode === 'advanced' ? 2 : 1 : remainingFrostGuardCharges(session);
+  const mirrorGuardCharges = ultimateId === 4 ? session.mode === 'advanced' ? 2 : 1 : remainingMirrorGuardCharges(session);
+  const lightningHintQuestions = ultimateId === 2 ? session.mode === 'advanced' ? 2 : 1 : remainingLightningHintQuestions(session);
   return settleTurn({
     ...session, step: 'feedback', feedback, success: true, energy: 0, ultimateUsed: true, ultimateId, preparedUltimateId: undefined,
     bonusPoints: (session.bonusPoints ?? 0) + ULTIMATE_BONUS_POINTS,
@@ -197,9 +223,9 @@ function successful(session: Session, feedback: string): Session {
     enemyBonusDamage: (session.enemyBonusDamage ?? 0) + spell.extraDamage,
     wrongStreak: 0, enemyBurning: ultimateId === 5 || session.enemyBurning === true,
     playerRegeneration: recovery || session.playerRegeneration === true,
-    frostGuard: ultimateId === 6 || session.frostGuard === true,
-    mirrorGuard: ultimateId === 4 || session.mirrorGuard === true,
-    lightningHintQueued: ultimateId === 2 || session.lightningHintQueued === true,
+    frostGuard: frostGuardCharges > 0, frostGuardCharges,
+    mirrorGuard: mirrorGuardCharges > 0, mirrorGuardCharges,
+    lightningHintQueued: lightningHintQuestions > 0, lightningHintQuestions,
     preventedDamage: false, lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
   }, session);
 }
@@ -272,7 +298,7 @@ function makeRecord(session: Session): AttemptRecord {
     ...(session.timed ? { timed: true, elapsedMs: session.elapsedMs ?? 0, timedOut: expired } : {}),
     ...(session.ultimateUsed ? { ultimateUsed: true, ultimateId: session.ultimateId } : {}),
     ...(session.preventedDamage ? { preventedDamage: true } : {}),
-    ...(session.combatRulesVersion === 2 ? { combatRulesVersion: 2 as const,
+    ...(session.combatRulesVersion !== undefined ? { combatRulesVersion: session.combatRulesVersion,
       turnBurnDamage: session.lastTurnBurnDamage ?? 0, turnHealing: session.lastTurnHealing ?? 0 } : {}),
   };
 }
@@ -293,14 +319,17 @@ export function advanceSession(session: Session): { session: Session | null; rec
     ultimateUsed: false, ultimateId: undefined, timedOut: false, preventedDamage: false,
     elapsedMs: 0, remainingMs: QUESTION_TIME_MS,
     lastEnemyDamage: 0, lastEnemyCritical: false, lastEnemyMissed: false,
-    lastTurnBurnDamage: 0, lastTurnHealing: 0, lightningHintChoices: [], lightningHintQueued: false,
+    lastTurnBurnDamage: 0, lastTurnHealing: 0, lightningHintChoices: [], lightningHintQueued: false, lightningHintQuestions: 0,
   };
-  if (session.lightningHintQueued) {
+  const futureHints = remainingLightningHintQuestions(session);
+  if (futureHints > 0) {
     const nextQuestion = currentQuestion(nextSession);
     const correct = Number(Object.keys(nextQuestion.valid)[0]);
     const incorrect = nextQuestion.choices.findIndex((_, index) => !nextQuestion.valid[index]?.length);
     const other = incorrect >= 0 ? incorrect : nextQuestion.choices.findIndex((_, index) => index !== correct);
     nextSession.lightningHintChoices = [correct, other].sort((a, b) => a - b);
+    nextSession.lightningHintQuestions = futureHints - 1;
+    nextSession.lightningHintQueued = nextSession.lightningHintQuestions > 0;
   }
   delete nextSession.resolvedTurnIndex;
   delete nextSession.demoRetriesKnown;

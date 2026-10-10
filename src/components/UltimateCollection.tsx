@@ -120,8 +120,8 @@ function CardModal({ spell, unlockedAt, onClose }: {
     <div className="ultimate-card-modal-content">
       <button ref={closeRef} className="ultimate-card-modal-close" type="button" onClick={onClose} aria-label="關閉收藏卡"><X size={24} /></button>
       <div className="ultimate-card-large-art"><img src={appAssetUrl(spell.artPath)} alt={`小羽施放${spell.name}的專屬收藏卡`} /><UltimateCardTitle name={spell.name} /></div>
-      <div className="ultimate-card-modal-info"><span className={`ultimate-category ${spell.category}`}><Icon size={20} />{categoryNames[spell.category]}</span>
-        <span className={'ultimate-tier ' + spell.mode}>{spell.mode === 'advanced' ? 'Lv.2 進階升級' : 'Lv.1 初階技能'}</span>
+      <div className="ultimate-card-modal-info"><div className="ultimate-card-badges"><span className={`ultimate-category ${spell.category}`}><Icon size={20} />{categoryNames[spell.category]}</span>
+        <span className={'ultimate-tier ' + spell.mode}>{spell.mode === 'advanced' ? 'Lv.2 進階升級' : 'Lv.1 初階技能'}</span></div>
         <h2 id={titleId}>{spell.name}</h2>
         {spell.mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>{spell.baseName} → {spell.name}</strong><p>{spell.upgradeDescription}</p></div>}
         <p>{spell.description}</p>
@@ -159,8 +159,8 @@ export function UltimateCollection({ cards, initialMode = 'starter' }: UltimateC
         {isUnlocked ? <button type="button" className="ultimate-card-art-button" onClick={() => setSelectedKey(`${mode}:${spell.id}`)} aria-label={`查看收藏卡：${spell.name}`}>
           <img src={appAssetUrl(spell.artPath)} alt={`小羽施放${spell.name}`} loading="lazy" /><UltimateCardTitle name={spell.name} /><span className="ultimate-card-open-hint">查看收藏卡</span>
         </button> : <div className="ultimate-card-locked-art" aria-label={`${spell.name}尚未解鎖`}><LockKeyhole size={44} aria-hidden="true" /><strong>{mode === 'advanced' ? '等待升級魔法' : '等待你的魔法'}</strong><span>挑戰{mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關<br />施放必殺技後解鎖</span></div>}
-        <div className="ultimate-card-details"><span className={`ultimate-category ${spell.category}`}><Icon size={18} />{categoryNames[spell.category]}</span><span className={'ultimate-tier ' + mode}>{mode === 'advanced' ? 'Lv.2 升級' : 'Lv.1 初階'}</span><h3>{spell.name}</h3><p>{getChapter(spell.id).title} · {mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關</p>
-          {mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>升級自：{spell.baseName}</strong><p>{spell.upgradeDescription}</p></div>}<p>{spell.description}</p>
+        <div className="ultimate-card-details"><div className="ultimate-card-badges"><span className={`ultimate-category ${spell.category}`}><Icon size={18} />{categoryNames[spell.category]}</span><span className={'ultimate-tier ' + mode}>{mode === 'advanced' ? 'Lv.2 升級' : 'Lv.1 初階'}</span></div><h3>{spell.name}</h3><p className="ultimate-card-chapter">{getChapter(spell.id).title} · {mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關</p>
+          {mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>升級自：{spell.baseName}</strong><p>{spell.upgradeDescription}</p></div>}<p className="ultimate-card-description">{spell.description}</p>
           <span className={`ultimate-card-status ${isUnlocked ? 'collected' : ''}`}>{isUnlocked ? '已收藏 · 點卡片查看' : '尚未解鎖'}</span></div>
       </article>;
     })}</div>

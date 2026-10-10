@@ -51,6 +51,41 @@ describe('battle sound choreography', () => {
     expect(boss.voices[0].from).toBeLessThan(enemy.voices[0].from);
   });
 
+  it('gives every chapter pursuit a second material contact at 1.22 s without extending the turn or borrowing creature calls', () => {
+    const materials = new Set<string>();
+    for (const mode of ['starter', 'advanced'] as const) for (let theme = 1; theme <= 6; theme++) {
+      for (const reduced of [false, true]) {
+        const speed = reduced ? 6 : 1;
+        const normal = buildBattleSound(false, theme, reduced, { mode });
+        const pursuit = buildBattleSound(false, theme, reduced, { mode, enemyCritical: true });
+        const contact = pursuit.voices.find(voice => voice.layer === `${pursuit.profile}-pursuit-contact`)!;
+        expect(contact).toMatchObject({ phase: 'impact', kind: 'triangle', at: 1.22 / speed, pan: -.55 });
+        expect(pursuit.voices.some(voice => voice.layer === `${pursuit.profile}-follow-up-flight` && voice.at === 1.02 / speed)).toBe(true);
+        const material = pursuit.voices.find(voice => voice.phase === 'impact' && voice.kind === 'noise' && voice.at === 1.22 / speed)!;
+        expect(material).toBeDefined(); materials.add(material.layer!);
+        expect(pursuit.voices.some(voice => voice.kind === 'creature')).toBe(false);
+        expect(pursuit.voices.length).toBeGreaterThan(normal.voices.length);
+        expect(pursuit.voices.reduce((power, voice) => power + voice.gain ** 2 * voice.duration, 0))
+          .toBeGreaterThan(normal.voices.reduce((power, voice) => power + voice.gain ** 2 * voice.duration, 0));
+        expect(pursuit.duration).toBe(normal.duration);
+        expect(pursuit.voices.every(voice => voice.at + voice.duration + .006 < pursuit.duration)).toBe(true);
+      }
+    }
+    expect(materials.size).toBe(12);
+  });
+
+  it('prevents every chapter pursuit’s second damage contact after shield interception or mirror dodge', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let theme = 1; theme <= 6; theme++) {
+      for (const outcome of [{ blocked: true }, { missed: true }]) {
+        const sound = buildBattleSound(false, theme, false, { mode, enemyCritical: true, ...outcome });
+        expect(sound.voices.some(voice => voice.layer?.endsWith('-pursuit-contact'))).toBe(false);
+        expect(sound.voices.some(voice => voice.layer?.endsWith('-follow-up-flight'))).toBe(false);
+        expect(sound.voices.some(voice => voice.phase === 'impact' && voice.kind === 'triangle')).toBe(false);
+        expect(buildBattleSampleCues(sound).some(cue => cue.id === 'heavy-impact')).toBe(false);
+      }
+    }
+  });
+
   it('keeps each final boss material independent of question theme for normal and critical attacks', () => {
     for (const mode of ['starter', 'advanced'] as const) for (const enemyCritical of [false, true]) {
       const sounds = Array.from({ length: 6 }, (_, i) => buildBattleSound(false, i + 1, false,
@@ -261,7 +296,7 @@ describe('battle Web Audio scheduling and cancellation', () => {
     expect(context.createBuffer).toHaveBeenCalledOnce();
   });
 
-  it('raises only ordinary hero and enemy mixes while keeping the same compressor headroom', async () => {
+  it('keeps chapter pursuit contact weight while preserving hero summons and final boss mixes and compressor headroom', async () => {
     const { battleSound } = await import('./audio');
     for (const success of [true, false]) {
       const before = MockContext.instances[0]?.nodes.length ?? 0;
@@ -273,7 +308,10 @@ describe('battle Web Audio scheduling and cancellation', () => {
       expect(limiter.ratio.value).toBe(8);
       const start = context.nodes.length;
       battleSound(success, 4, false, { ultimate: true, enemyCritical: true });
-      expect(context.nodes[start].gain.value).toBe(.85);
+      expect(context.nodes[start].gain.value).toBe(success ? .85 : 1.20);
+      const finalStart = context.nodes.length;
+      battleSound(success, 4, false, { ultimate: true, enemyCritical: true, finalBoss: true });
+      expect(context.nodes[finalStart].gain.value).toBe(.85);
     }
   });
 
@@ -288,6 +326,22 @@ describe('battle Web Audio scheduling and cancellation', () => {
     expect(context.nodes.every(node => node.disconnect.mock.calls.length > 0)).toBe(true);
     stopBattleSound();
     expect(current.every(source => source.stop.mock.calls.length === 1)).toBe(true);
+  });
+
+  it('cancels a queued chapter pursuit on pause or exit and releases its music lease without a later strike', async () => {
+    const { battleSound, stopBattleSound } = await import('./audio');
+    for (const mode of ['starter', 'advanced'] as const) {
+      battleSound(false, 6, false, { mode, enemyCritical: true });
+      const context = MockContext.instances[0];
+      const plan = buildBattleSound(false, 6, false, { mode, enemyCritical: true });
+      const sources = context.sources.slice(-plan.voices.length);
+      const follow = sources[plan.voices.findIndex(voice => voice.layer?.endsWith('-pursuit-contact'))];
+      expect(follow.start.mock.calls[0][0]).toBeCloseTo(11.22);
+      stopBattleSound(); stopBattleSound();
+      expect(follow.stop).toHaveBeenCalledTimes(2); expect(follow.onended).toBeNull();
+      expect(sources.every(source => source.disconnect.mock.calls.length > 0)).toBe(true);
+      expect(musicDuck.releases.at(-1)).toHaveBeenCalledOnce();
+    }
   });
 
   it('ducks music for real casts, restores it once on completion or cancellation, and schedules creature buffers', async () => {

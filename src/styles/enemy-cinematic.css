@@ -39,7 +39,7 @@
 /* Match the allocated battle pane rather than the device's full width. The
    nine heads remain one complete silhouette, and their existing launch and
    contact times still line up with the arena and HP changes. */
-@media (orientation: landscape) and (max-width: 1366px), (min-width: 601px) and (max-height: 650px) {
+@media (orientation: landscape) {
   .duel-combat-window .enemy-cinematic-charge {
     width: min(44cqw, 59cqh, 340px);
   }
@@ -61,3 +61,19 @@
     display: none;
   }
 }
+
+/* Chapter pursuits keep a large outlined material silhouette, then send a
+   paired follow-up through the same battle lane. Contact stays local and the
+   complete sequence ends before the existing 2050 ms turn deadline. */
+.enemy-main-charge-emblem{transform-origin:0 0;animation:enemy-main-gather var(--enemy-cinematic-duration) both}
+.enemy-main-flight-streaks{animation:enemy-cinematic-streams var(--enemy-cinematic-duration) both}
+.enemy-main-contact-emblem{transform-origin:0 0;animation:enemy-main-contact var(--enemy-cinematic-duration) both}
+.enemy-cinematic .enemy-main-pursuit{animation-name:enemy-main-pursuit;opacity:0}
+.enemy-cinematic .enemy-main-afterstrike{animation-name:enemy-main-afterstrike;opacity:0}
+@keyframes enemy-main-gather{0%{transform:scale(.68)}17%,23.4146%{transform:scale(1)}34%,100%{transform:scale(.9)}}
+@keyframes enemy-main-contact{0%,43.86%{transform:scale(.5)}47%{transform:scale(.78)}55%,100%{transform:scale(.67)}}
+@keyframes enemy-main-pursuit{0%,49.70%{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);opacity:0;transform:translate(-50%,-50%) scale(.65)}49.7561%{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);opacity:.95;transform:translate(-50%,-50%) scale(.73)}59.5122%{left:var(--enemy-contact-x);top:var(--enemy-contact-y);opacity:1;transform:translate(-50%,-50%) scale(.95)}63%,100%{left:var(--enemy-contact-x);top:var(--enemy-contact-y);opacity:0;transform:translate(-50%,-50%) scale(.58)}}
+@keyframes enemy-main-afterstrike{0%,59.47%{opacity:0;transform:translate(-50%,-50%) scale(.25)}59.5122%{opacity:1;transform:translate(-50%,-50%) scale(.63)}67%{opacity:.9;transform:translate(-50%,-50%) scale(1.10)}86%{opacity:.55;transform:translate(-50%,-50%) scale(1.17)}96%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.22)}}
+.enemy-cinematic.is-reduced .enemy-main-pursuit,.enemy-cinematic.is-reduced .enemy-main-afterstrike{display:none}
+.enemy-cinematic.is-reduced .enemy-main-charge-emblem,.enemy-cinematic.is-reduced .enemy-main-contact-emblem{transform:scale(.8)}
+@media(prefers-reduced-motion:reduce){.enemy-cinematic .enemy-main-pursuit,.enemy-cinematic .enemy-main-afterstrike{display:none}.enemy-cinematic .enemy-main-charge-emblem,.enemy-cinematic .enemy-main-contact-emblem{transform:scale(.8)}}
