@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createCoverHeroSprite, type HeroSpritePose } from './coverHeroSprite';
 import { createMissionEnemy, type MissionEnemyRig } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
+import { contactReaction, enemyCastMotion } from './combatChoreography';
 import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming } from './arenaFraming';
 
 function view(width = 8, height = 8.8, y = 1.8, elevation = 4.7, x = 0, zoom = 1) {
@@ -22,7 +23,11 @@ function projectedBounds(actor: { root: THREE.Group }, camera: THREE.Camera) {
     for (let i = 0; i < positions.count; i++) bounds.expandByPoint(new THREE.Vector3()
       .fromBufferAttribute(positions, i).applyMatrix4(object.matrixWorld).project(camera));
   };
-  if (sprite) collect(sprite); else actor.root.traverse(collect);
+  if (sprite) {
+    collect(sprite);
+    const headEnergy = actor.root.getObjectByName('final-nine-head-charge');
+    if (headEnergy?.visible) headEnergy.traverse(collect);
+  } else actor.root.traverse(collect);
   return bounds;
 }
 
@@ -66,6 +71,117 @@ describe('battle framing', () => {
   });
 
   describe.each([[360, 800], [390, 844], [768, 1024], [1024, 768], [1440, 900]])('%s × %s', (width, height) => {
+    it.each(['starter', 'advanced'] as const)('fits the actual %s final-boss cast deformation and contact responses', mode => {
+      const hero = createCoverHeroSprite({ loadTexture: () => undefined });
+      const enemy = createFinalBossSprite(mode, { loadTexture: () => undefined });
+      const fit = fitBattleActors({ width, height, questionBottom: height * .36, answersTop: height * .78, resolving: false },
+        measureActorFraming(hero, view()), measureActorFraming(enemy, view()));
+      const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+      const cameraPosition = camera.position.clone(), cameraRotation = camera.quaternion.clone(), projection = camera.projectionMatrix.clone();
+      const smooth = (value: number) => { const p = Math.max(0, Math.min(1, value)); return p * p * (3 - 2 * p); };
+      const clamp = (value: number) => Math.max(0, Math.min(1, value));
+      const outcomes = ['hero-hit', 'enemy-hit', 'enemy-critical', 'enemy-missed', 'enemy-blocked'] as const;
+      // Sample release, maximum anticipation, contact hold and recovery instead of
+      // forcing reduced-motion poses, which bypasses the visible atlas deformation.
+      const times = [0, .2, .34, .42, .48, .52, .64, .8, .9, .97, 1.03, 1.2, 1.45, 1.7, 2.05];
+      let sawCompression = false, sawForwardLean = false;
+      for (const reducedMotion of [false, true]) for (const outcome of outcomes) for (const time of times) {
+        const success = outcome === 'hero-hit', critical = outcome === 'enemy-critical';
+        const missed = outcome === 'enemy-missed', blocked = outcome === 'enemy-blocked';
+        hero.root.position.set(fit.heroX, 0, 0); enemy.root.position.set(fit.enemyX, 0, 0);
+        hero.root.scale.setScalar(fit.scale); enemy.root.scale.setScalar(fit.scale);
+        hero.root.rotation.set(0, .13, 0); enemy.root.rotation.set(0, -.15, 0);
+        const cast = smooth((time - .25) / .28) * (1 - smooth((time - 1.2) / .45));
+        const recoil = contactReaction(time, reducedMotion, missed);
+        // Match the existing bounded arena root movement while exercising the
+        // actual sprite updater below; the bounds assertion remains independent.
+        if (!reducedMotion) {
+          if (success) {
+            hero.root.position.x += .20 * cast;
+            hero.root.position.y -= Math.sin(clamp(time / .44) * Math.PI) * .09;
+            hero.root.rotation.z = -.055 * Math.sin(clamp(time / .34) * Math.PI / 2) * (1 - cast);
+            hero.root.rotation.y += .30 * cast;
+            enemy.root.position.x += recoil * .48 * fit.scale;
+            enemy.root.rotation.z -= recoil * .23;
+            enemy.root.scale.y *= 1 - recoil * .045;
+          } else {
+            const motion = enemyCastMotion(time);
+            enemy.root.position.x += (.10 * motion.anticipation - .10 * motion.release) * fit.scale;
+            enemy.root.position.y -= .06 * motion.anticipation * fit.scale;
+            enemy.root.rotation.y -= .14 * cast;
+            if (critical) {
+              enemy.root.position.y += Math.sin(clamp(time / .8) * Math.PI) * .16 * fit.scale;
+              enemy.root.scale.setScalar(fit.scale * (1 + Math.sin(clamp(time / 1.65) * Math.PI) * .09));
+            }
+            if (missed) hero.root.position.x -= smooth((time - .35) / .4) * (1 - smooth((time - 1.2) / .55)) * .30 * fit.scale;
+            else {
+              hero.root.position.x -= recoil * (blocked ? .035 : critical ? .29 : .19) * fit.scale;
+              hero.root.rotation.z += recoil * (blocked ? .025 : critical ? .15 : .10);
+              hero.root.scale.y *= 1 - recoil * (blocked ? .008 : .035);
+            }
+          }
+        }
+        hero.updateVisual({ camera, attackTime: time, success, reducedMotion, pose: missed || blocked ? 'idle' : undefined });
+        enemy.updateVisual({ camera, attackTime: time, success, reducedMotion });
+        const shape = enemy.root.userData.castShape as { compression: number; lean: number; headEnergy: number };
+        if (reducedMotion || success) expect(shape).toEqual({ compression: 0, lean: 0, headEnergy: 0 });
+        else { sawCompression ||= shape.compression > .04; sawForwardLean ||= shape.lean < -.06; }
+        for (const [name, actor] of [['hero', hero], ['enemy', enemy]] as const) {
+          const bounds = projectedBounds(actor, camera), label = `${mode}/${outcome}/${time}/${reducedMotion}/${name}`;
+          expect((bounds.min.x + 1) * width / 2, label).toBeGreaterThanOrEqual(width <= 600 ? 13 : 23);
+          expect((bounds.max.x + 1) * width / 2, label).toBeLessThanOrEqual(width - (width <= 600 ? 13 : 23));
+          expect((1 - bounds.max.y) * height / 2, label).toBeGreaterThanOrEqual(fit.top - 3);
+          expect((1 - bounds.min.y) * height / 2, label).toBeLessThanOrEqual(fit.bottom + 12);
+        }
+      }
+      expect(sawCompression).toBe(true); expect(sawForwardLean).toBe(true);
+      expect(camera.position.equals(cameraPosition)).toBe(true); expect(camera.quaternion.equals(cameraRotation)).toBe(true);
+      expect(camera.projectionMatrix).toEqual(projection);
+      hero.disposeVisual(); enemy.disposeVisual();
+    });
+
+    it.each(['starter', 'advanced'] as const)('fits all six %s ordinary-boss anticipation and release poses', mode => {
+      const hero = createCoverHeroSprite({ loadTexture: () => undefined });
+      for (let chapter = 1; chapter <= 6; chapter++) {
+        const enemy = createMissionEnemy(chapter, mode, false, { loadTexture: () => undefined });
+        const fit = fitBattleActors({ width, height, questionBottom: height * .36, answersTop: height * .78, resolving: false },
+          measureActorFraming(hero, view()), measureActorFraming(enemy, view()));
+        const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+        const parts: { object: THREE.Object3D; rotation: THREE.Euler }[] = [];
+        enemy.root.traverse(object => {
+          if (['book-spirit-paper-wing', 'paper-dragon-left-wing', 'paper-dragon-right-wing', 'lion-gear-crown'].includes(object.name)) {
+            parts.push({ object, rotation: object.rotation.clone() });
+          }
+        });
+        for (const time of [.2, .34, .42, .52, .64, .9, 1.2]) {
+          const motion = enemyCastMotion(time), p = Math.max(0, Math.min(1, (time - .25) / .28)), cast = p * p * (3 - 2 * p);
+          enemy.root.scale.setScalar(fit.scale);
+          enemy.root.position.set(fit.enemyX + (.10 * motion.anticipation - .10 * motion.release) * fit.scale,
+            -.06 * motion.anticipation * fit.scale, 0);
+          enemy.root.rotation.set(0, -.15 - .14 * cast, 0);
+          enemy.head.rotation.set(-.12 * motion.anticipation + .10 * motion.release, 0, 0);
+          enemy.leftArm.rotation.set(0, 0, -.26 - 1.65 * cast); enemy.rightArm.rotation.set(0, 0, .26);
+          for (const part of parts) {
+            part.object.rotation.copy(part.rotation);
+            if (part.object.name === 'lion-gear-crown') part.object.rotation.z += motion.anticipation * .22;
+            else {
+              const side = part.object.position.x < 0 ? -1 : 1;
+              part.object.rotation.y += side * (.22 * motion.anticipation - .30 * motion.release);
+              part.object.rotation.z += side * (.12 * motion.anticipation + .16 * motion.release);
+            }
+          }
+          enemy.updateVisual?.({ camera, attackTime: time, success: false, reducedMotion: false });
+          const bounds = projectedBounds(enemy, camera), label = `${mode}/${chapter}/${time}`;
+          expect((bounds.min.x + 1) * width / 2, label).toBeGreaterThanOrEqual(width <= 600 ? 13 : 23);
+          expect((bounds.max.x + 1) * width / 2, label).toBeLessThanOrEqual(width - (width <= 600 ? 13 : 23));
+          expect((1 - bounds.max.y) * height / 2, label).toBeGreaterThanOrEqual(fit.top - 3);
+          expect((1 - bounds.min.y) * height / 2, label).toBeLessThanOrEqual(fit.bottom + 12);
+        }
+        enemy.disposeVisual?.();
+      }
+      hero.disposeVisual();
+    });
+
     it.each(cases)('keeps every $name pose within the actor slot and horizontal margins', ({ make }) => {
       const hero = createCoverHeroSprite({ loadTexture: () => undefined });
       const enemy = make();

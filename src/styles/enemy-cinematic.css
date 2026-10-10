@@ -1,0 +1,37 @@
+/* Enemy-critical effects share the arena's ordinary 2.05 s clock. The projected
+   actor lanes and safe window are set by arena3d; no camera or full-screen shake. */
+.enemy-cinematic{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;isolation:isolate;clip-path:inset(var(--combat-top,120px) 0 calc(100% - var(--combat-bottom,78%)) 0);--enemy-cinematic-duration:2050ms;--enemy-contact-x:var(--hero-lane-x,29%);--enemy-contact-y:var(--actor-impact-y,64%)}
+.enemy-cinematic.is-blocked{--enemy-contact-x:var(--enemy-guard-x,calc(var(--hero-lane-x,29%) + 3%))}
+.enemy-cinematic.is-missed{--enemy-contact-x:var(--enemy-miss-x,calc(var(--hero-lane-x,29%) - 13%));--enemy-contact-y:var(--enemy-miss-y,calc(var(--actor-impact-y,64%) + 8%))}
+.enemy-cinematic-charge,.enemy-cinematic-flight,.enemy-cinematic-impact{position:absolute;aspect-ratio:1.15;transform:translate(-50%,-50%);filter:drop-shadow(0 4px 5px #25163780);opacity:0}
+.enemy-cinematic svg{display:block;width:100%;height:100%;overflow:visible}
+.enemy-cinematic-charge{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);width:min(29vw,31vh,340px);animation:enemy-cinematic-charge var(--enemy-cinematic-duration) both}
+.enemy-cinematic-flight{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);width:min(32vw,37vh,390px);animation:enemy-cinematic-flight var(--enemy-cinematic-duration) both}
+.enemy-cinematic-impact{left:var(--enemy-contact-x);top:var(--enemy-contact-y);width:min(27vw,34vh,330px);animation:enemy-cinematic-impact var(--enemy-cinematic-duration) both}
+.enemy-cinematic .enemy-guard-intercept{width:min(21vw,28vh,240px)}
+.enemy-cinematic .enemy-missed-dissipation{top:var(--enemy-contact-y);width:min(20vw,24vh,210px);opacity:0}
+.enemy-grimoire-open-pages{transform-origin:0 100px;animation:enemy-grimoire-open var(--enemy-cinematic-duration) both}
+.enemy-grimoire-flight-streaks,.enemy-phantom-flame-streams{animation:enemy-cinematic-streams var(--enemy-cinematic-duration) both}
+.enemy-rune-page-fan{transform-origin:0 0;animation:enemy-pages-fan var(--enemy-cinematic-duration) both}
+.enemy-nine-head-array{transform-origin:0 110px;animation:enemy-nine-gather var(--enemy-cinematic-duration) both}
+.enemy-rune-seal-split,.enemy-phantom-impact-flames{transform-origin:0 0;animation:enemy-local-burst var(--enemy-cinematic-duration) both}
+.enemy-impact-fragments{transform-origin:0 0;animation:enemy-local-fragments var(--enemy-cinematic-duration) both}
+@keyframes enemy-cinematic-charge{0%{opacity:.6;transform:translate(-50%,-50%) scale(.54)}16%{opacity:1;transform:translate(-50%,-50%) scale(1)}23.4146%{opacity:.88;transform:translate(-50%,-50%) scale(1.03)}30%,100%{opacity:0;transform:translate(-50%,-50%) scale(.88)}}
+@keyframes enemy-cinematic-flight{0%,23.35%{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);opacity:0;transform:translate(-50%,-50%) scale(.65)}23.4146%{left:var(--enemy-lane-x,71%);top:var(--actor-cast-y,58%);opacity:1;transform:translate(-50%,-50%) scale(.8)}35%{left:calc((var(--enemy-lane-x,71%) + var(--enemy-contact-x)) / 2);top:var(--enemy-contact-y);opacity:1;transform:translate(-50%,-50%) scale(.93)}43.9024%{left:var(--enemy-contact-x);top:var(--enemy-contact-y);opacity:1;transform:translate(-50%,-50%) scale(1)}48%,100%{left:var(--enemy-contact-x);top:var(--enemy-contact-y);opacity:0;transform:translate(-50%,-50%) scale(.56)}}
+@keyframes enemy-cinematic-impact{0%,43.86%{opacity:0;transform:translate(-50%,-50%) scale(.15)}43.9024%{opacity:1;transform:translate(-50%,-50%) scale(.48)}52%{opacity:1;transform:translate(-50%,-50%) scale(1.04)}75%{opacity:.7;transform:translate(-50%,-50%) scale(1.13)}93%,100%{opacity:0;transform:translate(-50%,-50%) scale(1.24)}}
+@keyframes enemy-grimoire-open{0%{transform:scaleX(.2)}16%,100%{transform:scaleX(1)}}
+@keyframes enemy-pages-fan{0%,23.4146%{transform:scaleY(.4)}35%,100%{transform:scaleY(1)}}
+@keyframes enemy-nine-gather{0%{transform:scale(.63);opacity:.7}17%,23.4146%{transform:scale(1);opacity:1}35%,100%{transform:scale(.83);opacity:0}}
+@keyframes enemy-cinematic-streams{0%,23.4146%{opacity:.2}35%,43.9024%{opacity:.85}48%,100%{opacity:0}}
+@keyframes enemy-local-burst{0%,43.86%{transform:scale(.7)}51%{transform:scale(1)}84%,100%{transform:scale(1.19)}}
+@keyframes enemy-local-fragments{0%,43.86%{transform:scale(.48);opacity:0}53%{transform:scale(.93);opacity:1}83%,100%{transform:scale(1.23);opacity:0}}
+/* Explicit preference and OS preference both retain a recognizable, upright
+   cast object and impact. Static forms never flash, shake, fly or rotate. */
+.enemy-cinematic.is-reduced,.enemy-cinematic.is-reduced *{animation:none!important}
+.enemy-cinematic.is-reduced .enemy-cinematic-charge{opacity:.72;transform:translate(-50%,-50%) scale(.83)}
+.enemy-cinematic.is-reduced .enemy-cinematic-flight{display:none}
+.enemy-cinematic.is-reduced .enemy-cinematic-impact{opacity:.7;transform:translate(-50%,-50%) scale(.77)}
+.enemy-cinematic.is-reduced .enemy-nine-head-array,.enemy-cinematic.is-reduced .enemy-grimoire-open-pages,.enemy-cinematic.is-reduced .enemy-rune-seal-split,.enemy-cinematic.is-reduced .enemy-phantom-impact-flames{transform:none;opacity:1}
+.enemy-cinematic.is-reduced .enemy-impact-fragments{display:none}
+@media(max-width:600px){.enemy-cinematic-charge{width:min(38vw,240px)}.enemy-cinematic-flight{width:min(45vw,270px)}.enemy-cinematic-impact{width:min(35vw,210px)}.enemy-cinematic .enemy-secondary-detail{display:none}.enemy-cinematic-charge,.enemy-cinematic-flight,.enemy-cinematic-impact{filter:drop-shadow(0 2px 3px #25163780)}}
+@media(prefers-reduced-motion:reduce){.enemy-cinematic,.enemy-cinematic *{animation:none!important}.enemy-cinematic .enemy-cinematic-charge{opacity:.72;transform:translate(-50%,-50%) scale(.83)}.enemy-cinematic .enemy-cinematic-flight{display:none}.enemy-cinematic .enemy-cinematic-impact{opacity:.7;transform:translate(-50%,-50%) scale(.77)}.enemy-cinematic .enemy-nine-head-array,.enemy-cinematic .enemy-grimoire-open-pages,.enemy-cinematic .enemy-rune-seal-split,.enemy-cinematic .enemy-phantom-impact-flames{transform:none;opacity:1}.enemy-cinematic .enemy-impact-fragments{display:none}}

@@ -3,6 +3,7 @@ import { acquireBattleMusicDuck, setBattleMusicDucked } from './music';
 import { buildBattleSound, type BattleSoundOptions } from './battleSoundDesign';
 import { synthesizeCreatureVoice } from './creatureVoice';
 import { battleSampleAssets, buildBattleSampleCues, type BattleSampleId } from './battleSamples';
+import { battleVoiceEnvelope } from './battleSoundEnvelope';
 
 let audioIndex: Record<string, string> = {};
 let loaded: Promise<void> | null = null;
@@ -245,18 +246,7 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     plan.voices.filter(voice => !sampleCues.some(cue => cue.replaces(voice))).forEach((voice, index) => {
       const at = start + voice.at, end = at + voice.duration;
       const gain = current.createGain(); nodes.push(gain);
-      gain.gain.setValueAtTime(0, at);
-      const attack = voice.envelope === 'swell' ? voice.duration * .32 : Math.min(.012, voice.duration * .15);
-      gain.gain.linearRampToValueAtTime(voice.gain, at + attack);
-      if (voice.envelope === 'gust') {
-        // Broad swells give fire a rushing burn and frost a moving wind instead
-        // of an exponentially fading click. Values share the audio clock.
-        [.58, .92, .63, .85, .43].forEach((level, i) =>
-          gain.gain.linearRampToValueAtTime(voice.gain * level, at + voice.duration * (.17 + i * .14)));
-      } else if (voice.envelope) {
-        gain.gain.linearRampToValueAtTime(voice.gain * .78, at + voice.duration * .7);
-      }
-      gain.gain.exponentialRampToValueAtTime(.0001, end);
+      for (const point of battleVoiceEnvelope(voice, at)) gain.gain[point.method](point.value, point.time);
       if (current.createStereoPanner) {
         const pan = current.createStereoPanner(); nodes.push(pan);
         pan.pan.setValueAtTime(voice.pan, at);
@@ -302,7 +292,14 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
         if (cue.panTo !== undefined) pan.pan.linearRampToValueAtTime(cue.panTo, end);
         gain.connect(pan); pan.connect(mix);
       } else gain.connect(mix);
-      source.connect(gain); source.start(at, cue.offset);
+      if (cue.filter) {
+        const filter = current.createBiquadFilter(); nodes.push(filter);
+        filter.type = cue.filter.type; filter.Q.value = cue.filter.resonance ?? .7;
+        filter.frequency.setValueAtTime(cue.filter.from, at);
+        filter.frequency.exponentialRampToValueAtTime(cue.filter.to, end);
+        source.connect(filter); filter.connect(gain);
+      } else source.connect(gain);
+      source.start(at, cue.offset);
       trackSource(source, end);
     });
   } catch { stopBattleSound(); /* Optional offline synthesized effects. */ }

@@ -80,7 +80,7 @@ describe('battle sound choreography', () => {
         expect(normal.voices.find(v => v.layer === 'contact-snap')).toMatchObject({
           phase: 'impact', kind: 'noise', at: normal.impact, duration: .07,
         });
-        expect(enhanced.voices.some(v => v.layer === 'contact-snap')).toBe(false);
+        expect(enhanced.voices.some(v => v.layer === 'contact-snap')).toBe(!success);
       }
     }
   });
@@ -162,7 +162,9 @@ describe('supplied sample choreography', () => {
       .toEqual(['ice-dragon-roar', 'frost-arrow', 'explosion']);
     for (const theme of [2, 3, 4]) expect(buildBattleSampleCues(buildBattleSound(true, theme, false, { ultimate: true })))
       .toEqual([]);
-    expect(buildBattleSampleCues(buildBattleSound(false, 5, false, { enemyCritical: true, mode: 'advanced' }))).toEqual([]);
+    const ink = buildBattleSampleCues(buildBattleSound(false, 5, false, { enemyCritical: true, mode: 'advanced' }));
+    expect(ink.map(cue => cue.id)).toEqual(['heavy-impact']);
+    expect(ink[0].filter?.type).toBe('lowpass');
     expect(buildBattleSampleCues(buildBattleSound(true, 1)).map(cue => cue.id)).toEqual(['heavy-impact']);
   });
 
@@ -343,6 +345,25 @@ describe('battle Web Audio scheduling and cancellation', () => {
   const suppliedFetch = () => vi.fn(async (url: string) => ({ ok: true,
     arrayBuffer: async () => new Uint8Array([Object.values(battleSampleAssets).findIndex(path => url.endsWith(path)) + 1]).buffer }));
   const isSample = (source: MockNode) => !!source.buffer && 'sample' in (source.buffer as object);
+
+  it('routes a material sample through its timed filter and holds short synthesized contacts before releasing every node', async () => {
+    vi.stubGlobal('fetch', suppliedFetch());
+    const { preloadBattleSamples, battleSound, stopBattleSound } = await import('./audio');
+    await preloadBattleSamples();
+    battleSound(false, 5, false, { mode: 'advanced' });
+    const context = MockContext.instances[0];
+    const sample = context.sources.find(isSample)!;
+    const filter = sample.connect.mock.calls[0][0] as MockNode;
+    expect(filter.type).toBe('lowpass');
+    expect(filter.frequency.setValueAtTime).toHaveBeenCalledWith(930, 10.9);
+    expect(filter.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(350, 11.15);
+    expect(context.nodes.some(node => node.gain.setValueAtTime.mock.calls.some(([gain, at]) =>
+      gain > 0 && Math.abs(at - (10.9 + .17 * .3)) < .00001))).toBe(true); // ink splash punch hold
+    stopBattleSound();
+    expect(context.nodes.every(node => node.disconnect.mock.calls.length > 0)).toBe(true);
+    expect(context.sources.every(source => source.stop.mock.calls.length === 2)).toBe(true);
+    expect(musicDuck.releases.at(-1)).toHaveBeenCalledOnce();
+  });
 
   it('preloads and decodes each local excerpt once without unlocking, playing or creating narration elements', async () => {
     const fetch = suppliedFetch(); vi.stubGlobal('fetch', fetch);

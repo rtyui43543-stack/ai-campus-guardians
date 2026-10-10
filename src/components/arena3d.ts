@@ -8,6 +8,7 @@ import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActor
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
+import { contactReaction, enemyAttackName, enemyCastMotion } from './combatChoreography';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -203,6 +204,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   const stage = host.closest('.duel-stage');
   const bubble = stage?.querySelector<HTMLElement>('.duel-bubble');
   const answers = stage?.querySelector<HTMLElement>('.duel-answer-area');
+  const castingParts: { object: THREE.Object3D; rotation: THREE.Euler }[] = [];
+  enemy.root.traverse(object => {
+    if (['book-spirit-paper-wing', 'paper-dragon-left-wing', 'paper-dragon-right-wing', 'lion-gear-crown'].includes(object.name)) {
+      castingParts.push({ object, rotation: object.rotation.clone() });
+    }
+  });
   const emitPhase = (phase: string) => {
     if (phase !== reportedPhase && alive) { reportedPhase = phase; onPhase(phase); }
   };
@@ -227,6 +234,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const fitted = fitBattleActors(layout, heroFraming, enemyFraming);
       modelScale = fitted.scale; lookY = fitted.lookY; elevation = fitted.elevation;
       heroX = fitted.heroX; enemyX = fitted.enemyX; camera.zoom = 1;
+      if (stage instanceof HTMLElement) {
+        stage.style.setProperty('--combat-top', `${fitted.top}px`);
+        stage.style.setProperty('--combat-bottom', `${Math.max(fitted.top + 1, fitted.bottom)}px`);
+      }
       const hud = stage?.querySelector<HTMLElement>('.duel-hud');
       if (hud && stage instanceof HTMLElement) {
         stage.style.setProperty('--duel-skill-top', `${hud.getBoundingClientRect().bottom - bounds.top + 12}px`);
@@ -238,10 +249,23 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       camera.zoom = 1;
     }
     camera.position.set(0, lookY + elevation, 15);
-    camera.lookAt(0, lookY, 0); camera.updateProjectionMatrix();
+    camera.lookAt(0, lookY, 0); camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
     framingY = lookY; framingElevation = elevation;
     hero.root.scale.setScalar(modelScale); enemy.root.scale.setScalar(modelScale);
     hero.root.position.x = heroX; enemy.root.position.x = enemyX;
+    if (!cinemaShot && stage instanceof HTMLElement) {
+      const heroAnchor = new THREE.Vector3(heroX, 1.4 * modelScale, .5).project(camera);
+      const enemyAnchor = new THREE.Vector3(enemyX, 1.5 * modelScale, .5).project(camera);
+      const missAnchor = new THREE.Vector3(heroX - .58 * modelScale, .85 * modelScale, .5).project(camera);
+      const guardAnchor = new THREE.Vector3(heroX + .25 * modelScale, 1.4 * modelScale, .5).project(camera);
+      stage.style.setProperty('--hero-lane-x', `${(heroAnchor.x + 1) * 50}%`);
+      stage.style.setProperty('--enemy-lane-x', `${(enemyAnchor.x + 1) * 50}%`);
+      stage.style.setProperty('--enemy-miss-x', `${(missAnchor.x + 1) * 50}%`);
+      stage.style.setProperty('--enemy-miss-y', `${(1 - missAnchor.y) * 50}%`);
+      stage.style.setProperty('--enemy-guard-x', `${(guardAnchor.x + 1) * 50}%`);
+      stage.style.setProperty('--actor-cast-y', `${(1 - enemyAnchor.y) * 50}%`);
+      stage.style.setProperty('--actor-impact-y', `${(1 - heroAnchor.y) * 50}%`);
+    }
     drone.scale.setScalar(modelScale);
     renderer.setSize(width, height, false); dirty = true;
   };
@@ -277,10 +301,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     const idleBob = reducedMotion ? 0 : Math.sin(idle * 2.4) * .018;
     hero.root.position.set(heroX, idleBob, 0);
     enemy.root.position.set(enemyX, idleBob * .65 + (enemyHp === 0 ? -.10 : 0), 0);
+    hero.root.scale.setScalar(modelScale); enemy.root.scale.setScalar(modelScale);
     hero.root.rotation.set(0, baseHeroRotation, 0);
     enemy.root.rotation.set(0, baseEnemyRotation, enemyHp === 0 ? .055 : 0);
     hero.head.rotation.set(0, 0, reducedMotion ? 0 : Math.sin(idle * 1.5) * .017);
-    enemy.head.rotation.z = reducedMotion ? 0 : Math.sin(idle * 1.7 + 1) * .025;
+    enemy.head.rotation.set(0, 0, reducedMotion ? 0 : Math.sin(idle * 1.7 + 1) * .025);
+    for (const part of castingParts) part.object.rotation.copy(part.rotation);
     poseMage(hero);
     enemy.leftArm.rotation.set(0, 0, -.26); enemy.rightArm.rotation.set(0, 0, .26);
     for (const part of [hero.leftLeg, hero.rightLeg, enemy.leftLeg, enemy.rightLeg]) part.rotation.set(0, 0, 0);
@@ -356,13 +382,16 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         : iceCast ? t < .42 ? '寒晶凝結' : t < .9 ? mode === 'advanced' ? '極寒冰龍飛襲' : '冰矛飛襲' : t < 2.65 ? '碎冰寒霜蔓延' : '寒霜收勢'
         : t < .42 ? mode === 'advanced' ? '升級必殺蓄勢' : '必殺蓄勢' : t < .9 ? mode === 'advanced' ? '全場魔法展開' : '必殺技展開' : t < 2.65 ? '專屬魔法成形' : '必殺收勢'
         : attack.blocked && t >= .9 && t < 1.75 ? '守護盾攔截'
+        : !success ? `${enemyAttackName(mode, theme, finalBoss)} · ${t < .34 ? '蓄力' : t < .48 ? '出手' : t < .9 ? '飛襲' : t < 1.75 ? '命中' : '收勢'}`
         : phoenixCast ? t < .34 ? '火羽匯聚' : t < .48 ? '揮杖施火' : t < .9 ? '火羽飛襲' : t < 1.75 ? '火焰迸裂' : '收杖'
         : iceCast ? t < .34 ? '霜晶凝結' : t < .48 ? '揮杖施冰' : t < .9 ? '冰矛飛襲' : t < 1.75 ? '碎冰霜霧' : '收杖'
         : t < .34 ? '魔力匯聚' : t < .48 ? '揮杖施法' : t < .9 ? '法術飛行' : t < 1.75 ? '法術命中' : '收杖');
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);
       const recovery = 1 - ease((t - 1.2) / .45);
       const cast = ease((t - .25) / .28) * recovery;
-      const recoil = Math.sin(clamp((t - .9) / .45) * Math.PI) * (1 - clamp((t - .9) / .55));
+      const recoil = attack.ultimate
+        ? Math.sin(clamp((t - .9) / .45) * Math.PI) * (1 - clamp((t - .9) / .55))
+        : contactReaction(t, reducedMotion, attack.missed);
       if (!reducedMotion) {
         if (success) {
           hero.root.position.y -= Math.sin(clamp(t / .44) * Math.PI) * .09;
@@ -376,24 +405,39 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           hero.glow.emissiveIntensity = .65 + 1.2 * (1 - clamp((t - .48) / .6));
           enemy.root.position.x += recoil * .48 * modelScale;
           enemy.root.rotation.z += recoil * -.23;
+          if (!attack.ultimate) enemy.root.scale.y *= 1 - recoil * .045;
           enemy.head.rotation.z -= recoil * .19;
           enemy.leftArm.rotation.z -= recoil * .55;
           enemy.rightArm.rotation.z += recoil * .55;
         } else {
+          const motion = enemyCastMotion(t, reducedMotion);
+          enemy.root.position.x += (.10 * motion.anticipation - .10 * motion.release) * modelScale;
+          enemy.root.position.y -= .06 * motion.anticipation * modelScale;
           enemy.leftArm.rotation.z = -.26 - (attack.critical ? 2.1 : 1.65) * cast;
           enemy.root.rotation.y -= .14 * cast;
+          enemy.head.rotation.x = -.12 * motion.anticipation + .10 * motion.release;
+          for (const part of castingParts) {
+            if (part.object.name === 'lion-gear-crown') part.object.rotation.z += motion.anticipation * .22;
+            else {
+              const side = part.object.position.x < 0 ? -1 : 1;
+              part.object.rotation.y += side * (.22 * motion.anticipation - .30 * motion.release);
+              part.object.rotation.z += side * (.12 * motion.anticipation + .16 * motion.release);
+            }
+          }
           if (attack.critical) { enemy.root.position.y += Math.sin(clamp(t / .8) * Math.PI) * .16 * modelScale; enemy.root.scale.setScalar(modelScale * (1 + Math.sin(clamp(t / 1.65) * Math.PI) * .09)); }
           // A mirror dodge visibly steps aside, without a false hit reaction.
           if (attack.missed) hero.root.position.x -= ease((t - .35) / .4) * (1 - ease((t - 1.2) / .55)) * .30 * modelScale;
           else {
             hero.root.position.x -= recoil * (attack.blocked ? .035 : attack.critical ? .29 : .19) * modelScale;
             hero.root.rotation.z += recoil * (attack.blocked ? .025 : attack.critical ? .15 : .10);
+            hero.root.scale.y *= 1 - recoil * (attack.blocked ? .008 : .035);
           }
           poseMage(hero, { defense: cast });
         }
       }
       // Select the cover-derived pose before sampling its visible crystal tip.
-      hero.updateVisual({ camera, attackTime: t, success, reducedMotion });
+      hero.updateVisual({ camera, attackTime: t, success, reducedMotion,
+        pose: !success && (attack.missed || attack.blocked) ? 'idle' : undefined });
       enemy.updateVisual?.({ camera, attackTime: t, success, reducedMotion });
       scene.updateMatrixWorld(true);
       if (success) {

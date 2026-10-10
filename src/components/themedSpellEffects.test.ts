@@ -17,6 +17,186 @@ const visibleMeshes = (object: THREE.Object3D) => nodes(object).filter(node => {
 });
 
 describe('themed spell performances', () => {
+  it('holds all six ordinary hero projectiles at the emitter until .48 and contacts at .9', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      const normal = fx.root.getObjectByName(`normal-${chapter}`)!;
+      for (const reducedMotion of [false, true]) {
+        fx.update(frame({ time: .47, reducedMotion }));
+        const lead = nodes(normal).find(part => part.userData.role === 'lead')!;
+        expect(fx.root.userData.phase).toBe('prepare');
+        expect(lead.position.x).toBeCloseTo(frame().start.x);
+        expect(normal.getObjectByName('ordinary-trail')!.visible).toBe(false);
+        fx.update(frame({ time: .48, reducedMotion }));
+        expect(fx.root.userData.phase).toBe('travel');
+        expect(lead.position.x).toBeCloseTo(reducedMotion ? frame().target.x : frame().start.x);
+        fx.update(frame({ time: .49, reducedMotion }));
+        expect(lead.position.x).toBeGreaterThan(frame().start.x);
+        fx.update(frame({ time: .9, reducedMotion }));
+        expect(fx.root.userData.phase).toBe('impact');
+        const impact = normal.getObjectByName('normal-impact')!;
+        expect(impact.visible).toBe(true); expect(impact.position.x).toBe(frame().target.x);
+      }
+      fx.dispose();
+    }
+  });
+
+  it('launches every ordinary and final-boss counterattack at .48, including critical and reduced casts', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      for (const finalBoss of [false, ...(chapter === 6 ? [true] : [])]) for (const enemyCritical of finalBoss ? [false, true] : [false]) {
+        const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode, finalBoss);
+        const projectile = fx.root.getObjectByName(finalBoss ? 'final-boss-projectile' : 'enemy-signature-projectile')!;
+        const charge = fx.root.getObjectByName(finalBoss ? 'final-boss-summoning-seal' : 'enemy-species-charge')!;
+        const impact = fx.root.getObjectByName(finalBoss ? 'final-boss-material-contact' : 'enemy-impact')!;
+        const cast = frame({ success: false, enemyCritical, start: new THREE.Vector3(2.3, 1.9, .5), target: new THREE.Vector3(-2.3, 1.4, .5) });
+        for (const reducedMotion of [false, true]) {
+          fx.update({ ...cast, time: .47, reducedMotion });
+          expect(fx.root.userData.phase).toBe('prepare');
+          expect(charge.visible).toBe(true); expect(projectile.visible).toBe(false); expect(impact.visible).toBe(false);
+          fx.update({ ...cast, time: .48, reducedMotion });
+          expect(fx.root.userData.phase).toBe('travel'); expect(projectile.visible).toBe(true);
+          expect(projectile.position.x).toBeCloseTo(reducedMotion ? cast.target.x : cast.start.x);
+          fx.update({ ...cast, time: .49, reducedMotion }); expect(projectile.position.x).toBeLessThan(cast.start.x);
+          fx.update({ ...cast, time: .9, reducedMotion });
+          expect(projectile.position.x).toBeCloseTo(cast.target.x);
+          expect(impact.visible).toBe(true); expect(impact.position.x).toBe(cast.target.x);
+          expect(fx.root.userData.phase).toBe('impact');
+        }
+        fx.dispose();
+      }
+    }
+  });
+
+  it('retains the hero ultimate .42 phase boundary and original smooth flight path', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      fx.update(frame({ ultimate: true, time: .419 })); expect(fx.root.userData.phase).toBe('prepare');
+      fx.update(frame({ ultimate: true, time: .42 })); expect(fx.root.userData.phase).toBe('travel');
+      if (chapter === 1 || mode === 'starter' && [2, 4, 5, 6].includes(chapter)) {
+        const strike = fx.root.getObjectByName(`ultimate-${chapter}`)!.getObjectByName('ultimate-strike')!;
+        expect(strike.position.x).toBe(frame().start.x);
+        fx.update(frame({ ultimate: true, time: .47 }));
+        const p = (.47 - .42) / .48, smooth = p * p * (3 - 2 * p);
+        expect(strike.position.x).toBeCloseTo(THREE.MathUtils.lerp(frame().start.x, frame().target.x, smooth));
+        fx.update(frame({ ultimate: true, time: .9 })); expect(strike.position.x).toBeCloseTo(frame().target.x);
+      }
+      fx.dispose();
+    }
+  });
+
+  it('leads each ordinary hero cast with one readable object and accelerates into the unchanged contact time', () => {
+    for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, 'starter');
+      const normal = fx.root.getObjectByName(`normal-${chapter}`)!;
+      const positions: number[] = [];
+      for (const time of [.50, .62, .74, .86]) {
+        fx.update(frame({ time }));
+        const leaders = nodes(normal).filter(part => part.userData.role === 'lead');
+        expect(leaders).toHaveLength(1);
+        positions.push(leaders[0].position.x);
+        for (const companion of nodes(normal).filter(part => part.userData.role === 'companion')) {
+          expect(companion.scale.x).toBeLessThan(leaders[0].scale.x * .7);
+        }
+      }
+      expect(positions[3] - positions[2]).toBeGreaterThan(positions[1] - positions[0]);
+      fx.update(frame({ time: .89 })); expect(normal.getObjectByName('normal-impact')!.visible).toBe(false);
+      fx.update(frame({ time: SPELL_IMPACT_SECONDS }));
+      const contact = normal.getObjectByName('normal-impact')!;
+      expect(contact.visible).toBe(true); expect(contact.position.x).toBe(frame().target.x);
+      fx.update(frame({ time: NORMAL_CAST_SECONDS })); expect(fx.root.visible).toBe(false);
+      fx.dispose();
+    }
+  });
+
+  it('charges each of the twelve boss identities at its emitter and separates its projectile from a material landing', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
+      const cast = frame({ success: false, start: new THREE.Vector3(2.3, 1.9, .5), target: new THREE.Vector3(-2.3, 1.4, .5) });
+      const boss = fx.root.getObjectByName(`enemy-${chapter}-${mode}`)!;
+      const charge = boss.getObjectByName('enemy-species-charge')!, projectile = boss.getObjectByName('enemy-signature-projectile')!;
+      const contact = boss.getObjectByName('enemy-impact')!;
+      fx.update({ ...cast, time: .2 });
+      expect(charge.visible).toBe(true); expect(charge.position.x).toBe(cast.start.x);
+      expect(projectile.visible).toBe(false); expect(contact.visible).toBe(false);
+      fx.update({ ...cast, time: .7 });
+      expect(charge.visible).toBe(false); expect(projectile.visible).toBe(true);
+      expect(projectile.position.x).toBeLessThan(cast.start.x); expect(projectile.position.x).toBeGreaterThan(cast.target.x);
+      expect(contact.visible).toBe(false);
+      fx.update({ ...cast, time: .9 });
+      expect(contact.visible).toBe(true); expect(visibleMeshes(contact).length).toBeGreaterThan(8);
+      expect(contact.position.x).toBe(cast.target.x);
+      fx.update({ ...cast, time: 1.2, blocked: true });
+      expect(contact.visible).toBe(false); expect(boss.getObjectByName('enemy-local-pressure-wave')!.visible).toBe(false);
+      expect(boss.getObjectByName('ordinary-hit-rays')!.visible).toBe(false);
+      expect(boss.getObjectByName('ordinary-contact')!.position.x).toBeCloseTo(cast.target.x + .18);
+      fx.update({ ...cast, time: 1.2, missed: true });
+      expect(contact.getObjectByName('enemy-contact-form')!.visible).toBe(false);
+      expect(boss.getObjectByName('enemy-local-pressure-wave')!.visible).toBe(false);
+      fx.dispose();
+    }
+  });
+
+  it('keeps the final dragon upright with nine left-facing heads and nine breath streams instead of a turned-over ice dragon', () => {
+    const fx = createThemedSpellEffects(new THREE.Scene(), 6, 'advanced', true);
+    fx.update(frame({ success: false, time: .7 }));
+    const projectile = fx.root.getObjectByName('final-boss-projectile')!;
+    const dragon = projectile.getObjectByName('spectral-dragon-charge')!;
+    expect(dragon.userData).toMatchObject({ headCount: 9, facing: 'left' });
+    expect(dragon.rotation.z).toBe(0);
+    expect(nodes(dragon).filter(part => part.name.startsWith('spectral-dragon-head-'))).toHaveLength(9);
+    expect(nodes(projectile).filter(part => part.name.startsWith('spectral-breath-'))).toHaveLength(9);
+    expect(projectile.getObjectByName('frost-ice-dragon')).toBeUndefined();
+    fx.update(frame({ success: false, time: .9, enemyCritical: true, missed: true }));
+    expect(fx.root.getObjectByName('final-boss-material-contact')!.visible).toBe(false);
+    expect(fx.root.getObjectByName('final-boss-impact-wave')!.visible).toBe(false);
+    expect(fx.root.getObjectByName('final-boss-critical-bolt-0')!.visible).toBe(false);
+    fx.dispose();
+  });
+
+  it('holds complete ordinary/critical material effects still in reduced motion and bounds narrow-screen casts', () => {
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      for (const finalBoss of [false, ...(chapter === 6 ? [true] : [])]) {
+        const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode, finalBoss);
+        for (const success of [true, false]) {
+          const cast = frame({ success, scale: .42, enemyCritical: finalBoss && !success,
+            start: new THREE.Vector3(success ? -1.1 : 1.1, 1, .5), target: new THREE.Vector3(success ? 1.1 : -1.1, .63, .5) });
+          for (const time of [.20, .62, .9, 1.30]) {
+            fx.update({ ...cast, time }); fx.root.updateMatrixWorld(true);
+            for (const mesh of visibleMeshes(fx.root)) {
+              const bounds = new THREE.Box3().setFromObject(mesh);
+              expect(bounds.max.x).toBeLessThan(2.4); expect(bounds.min.x).toBeGreaterThan(-2.4);
+              expect(bounds.max.y).toBeLessThan(1.8); expect(bounds.min.y).toBeGreaterThan(-.45);
+            }
+          }
+          fx.update({ ...cast, time: 1.05, reducedMotion: true }); fx.root.updateMatrixWorld(true);
+          const before = visibleMeshes(fx.root).map(mesh => mesh.matrixWorld.elements.slice());
+          fx.update({ ...cast, time: 1.75, reducedMotion: true }); fx.root.updateMatrixWorld(true);
+          expect(visibleMeshes(fx.root).map(mesh => mesh.matrixWorld.elements.slice())).toEqual(before);
+        }
+        fx.dispose();
+      }
+    }
+  });
+
+  it('reuses signature/charge/landing geometry on replay and disposes shared final-boss copies exactly once', () => {
+    for (const mode of ['starter', 'advanced'] as const) {
+      const scene = new THREE.Scene(), fx = createThemedSpellEffects(scene, 6, mode, true);
+      const meshes = nodes(fx.root).filter((part): part is THREE.Mesh => part instanceof THREE.Mesh);
+      const geometry = [...new Set(meshes.map(mesh => mesh.geometry))];
+      const materials = [...new Set(meshes.flatMap(mesh => Array.isArray(mesh.material) ? mesh.material : [mesh.material]))];
+      const resources = [...geometry, ...materials], spies = resources.map(resource => vi.spyOn(resource, 'dispose'));
+      for (let replay = 0; replay < 3; replay++) {
+        for (const time of [.2, .7, .9, 1.6, NORMAL_CAST_SECONDS]) fx.update(frame({ success: false, enemyCritical: replay === 1, time }));
+        expect(fx.root.visible).toBe(false); fx.clear();
+      }
+      expect(nodes(fx.root).filter(part => part instanceof THREE.Mesh)).toEqual(meshes);
+      expect([...new Set(meshes.map(mesh => mesh.geometry))]).toEqual(geometry);
+      fx.dispose(); fx.dispose();
+      expect(scene.children).toHaveLength(0);
+      for (const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('retains the collection material through charge, travel and contact without repainting ordinary attacks', () => {
     const expected = ['transparent-crystal-gold', 'navy-leather-gold-ivory-pages', 'gold-edged-leaf-crystal', 'beveled-gold-prism-mirror'];
     for (const mode of ['starter', 'advanced'] as const) for (let chapter=1;chapter<=4;chapter++) {

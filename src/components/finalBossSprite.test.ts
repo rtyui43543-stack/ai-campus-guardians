@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import type { Mode } from '../domain/types';
-import { createFinalBossSprite, getFinalBossArt } from './finalBossSprite';
+import { createFinalBossSprite, finalBossCastShape, getFinalBossArt } from './finalBossSprite';
 import type { CoverHeroSpriteRig, HeroSpritePose, HeroSpriteTextureLoader } from './coverHeroSprite';
 
 const owned: CoverHeroSpriteRig[] = [];
@@ -112,6 +112,64 @@ describe.each(['starter', 'advanced'] as const)('final %s boss rendering', mode 
     expect(rig.root.getObjectByName('cover-identity-hero-atlas')).toBeUndefined();
     expect(onReady).toHaveBeenCalledTimes(1);
   });
+
+  it('visibly compresses back then leans left from the same grounded artwork, without accumulated deformation', () => {
+    const { rig, camera, mesh, loaded } = boundary(mode); loaded();
+    const geometry = mesh.geometry.getAttribute('position');
+    const coordinates = () => Array.from({length: geometry.count}, (_, index) => [geometry.getX(index), geometry.getY(index), geometry.getZ(index)]);
+    rig.updateVisual({camera, attackTime:.3, success:false, reducedMotion:false});
+    const windup = coordinates();
+    expect(rig.root.userData.castShape).toMatchObject({ compression: expect.any(Number), lean: expect.any(Number) });
+    expect(rig.root.userData.castShape.compression).toBeGreaterThan(0);
+    expect(rig.root.userData.castShape.lean).toBeGreaterThan(0);
+    const tip = rig.tip.position.toArray();
+    for (let index = 0; index < 12; index++) rig.updateVisual({camera, attackTime:.3, success:false, reducedMotion:false});
+    expect(coordinates()).toEqual(windup);
+    expect(rig.tip.position.toArray()).toEqual(tip);
+    rig.updateVisual({camera, attackTime:.7, success:false, reducedMotion:false});
+    expect(rig.root.userData.castShape.lean).toBeLessThan(0);
+    expect(rig.root.getObjectByName('cover-hero-image-sole')!.position.toArray()).toEqual([0,.02,0]);
+    // Top two vertices remain above the feet and the atlas never flips upside down.
+    expect(geometry.getY(0)).toBeGreaterThan(geometry.getY(2));
+    expect(geometry.getY(1)).toBeGreaterThan(geometry.getY(3));
+    rig.updateVisual({camera, attackTime:.7, success:false, reducedMotion:true});
+    expect(rig.root.userData.castShape).toEqual({ compression:0, lean:0, headEnergy:0 });
+    rig.updateVisual({camera, reducedMotion:false});
+    const idle = coordinates();
+    rig.updateVisual({camera, attackTime:.3, success:false, reducedMotion:false});
+    rig.updateVisual({camera, reducedMotion:false});
+    expect(coordinates()).toEqual(idle);
+  });
+});
+
+it('shows nine calibrated energy rings only while the nine-head boss gathers a real counterattack', () => {
+  const { rig, camera, loaded } = boundary('advanced'); loaded();
+  const energy = rig.root.getObjectByName('final-nine-head-charge')!;
+  expect(energy.children).toHaveLength(9);
+  const update = (attackTime: number | undefined, success = false, reducedMotion = false) => rig.updateVisual({camera,attackTime,success,reducedMotion});
+  update(.25); expect(energy.visible).toBe(true);
+  const positions = energy.children.map(head => head.position.toArray());
+  expect(new Set(positions.map(point => point.join(','))).size).toBe(9);
+  update(.25); expect(energy.children.map(head => head.position.toArray())).toEqual(positions);
+  update(.8); expect(energy.visible).toBe(false);
+  update(.25,true); expect(energy.visible).toBe(false);
+  update(.25,false,true); expect(energy.visible).toBe(false);
+  update(undefined); expect(energy.visible).toBe(false);
+  const ring = energy.children[0].children[0] as THREE.Mesh;
+  const disposeGeometry = vi.spyOn(ring.geometry,'dispose'), disposeMaterial = vi.spyOn(ring.material as THREE.Material,'dispose');
+  rig.disposeVisual(); rig.disposeVisual();
+  expect(disposeGeometry).toHaveBeenCalledTimes(1); expect(disposeMaterial).toHaveBeenCalledTimes(1);
+});
+
+it('does not invent dragon head landmarks for the starter grimoire king or animate invalid clocks', () => {
+  const {rig,camera,loaded}=boundary('starter'); loaded();
+  rig.updateVisual({camera,attackTime:.25,success:false,reducedMotion:false});
+  expect(rig.root.getObjectByName('final-nine-head-charge')).toBeUndefined();
+  for (const time of [undefined,NaN,Infinity,-1,1.5,2.05]) {
+    expect(finalBossCastShape(time,true,false)).toEqual({ compression:0,lean:0,headEnergy:0 });
+  }
+  expect(finalBossCastShape(.25,false,false)).toEqual({compression:0,lean:0,headEnergy:0});
+  expect(finalBossCastShape(.25,true,true)).toEqual({compression:0,lean:0,headEnergy:0});
 });
 
 it('retains all nine visually reviewed heads inside every advanced portrait and battle frame', () => {

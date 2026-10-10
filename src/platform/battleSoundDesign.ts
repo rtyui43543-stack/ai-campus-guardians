@@ -1,4 +1,5 @@
 import type { Mode } from '../domain/types';
+import { buildMaterialAttack } from './combatMaterialSound';
 
 export interface BattleSoundOptions {
   mode?: Mode;
@@ -22,7 +23,7 @@ export interface BattleSoundVoice {
   resonance?: number;
   /** A voice is synthesized from a glottal source and moving formants, not a tone. */
   creature?: 'phoenix' | 'dragon';
-  envelope?: 'sustain' | 'swell' | 'gust';
+  envelope?: 'sustain' | 'swell' | 'gust' | 'punch';
   panTo?: number;
   layer?: string;
 }
@@ -78,6 +79,15 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
   const duration = success && options.ultimate ? 3 : 2.05;
   const voices: BattleSoundVoice[] = [];
   const pitch = (success ? mode === 'advanced' ? 1.06 : 1 : .91) * (!success && options.finalBoss ? .76 : 1);
+  // Hero summons retain their existing music/samples. Ordinary hero attacks and
+  // every enemy spell get their own physical material, rather than borrowing a
+  // fire/ice/leaf summon merely because their old palette used that texture.
+  if (!success || !enhanced) return {
+    profile: profile.id, enhanced, impact: .9 / (reducedMotion ? 6 : 1),
+    duration: duration / (reducedMotion ? 6 : 1),
+    voices: buildMaterialAttack({ ...profile, success, enhanced, pitch, reducedMotion,
+      missed: !success && !!options.missed, blocked: !success && !!options.blocked }),
+  };
   const sourcePan = success ? -.55 : .55, targetPan = -sourcePan;
   const add = (phase: BattleSoundVoice['phase'], kind: BattleSoundVoice['kind'], at: number,
     length: number, from: number, to: number, gain: number, pan: number, filter?: BiquadFilterType, resonance = .8,

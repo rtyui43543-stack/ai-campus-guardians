@@ -5,6 +5,7 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 export const NORMAL_CAST_SECONDS = 2.05;
 export const ULTIMATE_CAST_SECONDS = 3;
 export const SPELL_IMPACT_SECONDS = .9;
+const ORDINARY_LAUNCH_SECONDS = .48;
 export const normalSpellNames = ['守護城堡封印', '雷霆書頁', '森葉分類拼圖', '破偽鏡刃', '烈焰火羽', '霜晶冰矛'];
 export const ultimateSpellNames = ['守護城堡', '雷霆索引', '萬葉歸位', '鏡界破偽', '智慧火鳳', '寒晶冰矛'];
 export const enemySpellNames = {
@@ -156,26 +157,20 @@ function iceSpear(parent: THREE.Object3D, size = 1) {
   for (let i = 0; i < 3; i++) { const crystal = iceShard(result, .27); crystal.position.set(-.35 + i * .20, 0, .075); crystal.rotation.z = -Math.PI / 2; }
   result.scale.setScalar(size); return result;
 }
-function iceDragon(parent: THREE.Object3D) {
-  const result = group(parent, 'frost-ice-dragon');
-  tube(result, [[-.90, -.35], [-.58, -.16], [-.34, .10], [.1, -.05], [.43, .10], [.64, .16]], .14, 0x89d9f3);
-  const head = polygon(result, [[.44, .09], [.52, .36], [.77, .40], [.89, .23], [1.15, .17], [1.03, .03], [.78, -.04], [.55, -.06]], 0xb5efff, .15);
-  head.name = 'ice-dragon-head';
-  const horns = group(result, 'ice-dragon-horns');
-  polygon(horns, [[.56, .33], [.45, .72], [.73, .40]], 0xdafaff, .08);
-  polygon(horns, [[.73, .36], [.73, .65], [.91, .27]], 0x65bce5, .06);
-  box(result, .068, .045, .02, 0x173d65, .86, .18, .12);
-  for (const side of [-1, 1]) {
-    const wing = group(result, 'ice-dragon-wing');
-    wing.position.z = side < 0 ? -.11 : .14;
-    polygon(wing, [[-.24, .06], [-.88, .86], [-.56, .59], [-.47, 1.03], [-.12, .70], [.16, .86], [.04, .29]], side < 0 ? 0x62b6dc : 0xbaefff, .05);
-    tube(wing, [[-.24, .06, .08], [-.47, 1.03, .08]], .027, 0xf1fdff);
-    tube(wing, [[-.24, .06, .08], [-.88, .86, .08]], .026, 0xe0f8ff);
-  }
-  for (let i = 0; i < 4; i++) { const crest = iceShard(result, .32); crest.position.set(-.45 + i * .22, .21, .13); crest.rotation.z = -.25; }
-  for (const x of [-.32, .24]) {
-    tube(result, [[x, -.01, .09], [x + .08, -.29, .09], [x + .21, -.24, .09]], .04, 0xb9f0ff);
-    polygon(result, [[x + .13, -.23], [x + .33, -.22], [x + .22, -.30]], 0xf2fcff, .04);
+/** A left-facing, upright nine-head apparition belongs only to the final boss. */
+function spectralHydra(parent: THREE.Object3D) {
+  const result = group(parent, 'spectral-dragon-charge');
+  result.userData.headCount = 9; result.userData.facing = 'left';
+  polygon(result, [[.12, -.20], [.30, .16], [.57, .04], [.73, -.20], [.30, -.36]], 0x7751a5, .12);
+  polygon(result, [[.28, -.03], [.78, .56], [.68, .16], [.94, .24], [.68, -.16]], 0xa784d6, .04);
+  for (let i = 0; i < 9; i++) {
+    const x = -.40 + (i % 3) * .23, y = (Math.floor(i / 3) - 1) * .32;
+    tube(result, [[.33, -.17, -.02], [x + .25, y -.08, -.02], [x + .08, y, -.02]], .037, i % 2 ? 0x8a60b9 : 0xb286d8);
+    const head = group(result, 'spectral-dragon-head-' + i); head.position.set(x, y, .07 + i % 3 * .025);
+    polygon(head, [[.11, -.07], [.13, .08], [-.02, .12], [-.12, .035], [-.23, .005], [-.16, -.08]], i % 2 ? 0xc5a0ed : 0x9f77cd, .055);
+    polygon(head, [[.02, .10], [.10, .24], [.13, .07]], 0xf4dfb0, .04);
+    box(head, .034, .022, .014, 0xffe78b, -.055, .043, .041);
+    tube(head, [[-.20, -.015, .047], [-.11, -.025, .047]], .008, 0x402458);
   }
   return result;
 }
@@ -298,6 +293,19 @@ function path(frame: SpellFrame, output = new THREE.Vector3(), offset = 0) {
   output.y = Math.min(output.y, 2.70 * frame.scale);
   return output;
 }
+/** Ordinary projectiles gain speed into contact; ultimate choreography retains its own path. */
+function ordinaryPath(frame: SpellFrame, output = new THREE.Vector3(), offset = 0) {
+  const p = frame.reducedMotion ? frame.time < ORDINARY_LAUNCH_SECONDS ? 0 : 1
+    : Math.pow(limit((frame.time - ORDINARY_LAUNCH_SECONDS - offset) / (SPELL_IMPACT_SECONDS - ORDINARY_LAUNCH_SECONDS - offset)), 1.55);
+  output.copy(frame.start).lerp(frame.target, p);
+  output.y += Math.sin(p * Math.PI) * .13 * frame.scale;
+  output.y = Math.min(output.y, 2.70 * frame.scale);
+  return output;
+}
+function heldOrdinaryFrame(frame: SpellFrame): SpellFrame {
+  // Keep one static pose per phase instead of racing the new secondary motion.
+  return frame.reducedMotion ? { ...frame, time: frame.time < ORDINARY_LAUNCH_SECONDS ? .20 : frame.time < .9 ? .70 : 1.28 } : frame;
+}
 function impactAge(frame: SpellFrame, end = 1.72) { return limit((frame.time - SPELL_IMPACT_SECONDS) / (end - SPELL_IMPACT_SECONDS)); }
 function visibleDuring(frame: SpellFrame, from: number, end: number) { return frame.time >= from && frame.time < end; }
 function animateOrbit(pieces: THREE.Group[], frame: SpellFrame, center: THREE.Vector3, radius: number, spin: number,
@@ -367,7 +375,7 @@ function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: Att
     const ordinary = !f.enemyCritical;
     // The existing enemy critical choreography keeps its original accent size.
     template.material.emissiveIntensity = ordinary ? .7 : .42;
-    const prepare = f.reducedMotion ? .6 : smooth(f.time / .42);
+    const prepare = f.reducedMotion ? .6 : smooth(f.time / ORDINARY_LAUNCH_SECONDS);
     anchor(charge, f.start, f); charge.visible = visibleDuring(f, .02, .50);
     charges.forEach((part, i) => {
       const angle = i * Math.PI / 3 + (f.reducedMotion ? 0 : f.time * 1.2);
@@ -378,8 +386,8 @@ function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: Att
     chargeHalo.visible = ordinary;
     chargeHalo.scale.setScalar(f.reducedMotion ? 1.3 : 1.55 - prepare * .4);
     chargeHalo.position.z = -.05;
-    trail.visible = !f.reducedMotion && visibleDuring(f, .43, SPELL_IMPACT_SECONDS);
-    path(f, flightPoint); direction.copy(f.target).sub(f.start).normalize();
+    trail.visible = !f.reducedMotion && visibleDuring(f, ORDINARY_LAUNCH_SECONDS, SPELL_IMPACT_SECONDS);
+    ordinaryPath(f, flightPoint); direction.copy(f.target).sub(f.start).normalize();
     const angle = Math.atan2(direction.y, direction.x);
     streaks.forEach((part, i) => {
       const lag = .22 + Math.floor(i / 2) * .25;
@@ -403,7 +411,7 @@ function ordinaryAttackAccents(parent: THREE.Object3D, color: number, motif: Att
       part.scale.set(scale, scale * .72, 1); part.rotation.z = i * Math.PI;
       part.position.z = -.035 - i * .012;
     });
-    emphasis.visible = ordinary && visibleDuring(f, SPELL_IMPACT_SECONDS, f.reducedMotion ? 1.88 : 1.55);
+    emphasis.visible = ordinary && !f.blocked && !f.missed && visibleDuring(f, SPELL_IMPACT_SECONDS, f.reducedMotion ? 1.88 : 1.55);
     const contact = f.reducedMotion ? .4 : smooth((f.time - SPELL_IMPACT_SECONDS) / .48);
     rays.forEach((part, i) => {
       const angle = i * Math.PI / 4 + .12, radius = .20 + contact * .86;
@@ -424,16 +432,17 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
   const moving = group(root, 'normal-projectile'), landing = group(root, 'normal-impact');
   let update: Variant['update'];
   if (theme === 1) {
+    moving.userData.role = 'lead';
     const keep = castle(moving); keep.scale.setScalar(.55); keep.position.y = -.12;
     padlock(moving, .78).position.set(0, .05, .21);
     const seals = [padlock(landing, .75), padlock(landing, .65), padlock(landing, .65)];
     seals[1].position.set(-.45, .17, -.03); seals[2].position.set(.45, .17, -.03);
     const chain = Array.from({ length: 14 }, () => chainLink(root, 0xebc368));
     update = f => {
-      anchor(moving, f.reducedMotion ? f.target : path(f), f); moving.visible = visibleDuring(f, .08, .9);
+      anchor(moving, ordinaryPath(f), f, 1.10); moving.visible = visibleDuring(f, .08, .9);
       anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.78); landing.scale.multiplyScalar(.65 + smooth((f.time - .9) / .25) * .65);
-      const p = f.reducedMotion ? 1 : smooth((f.time - .55) / .35);
-      chain.forEach((link, i) => { link.visible = visibleDuring(f, .55, 1.65); const a = i * Math.PI * 2 / chain.length;
+      const p = f.reducedMotion ? 1 : smooth((f.time - .9) / .24);
+      chain.forEach((link, i) => { link.visible = visibleDuring(f, .9, 1.65); const a = i * Math.PI * 2 / chain.length;
         const point = f.target.clone(); point.x += Math.cos(a) * (.86 - .25 * p) * f.scale;
         point.y += Math.sin(a) * (.72 - .18 * p) * f.scale; anchor(link, point, f); link.rotateZ(a); });
     };
@@ -444,9 +453,10 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
     bolts.forEach((piece, i) => piece.position.set((i - 1) * .34, .25, .1 + i * .025));
     update = f => {
       pages.forEach((piece, i) => { piece.visible = visibleDuring(f, .15 + i * .035, 1.08);
-        const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i * .035);
-        point.y += (i - 2) * .18 * f.scale; anchor(piece, point, f, .88);
-        piece.rotateZ((i - 2) * .18 + (f.reducedMotion ? 0 : Math.sin(f.time * 8 + i) * .12)); });
+        const point = ordinaryPath(f, new THREE.Vector3(), i * .025);
+        point.x -= i * .12 * f.scale; point.y += (i === 0 ? 0 : (i % 2 ? 1 : -1) * (.13 + i * .035)) * f.scale;
+        anchor(piece, point, f, i === 0 ? 1.05 : .52); piece.userData.role = i === 0 ? 'lead' : 'companion';
+        piece.rotateZ(i === 0 ? -.08 : (i % 2 ? 1 : -1) * .22); });
       anchor(landing, f.target, f, 1.2); landing.visible = visibleDuring(f, .9, 1.82);
       landing.scale.multiplyScalar(.75 + .25 * smooth((f.time - .9) / .15));
       moving.visible = false;
@@ -456,27 +466,29 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
     const leaves = Array.from({ length: 6 }, (_, i) => leaf(root, i % 2 ? 0x68bf8e : 0xb2d96d, .64));
     for (let i = 0; i < 3; i++) { box(landing, .5, .10, .16, [0x54b68d, 0xf1ba58, 0x8dca70][i], (i - 1) * .52, -.5); }
     update = f => {
-      const settled = smooth((f.time - .9) / .35), center = f.reducedMotion ? f.target.clone() : path(f);
+      const settled = smooth((f.time - .9) / .18), center = ordinaryPath(f);
       cards.forEach((piece, i) => { piece.visible = visibleDuring(f, .05, 1.82);
-        const a = i * 2.4 + (f.reducedMotion ? 0 : f.time * 7), point = center.clone();
-        const orbitX = Math.cos(a) * (.22 + i % 3 * .10), orbitY = (i / cards.length - .5) * 1.25;
-        point.x += THREE.MathUtils.lerp(orbitX, (i % 3 - 1) * .47, settled) * f.scale;
-        point.y += THREE.MathUtils.lerp(orbitY, Math.floor(i / 3) * .15 - .35, settled) * f.scale;
-        anchor(piece, point, f, .72); if (!f.reducedMotion) piece.rotateZ((1 - settled) * Math.sin(a) * .8);
+        const point = center.clone(), row = Math.ceil(i / 2);
+        point.x += THREE.MathUtils.lerp(-row * .15, (i % 3 - 1) * .36, settled) * f.scale;
+        point.y += THREE.MathUtils.lerp(i === 0 ? 0 : (i % 2 ? 1 : -1) * row * .10, Math.floor(i / 3) * .26 - .26, settled) * f.scale;
+        anchor(piece, point, f, i === 0 ? .93 : .53); piece.userData.role = i === 0 ? 'lead' : 'companion';
+        piece.rotateZ((1 - settled) * (i % 2 ? .18 : -.18));
       });
-      animateOrbit(leaves, f, center, .62, 1.9, .1, 1.82);
+      animateOrbit(leaves, f, center, .48, .7, .1, 1.82);
       anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.86); moving.visible = false;
     };
   } else if (theme === 4) {
     const blades = Array.from({ length: 5 }, (_, i) => mirrorShard(root, i));
     const falseFace = mask(landing);
     update = f => {
-      const p = impactAge(f), center = f.reducedMotion ? f.target : path(f);
+      const p = impactAge(f), center = ordinaryPath(f);
       blades.forEach((piece, i) => { piece.visible = visibleDuring(f, .1, 1.85);
         const a = i * Math.PI * 2 / blades.length, point = center.clone();
-        point.x += Math.cos(a) * (.30 + p * .55) * f.scale; point.y += Math.sin(a) * (.3 + p * .55) * f.scale;
-        anchor(piece, point, f); piece.rotateZ(a + (f.reducedMotion ? 0 : f.time * 2)); });
-      anchor(landing, f.target, f, 1.40); landing.visible = visibleDuring(f, .65, 1.60);
+        point.x += (f.time < .9 ? -i * .12 : Math.cos(a) * (.2 + p * .60)) * f.scale;
+        point.y += (f.time < .9 ? i === 0 ? 0 : (i % 2 ? 1 : -1) * .13 : Math.sin(a) * (.2 + p * .60)) * f.scale;
+        anchor(piece, point, f, i === 0 ? 1.05 : .52); piece.userData.role = i === 0 ? 'lead' : 'companion';
+        piece.rotateZ(f.time < .9 ? -Math.PI / 2 : a + p * .7); });
+      anchor(landing, f.target, f, 1.40); landing.visible = visibleDuring(f, .9, 1.60);
       falseFace.scale.set(1 + p * .7, 1 - p * .75, 1); falseFace.rotation.z = f.reducedMotion ? 0 : p * .5;
       moving.visible = false;
     };
@@ -493,9 +505,10 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
     update = f => {
       const spread = impactAge(f, 1.86);
       flight.forEach((piece, i) => { piece.visible = visibleDuring(f, .06 + i * .035, .97);
-        const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i * .025);
-        point.x -= i * .075 * f.scale; point.y += Math.sin(i * .8) * .23 * f.scale;
-        anchor(piece, point, f, .88); piece.rotateZ((i - 3) * .11); });
+        const point = ordinaryPath(f, new THREE.Vector3(), i * .025);
+        point.x -= i * .09 * f.scale; point.y += Math.sin(i * .8) * .16 * f.scale;
+        anchor(piece, point, f, i === 0 ? 1.02 : .50); piece.userData.role = i === 0 ? 'lead' : 'companion';
+        piece.rotateZ(i === 0 ? 0 : (i - 3) * .075); });
       anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.88);
       flames.forEach((piece, i) => {
         const a = i * Math.PI * 2 / flames.length;
@@ -515,13 +528,14 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
     const shatter = iceBurst(landing, 12);
     update = f => {
       spears.forEach((piece, i) => { piece.visible = visibleDuring(f, .08 + i * .035, .98);
-        const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i * .025);
-        point.y += (i - 2) * .15 * f.scale; anchor(piece, point, f, .72); });
+        const point = ordinaryPath(f, new THREE.Vector3(), i * .025);
+        point.x -= i * .12 * f.scale; point.y += (i === 0 ? 0 : (i % 2 ? 1 : -1) * (.12 + i * .025)) * f.scale;
+        anchor(piece, point, f, i === 0 ? .75 : .47); piece.userData.role = i === 0 ? 'lead' : 'companion'; });
       anchor(landing, f.target, f); landing.visible = visibleDuring(f, .9, 1.88);
       shatter.update(f.reducedMotion ? .65 : impactAge(f, 1.88), f.reducedMotion); moving.visible = false;
     };
   }
-  return { root, update(f) { update(f); accents.update(f); } };
+  return { root, update(frame) { const f = heldOrdinaryFrame(frame); update(f); accents.update(f); } };
 }
 
 /** Card-matched versions are ultimate-only: ordinary attacks retain their art. */
@@ -980,21 +994,99 @@ function enemyVariant(parent: THREE.Object3D, theme: number, mode: Mode): Varian
     }
   } else if (advanced) { for (let i = 0; i < 3; i++) pieces.push(cloudFist(root)); }
   else { for (let i = 0; i < 6; i++) pieces.push(gear(root)); }
-  return { root, update(f) {
+
+  // The caster's species now supplies a readable leading object, not just a
+  // cloud of equally weighted particles. Charge/impact copies share resources.
+  const projectile = group(root, 'enemy-signature-projectile');
+  const charge = group(root, 'enemy-species-charge');
+  let signature: THREE.Object3D;
+  if (theme === 1) signature = advanced ? pieces[0].clone(true) : padlock(projectile, 1.10);
+  else if (theme === 2 && !advanced) signature = openBook(projectile);
+  else if (theme === 2) {
+    signature = group(projectile, 'hourglass-sand-core');
+    polygon(signature, [[-.27, .35], [.27, .35], [.09, .03], [.28, -.35], [-.28, -.35], [-.09, .03]], 0xe4ba66, .12);
+    box(signature, .67, .08, .15, cream, 0, .38); box(signature, .67, .08, .15, cream, 0, -.38);
+    tube(signature, [[0, .17, .10], [0, -.19, .10]], .036, 0xffe2a0);
+  } else if (theme === 3) {
+    signature = pieces[0].clone(true);
+    if (advanced) { signature.rotation.z = Math.PI / 2; signature.position.x = .30; }
+  } else if (theme === 4 && advanced) {
+    signature = group(projectile, 'echo-tail-wave');
+    for (let i = 0; i < 3; i++) {
+      const tail = leaf(signature, i % 2 ? 0xbfa1e4 : 0x81bfdc, 1.25);
+      tail.rotation.z = Math.PI / 2 + (i - 1) * .3; tail.position.set((i - 1) * .11, (i - 1) * .14, i * .015);
+    }
+    note(signature, 0xf0ddff).position.z = .12;
+  } else signature = pieces[0].clone(true);
+  if (signature.parent !== projectile) projectile.add(signature);
+  signature.name = 'enemy-signature-' + mode + '-' + theme;
+  const signatureScale = theme === 5 ? advanced ? 2.1 : 1.5 : theme === 6 ? advanced ? 1.32 : 1.6 : 1.2;
+  signature.scale.multiplyScalar(signatureScale);
+  const chargeForm = signature.clone(true); charge.add(chargeForm); chargeForm.name = 'enemy-charge-form';
+  const debris: THREE.Object3D[] = [];
+  const count = theme === 1 ? 6 : theme === 6 ? 8 : 7;
+  for (let i = 0; i < count; i++) {
+    let part: THREE.Object3D;
+    if (theme === 1) part = advanced ? pieces[0].clone(true) : chainLink(landing, 0xe8be65);
+    else if (theme === 4 && !advanced) part = mirrorShard(landing, i);
+    else if (theme === 6 && advanced) {
+      part = body(landing, new THREE.RingGeometry(.16, .205, 16), 0xcceeff, 0, 0, 0, 0, .72);
+    } else part = pieces[i % pieces.length].clone(true);
+    if (part.parent !== landing) landing.add(part);
+    part.name = 'enemy-material-fragment'; debris.push(part);
+  }
+  // Every boss has a material landing: pages, mask fragments, gear teeth and
+  // compressed air complete the previously empty impact groups.
+  const collision = signature.clone(true); landing.add(collision); collision.name = 'enemy-contact-form';
+  const ground = impactWave(root, 'enemy-local-pressure-wave', advanced ? 0xaaa0de : 0xd6b76f);
+  root.userData.sequence = 'species-charge-leading-projectile-material-contact';
+  const flightPoint = new THREE.Vector3(), partPoint = new THREE.Vector3();
+  return { root, update(frame) {
+    const f = heldOrdinaryFrame(frame);
     accents.update(f);
-    const hit = smooth((f.time - .9) / .35);
+    const hit = f.reducedMotion ? .62 : smooth((f.time - .9) / .40);
+    const travel = limit((f.time - ORDINARY_LAUNCH_SECONDS) / (SPELL_IMPACT_SECONDS - ORDINARY_LAUNCH_SECONDS));
+    ordinaryPath(f, flightPoint);
+    anchor(charge, f.start, f, .55 + smooth(f.time / ORDINARY_LAUNCH_SECONDS) * .32);
+    charge.visible = visibleDuring(f, .02, ORDINARY_LAUNCH_SECONDS);
+    if (!f.reducedMotion) charge.rotateZ((theme === 6 || theme === 2 ? -.20 : .10) * (1 - smooth(f.time / ORDINARY_LAUNCH_SECONDS)));
+    anchor(projectile, f.reducedMotion ? f.target : flightPoint, f);
+    projectile.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, .98);
+    if (!f.reducedMotion) {
+      if (theme === 6 && !advanced) projectile.rotateZ(-travel * Math.PI * 1.5);
+      else if (theme === 3 && !advanced) projectile.rotateZ(-.35 * (1 - travel));
+      else if (theme === 5 && advanced) projectile.scale.set(f.scale * (1 + travel * .25), f.scale * (1 - travel * .12), f.scale);
+    }
     pieces.forEach((piece, i) => {
-      piece.visible = visibleDuring(f, .10 + i % 3 * .04, 1.7);
-      const point = f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i % 3 * .025);
-      if (theme === 1 && !advanced) { const p = i / Math.max(1, pieces.length - 1); point.copy(f.start).lerp(f.reducedMotion ? f.target : path(f), p); point.y += Math.sin(p * Math.PI * 2) * .13 * f.scale; }
-      else if (theme === 2 && advanced) { point.x += ((i % 6) - 2.5) * .17 * f.scale; point.y += (Math.floor(i / 6) - 1) * .3 * f.scale - hit * .45 * f.scale; }
-      else if (theme === 3 && advanced) { const p = i / pieces.length; point.copy(f.start).lerp(f.reducedMotion ? f.target : path(f), p); point.y -= .50 * f.scale; }
-      else if (pieces.length > 1) { point.x += (i % 3 - 1) * .24 * f.scale; point.y += (Math.floor(i / 3) - Math.floor(pieces.length / 6)) * .22 * f.scale; }
-      anchor(piece, point, f, theme === 6 && advanced ? 1.20 : theme === 4 && !advanced ? .8 : 1);
-      if (!f.reducedMotion && !((theme === 1 || theme === 3) && advanced)) piece.rotateZ(Math.sin(f.time * 4 + i) * .22 + (theme === 6 && !advanced ? f.time * 4 : 0));
+      piece.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, .97);
+      const point = partPoint.copy(f.reducedMotion ? f.target : flightPoint);
+      if ((theme === 1 && !advanced) || (theme === 3 && advanced)) {
+        const p = (i + 1) / pieces.length;
+        point.copy(f.start).lerp(f.reducedMotion ? f.target : flightPoint, p);
+        point.y += Math.sin(p * Math.PI) * (theme === 3 ? -.18 : .12) * f.scale;
+      } else {
+        point.x += (.14 + i % 3 * .16) * f.scale;
+        point.y += (i % 2 ? 1 : -1) * (.10 + Math.floor(i / 3) * .07) * f.scale;
+      }
+      anchor(piece, point, f, theme === 2 && advanced ? .85 : theme === 3 && advanced ? .44 : .55);
+      if (theme === 3 && advanced) piece.rotateZ(Math.PI / 2);
+      else if (!f.reducedMotion) piece.rotateZ((i % 2 ? .25 : -.25) * travel);
     });
-    anchor(landing, f.target, f, 1.1); landing.visible = visibleDuring(f, .9, 1.83);
-    landing.scale.multiplyScalar(.65 + .35 * hit);
+    anchor(landing, f.target, f); landing.visible = !f.blocked && visibleDuring(f, .9, 1.83);
+    collision.visible = !f.missed;
+    collision.scale.copy(signature.scale).multiplyScalar(.88 - hit * .55);
+    if (theme === 3 && !advanced) collision.scale.y *= .5;
+    debris.forEach((part, i) => {
+      const angle = i * Math.PI * 2 / debris.length + .2;
+      const radius = .17 + hit * (.48 + i % 2 * .15);
+      part.position.set(Math.cos(angle) * radius, Math.sin(angle) * radius * .68, .10);
+      part.rotation.z = angle + (f.reducedMotion ? 0 : hit * .4);
+      const size = theme === 1 && advanced ? .30 : theme === 2 && advanced ? .90 : theme === 6 && advanced ? .8 + hit * .9 : .42;
+      part.scale.setScalar(size * (1 - hit * .15));
+    });
+    const floor = partPoint.copy(f.target); floor.y -= .40 * f.scale;
+    anchor(ground, floor, f, .7 + hit * .70);
+    ground.visible = !f.blocked && !f.missed && visibleDuring(f, .9, 1.72);
   } };
 }
 
@@ -1007,17 +1099,27 @@ function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
     mode === 'starter' ? 'paper' : 'ice');
   const summon = ritualRing(root, 'final-boss-summoning-seal', 0xe67aa7, .65);
   const projectile = group(root, 'final-boss-projectile');
+  const fan: THREE.Group[] = [];
   if (mode === 'starter') {
     const book = openBook(projectile); book.scale.setScalar(1.08);
     const crest = padlock(projectile, .50); crest.position.set(0, -.1, .13);
+    for (let i = 0; i < 5; i++) {
+      const page = card(projectile, i % 2 ? 0xa95279 : 0x6a518c, i);
+      page.position.set(.35 + Math.abs(i - 2) * .11, (i - 2) * .19, .04);
+      page.rotation.z = (i - 2) * -.18; page.scale.setScalar(.60); fan.push(page);
+    }
   } else {
-    const dragon = iceDragon(projectile); dragon.name = 'spectral-dragon-charge'; dragon.rotation.z = Math.PI;
-    dragon.traverse(node => {
-      if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
-        node.material.color.setHex(0x895bb8); node.material.emissive.setHex(0x895bb8);
-      }
-    });
+    spectralHydra(projectile);
+    for (let i = 0; i < 9; i++) {
+      const jet = flame(projectile, .23); jet.name = 'spectral-breath-' + i;
+      jet.position.set(-.59 + i % 3 * .23, (Math.floor(i / 3) - 1) * .32, .14);
+      jet.rotation.z = Math.PI / 2; fan.push(jet);
+      jet.traverse(node => { if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
+        node.material.color.setHex(0xbb86e4); node.material.emissive.setHex(0xbb86e4);
+      } });
+    }
   }
+  const chargeForm = projectile.clone(true); summon.add(chargeForm); chargeForm.name = 'final-boss-charge-form'; chargeForm.scale.setScalar(.54);
   const fragments = Array.from({ length: 9 }, (_, i) => mode === 'starter' ? card(root, i % 2 ? 0xa95279 : 0x6a518c, i) : flame(root, .46));
   if (mode === 'advanced') fragments.forEach(part => part.traverse(node => {
     if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
@@ -1025,9 +1127,26 @@ function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
     }
   }));
   const impact = impactWave(root, 'final-boss-impact-wave', 0xef80ac);
+  const seal = group(root, 'final-boss-material-contact');
+  if (mode === 'starter') {
+    padlock(seal, .75);
+    for (let i = 0; i < 6; i++) {
+      const page = card(seal, i % 2 ? 0x9a538e : 0x72569d, i), angle = i * Math.PI / 3;
+      page.position.set(Math.cos(angle) * .46, Math.sin(angle) * .40, .04); page.rotation.z = angle; page.scale.setScalar(.70);
+    }
+  } else {
+    for (let i = 0; i < 9; i++) {
+      const fire = flame(seal, .42); fire.position.set(Math.cos(i * 2.4) * .34, Math.sin(i * 2.4) * .29, .05);
+      fire.rotation.z = i * 2.4;
+      fire.traverse(node => { if (node instanceof THREE.Mesh && node.material instanceof THREE.MeshStandardMaterial) {
+        node.material.color.setHex(0xb884e1); node.material.emissive.setHex(0xb884e1);
+      } });
+    }
+  }
   const chase = Array.from({ length: 6 }, (_, i) => lightning(root, .5 + i % 2 * .16));
   chase.forEach((bolt, i) => { bolt.name = 'final-boss-critical-bolt-' + i; });
-  return { root, update(f) {
+  return { root, update(frame) {
+    const f = heldOrdinaryFrame(frame);
     const critical = !!f.enemyCritical;
     accents.root.visible = !critical;
     if (!critical) accents.update(f);
@@ -1035,19 +1154,25 @@ function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
     root.userData.critical = critical;
     root.userData.identity = critical ? mode === 'starter' ? '魔典王 · 混沌追擊必殺' : '九頭龍 · 幻焰追擊必殺' : mode === 'starter' ? '混沌魔典衝擊' : '九龍幻焰衝擊';
     anchor(summon, f.start, f, strength); summon.visible = visibleDuring(f, .02, .60);
-    anchor(projectile, f.reducedMotion ? f.target : path(f), f, strength);
-    projectile.visible = visibleDuring(f, .15, 1.01);
-    const impactAge = smooth((f.time - .9) / .65);
+    anchor(projectile, ordinaryPath(f), f, strength);
+    projectile.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, 1.01);
+    const impactAge = f.reducedMotion ? .62 : smooth((f.time - .9) / .65);
+    fan.forEach((part, i) => {
+      if (mode === 'starter') part.rotation.z = (i - 2) * (-.18 - limit((f.time - ORDINARY_LAUNCH_SECONDS) / (SPELL_IMPACT_SECONDS - ORDINARY_LAUNCH_SECONDS)) * .10);
+      else part.scale.setScalar(.23 * (1 + (f.reducedMotion ? .3 : limit((f.time - ORDINARY_LAUNCH_SECONDS - i % 3 * .025) / .4)) * .4));
+    });
     anchor(impact, f.target, f, strength * (.65 + impactAge * .9));
-    impact.visible = visibleDuring(f, .9, 1.9);
+    impact.visible = !f.blocked && !f.missed && visibleDuring(f, .9, 1.9);
+    anchor(seal, f.target, f, strength * (.55 + impactAge * .55));
+    seal.visible = !f.blocked && !f.missed && visibleDuring(f, .9, 1.86);
     fragments.forEach((part, i) => {
       const p = (i + .5) / fragments.length, angle = i * 2.4 + (f.reducedMotion ? 0 : f.time);
       const radius = f.time < .9 ? .18 + p * .45 : .28 + impactAge * (.35 + p * .50);
-      const center = f.time < .9 ? f.reducedMotion ? f.target.clone() : path(f, new THREE.Vector3(), i % 3 * .02) : f.target.clone();
+      const center = f.time < .9 ? ordinaryPath(f, new THREE.Vector3(), i % 3 * .02) : f.target.clone();
       center.x += Math.cos(angle) * radius * strength * f.scale;
       center.y += Math.sin(angle) * radius * strength * f.scale;
       anchor(part, center, f, critical ? .72 : .45);
-      part.visible = visibleDuring(f, .12, 1.88);
+      part.visible = visibleDuring(f, ORDINARY_LAUNCH_SECONDS, f.blocked ? 1.02 : 1.88);
       if (!f.reducedMotion) part.rotateZ(angle * .35);
     });
     chase.forEach((bolt, i) => {
@@ -1055,7 +1180,7 @@ function finalEnemyVariant(parent: THREE.Object3D, mode: Mode): Variant {
       const center = f.target.clone(); center.x += Math.cos(angle) * (.3 + impactAge * .7) * f.scale;
       center.y += Math.sin(angle) * (.3 + impactAge * .7) * f.scale;
       anchor(bolt, center, f, 1.15); bolt.rotation.z = angle;
-      bolt.visible = critical && visibleDuring(f, .9, 1.90);
+      bolt.visible = critical && !f.blocked && !f.missed && visibleDuring(f, .9, 1.90);
     });
   } };
 }
@@ -1084,10 +1209,14 @@ export function createThemedSpellEffects(scene: THREE.Scene, chapter: number, mo
       root.userData.spell = selected.root.userData.identity;
       root.userData.kind = frame.success ? frame.ultimate ? 'ultimate' : 'normal' : frame.enemyCritical ? 'enemy-ultimate' : 'enemy';
       root.userData.element = frame.success ? selected.root.userData.element : 'boss';
-      root.userData.phase = frame.time < .42 ? 'prepare' : frame.time < .9 ? 'travel' : 'impact';
+      root.userData.phase = frame.time < (selected === ultimate ? .42 : ORDINARY_LAUNCH_SECONDS) ? 'prepare' : frame.time < .9 ? 'travel' : 'impact';
       // A missed attack lands beside the learner, rather than visually striking
       // a character whose HP did not change.
-      const shownFrame = frame.missed && !frame.success ? { ...frame, target: frame.target.clone().add(new THREE.Vector3(-.65 * frame.scale, -.55 * frame.scale, 0)) } : frame;
+      const shownFrame = frame.missed && !frame.success
+        ? { ...frame, target: frame.target.clone().add(new THREE.Vector3(-.65 * frame.scale, -.55 * frame.scale, 0)) }
+        : frame.blocked && !frame.success
+          ? { ...frame, target: frame.target.clone().add(new THREE.Vector3(.18 * frame.scale, 0, 0)) }
+          : frame;
       selected.update(shownFrame);
       root.userData.spell = selected.root.userData.identity;
       guard.visible = frame.blocked && !frame.success && visibleDuring(frame, .35, 1.95);
