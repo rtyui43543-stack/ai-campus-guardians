@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Compass, Flag, GraduationCap, HandHeart, Home, KeyRound, Leaf, LockKeyhole, Pause, Play, RotateCcw, Search, ShieldCheck, SkipForward, Sparkles, UserRound, Video, Volume2, X } from 'lucide-react';
 import type { Level } from '../domain/types';
 import type { StoryBeat } from '../content/stories';
+import { getQuestions } from '../content';
 import { getChapter } from '../content/levels';
 import { getMissionBoss } from '../content/missionBosses';
 import { initialEnemyHp } from '../domain/battleHealth';
@@ -111,7 +112,7 @@ export function StoryCinematic({ level, reducedMotion, beats, onClose, onStart, 
           <span className="story-ready-symbol"><ShieldCheck size={34} /></span>
           <h3 id="story-ready-title" tabIndex={-1}>{level ? '任務準備完成！' : '準備好開始冒險了嗎？'}</h3>
           <p className="story-ready-objective">{level ? level.objective : '從聊天到寫作業，用你的觀察與判斷，練習正確使用 AI。'}</p>
-          {level && <div className="story-ready-rules"><span><BookOpen size={20} />{level.finalBoss ? '最多 15 道綜合題' : '5 道生活題'}</span><span><Sparkles size={20} />{level.finalBoss ? '能量滿 · 自選必殺' : '答對施展魔法'}</span><span><Flag size={20} />{level.finalBoss ? `魔王 ${initialEnemyHp(level.id)} HP` : '答錯扣血，可重試'}</span></div>}
+          {level && <div className="story-ready-rules"><span><BookOpen size={20} />{level.finalBoss ? `最多 ${getQuestions(level.id).length} 道綜合題` : `${getQuestions(level.id).length} 道生活題`}</span><span><Sparkles size={20} />{level.finalBoss ? '能量滿 · 自選必殺' : '答對施展魔法'}</span><span><Flag size={20} />{level.finalBoss ? `魔王 ${initialEnemyHp(level.id)} HP` : '答錯扣血，可重試'}</span></div>}
           {level && savedLevelTitle && <p className="story-save-note">目前還有「{savedLevelTitle}」的中途存檔。開始新挑戰會取代這份中途存檔，已完成的關卡與得分仍會保留。</p>}
           <div className="story-ready-actions">
             {onResume && <button type="button" className="story-button story-button-secondary" onClick={() => leave(onResume)}><Play size={20} />繼續原本的挑戰</button>}
