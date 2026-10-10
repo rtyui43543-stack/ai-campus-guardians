@@ -1,4 +1,4 @@
-import { getQuestions, getQuestionsForHistory, questionById } from '../content';
+import { getQuestionsForHistory, questionById } from '../content';
 import { levels } from '../content/levels';
 import { getUltimateSpell } from '../content/ultimateSpells';
 import { battleEnemyMaxHp } from './battleHealth';
@@ -67,7 +67,10 @@ function recordsForScore(value: Session | CompletedRun): AttemptRecord[] {
 export function scoreSession(value: Session | CompletedRun): SessionScore {
   const records = recordsForScore(value);
   const finalBoss = levels.find(level => level.id === value.levelId)?.finalBoss === true;
-  const questionCount = finalBoss ? Math.max(1, records.length) : 'questionIds' in value ? value.questionIds.length : getQuestions(value.levelId, value.review).length;
+  // A completed report keeps its original question edition and denominator.
+  // New four-question missions must not increase scores earned in older five-question runs.
+  const questionCount = finalBoss ? Math.max(1, records.length) : 'questionIds' in value ? value.questionIds.length
+    : getQuestionsForHistory(value.levelId, value.review, records[0]?.questionId).length;
   const rows = records.map(record => ({ record, points: scoreRecord(record, questionCount), maxPoints: 100 / questionCount,
     bonusPoints: record.ultimateUsed ? 10 : 0, timeLimitPoints: timeLimitPoints(record) / 20 * (100 / questionCount) }));
   const unresolved = 'questionIds' in value && records.length === value.index ? value : null;

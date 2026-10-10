@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, questionById, presentQuestion, questionBank } from '../src/content';
+import { questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, legacyFiveQuestionQuestions, questionById, presentQuestion, questionBank } from '../src/content';
 import { chapters, levels } from '../src/content/levels';
 import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
@@ -12,11 +12,11 @@ export interface AuditResult { errors: string[]; summary: Record<string, number>
 export function auditContent(items: readonly Question[] = questions): AuditResult {
   const errors: string[] = [];
   const ids = new Set(items.map(q => q.id));
-  if (items.length !== 90 || ids.size !== 90) errors.push('現行題庫必須有90個不重複題目ID。');
+  if (items.length !== 84 || ids.size !== 84) errors.push('現行題庫必須有84個不重複題目ID。');
   const main = items.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss).length;
   const finals = items.filter(q => levels.find(level => level.id === q.levelId)?.finalBoss).length;
   const variations = items.filter(q => q.variantOf !== undefined).length;
-  if (main !== 60 || finals !== 30 || variations !== 0) errors.push('主題關必須60題、最終關必須30題，現行題庫不提供複習變式。');
+  if (main !== 54 || finals !== 30 || variations !== 0) errors.push('主題關必須54題、最終關必須30題，現行題庫不提供複習變式。');
   if (levels.length !== 14 || chapters.length !== 6 || questionBank.schemaVersion !== 2) errors.push('需要第2版題庫、14關和6個主題。');
   for (const mode of ['starter', 'advanced']) {
     if (levels.filter(level => level.mode === mode && !level.finalBoss).length !== 6) errors.push(mode + '必須各有6個主題關。');
@@ -24,7 +24,8 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
   }
   for (let level = 1; level <= 12; level++) {
     const slots = items.filter(q => q.levelId === level).map(q => q.slot).sort((a, b) => a - b);
-    if (slots.join(',') !== '1,2,3,4,5') errors.push(`第${level}關必須各有slot1–5。`);
+    const count = level <= 6 ? 4 : 5;
+    if (slots.join(',') !== Array.from({ length: count }, (_, i) => i + 1).join(',')) errors.push(`第${level}關必須各有slot1–${count}。`);
     const mission = levels.find(item => item.id === level);
     if (mission?.mode !== (level <= 6 ? 'starter' : 'advanced') || mission.chapterId !== (level - 1) % 6 + 1) errors.push(`第${level}關的難度或主題不符。`);
   }
@@ -37,7 +38,7 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
   const answerPositions = new Set<number>();
   for (const q of items) {
     const prefix = `${q.id}：`;
-    const expectedId = `${q.levelId >= 13 ? 'V4F' : 'V4L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
+    const expectedId = `${q.levelId >= 13 ? 'V4F' : q.levelId <= 6 ? 'V5L' : 'V4L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
     if (q.id !== expectedId) errors.push(prefix + 'ID與關卡/題次不符。');
     if (!q.prompt.trim() || !q.objective.trim() || !q.explanation.trim() || !q.hint.trim()) errors.push(prefix + '題幹、目標、解析或提示缺漏。');
     if (q.prompt.length > 70 || q.hint.length > 60 || q.explanation.length > 100) errors.push(prefix + '超過生活化題目閱讀預算。');
@@ -79,12 +80,27 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     if (p.kind === 'tradeoff' && actions.length < 2) errors.push(prefix + '取捨題必須接受至少兩個完整方案。');
     for (const evidence of p.evidence) if (!evidence.title.trim() || !evidence.body.trim()) errors.push(prefix + '證據卡有空白。');
   }
-  if (items.length === 90 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
+  if (items.length === 84 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
   if (!items.some(q => q.levelId === 12 && q.slot === 3 && Object.keys(q.valid).length >= 2)) errors.push('最後合作關需接受至少兩個完整合理方案。');
   errors.push(...auditLegacyReview().errors);
   errors.push(...auditLegacyFinal().errors);
   errors.push(...auditLegacyReasoning().errors);
-  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, legacyReasoning: legacyReasoningQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+  errors.push(...auditLegacyFiveQuestion().errors);
+  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, legacyReasoning: legacyReasoningQuestions.length, legacyFiveQuestion: legacyFiveQuestionQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+}
+
+/** Retain every original starter choice and its five-question denominator. */
+export function auditLegacyFiveQuestion(items: readonly Question[] = legacyFiveQuestionQuestions): AuditResult {
+  const errors: string[] = [];
+  if (items.length !== 30 || new Set(items.map(q => q.id)).size !== 30) errors.push('初階五題版應封存完整30題。');
+  for (let level = 1; level <= 6; level++) {
+    if (items.filter(q => q.levelId === level).map(q => q.slot).join(',') !== '1,2,3,4,5') errors.push(`歷史初階第${level}關應保留完整五題題序。`);
+  }
+  for (const q of items) {
+    const expected = `V4L${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
+    if (q.levelId > 6 || q.id !== expected || questions.some(current => current.id === q.id)) errors.push(q.id + '：初階五題版不可進入新開題庫。');
+  }
+  return { errors, summary: { legacyFiveQuestion: items.length } };
 }
 
 /** Keep each prior edition separate; never reinterpret old chosen indices. */
@@ -155,7 +171,7 @@ export function expectedAudio() {
   for (const level of levels) add(`level.${level.id}`, level.title + '。' + level.intro + '。這一關，' + level.objective);
   for (const chapter of chapters) add(`chapter.${chapter.id}`, chapter.title + '。' + chapter.description);
   // Saved sessions use the exact text and narration from their editorial edition.
-  for (const q of [...questions, ...legacyReasoningQuestions, ...legacyFinalQuestions]) {
+  for (const q of [...questions, ...legacyReasoningQuestions, ...legacyFinalQuestions, ...legacyFiveQuestionQuestions]) {
     const mode = levels.find(level => level.id === q.levelId)!.mode;
     const p = presentQuestion(q, mode);
     const key = `${q.id}.${mode}`;

@@ -1,6 +1,6 @@
 [
   {
-    "id": "V4L01Q01",
+    "id": "V5L01Q01",
     "level": 1,
     "slot": 1,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -16,7 +16,7 @@
     "themeId": 1
   },
   {
-    "id": "V4L01Q02",
+    "id": "V5L01Q02",
     "level": 1,
     "slot": 2,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -32,7 +32,7 @@
     "themeId": 1
   },
   {
-    "id": "V4L01Q03",
+    "id": "V5L01Q03",
     "level": 1,
     "slot": 3,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -48,7 +48,7 @@
     "themeId": 1
   },
   {
-    "id": "V4L01Q04",
+    "id": "V5L01Q04",
     "level": 1,
     "slot": 4,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -64,23 +64,7 @@
     "themeId": 1
   },
   {
-    "id": "V4L01Q05",
-    "level": 1,
-    "slot": 5,
-    "objective": "只給任務需要的資料，密碼不交出去。",
-    "units": [
-      7,
-      9,
-      14,
-      17
-    ],
-    "printedPages": "65、79–84、149、173",
-    "label": "倫理延伸",
-    "independentFinal": false,
-    "themeId": 1
-  },
-  {
-    "id": "V4L02Q01",
+    "id": "V5L02Q01",
     "level": 2,
     "slot": 1,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -96,7 +80,7 @@
     "themeId": 2
   },
   {
-    "id": "V4L02Q02",
+    "id": "V5L02Q02",
     "level": 2,
     "slot": 2,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -112,7 +96,7 @@
     "themeId": 2
   },
   {
-    "id": "V4L02Q03",
+    "id": "V5L02Q03",
     "level": 2,
     "slot": 3,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -128,7 +112,7 @@
     "themeId": 2
   },
   {
-    "id": "V4L02Q04",
+    "id": "V5L02Q04",
     "level": 2,
     "slot": 4,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -144,23 +128,7 @@
     "themeId": 2
   },
   {
-    "id": "V4L02Q05",
-    "level": 2,
-    "slot": 5,
-    "objective": "先查課本或原公告，再使用 AI 的答案。",
-    "units": [
-      2,
-      3,
-      4,
-      10
-    ],
-    "printedPages": "24–30、39、99",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 2
-  },
-  {
-    "id": "V4L03Q01",
+    "id": "V5L03Q01",
     "level": 3,
     "slot": 1,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -176,7 +144,7 @@
     "themeId": 3
   },
   {
-    "id": "V4L03Q02",
+    "id": "V5L03Q02",
     "level": 3,
     "slot": 2,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -192,7 +160,7 @@
     "themeId": 3
   },
   {
-    "id": "V4L03Q03",
+    "id": "V5L03Q03",
     "level": 3,
     "slot": 3,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -208,7 +176,7 @@
     "themeId": 3
   },
   {
-    "id": "V4L03Q04",
+    "id": "V5L03Q04",
     "level": 3,
     "slot": 4,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -224,23 +192,7 @@
     "themeId": 3
   },
   {
-    "id": "V4L03Q05",
-    "level": 3,
-    "slot": 5,
-    "objective": "分清 AI 幫忙、自己練習和請大人協助。",
-    "units": [
-      1,
-      8,
-      13,
-      18
-    ],
-    "printedPages": "16–17、71–73、135–141、183",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 3
-  },
-  {
-    "id": "V4L04Q01",
+    "id": "V5L04Q01",
     "level": 4,
     "slot": 1,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -253,7 +205,7 @@
     "themeId": 4
   },
   {
-    "id": "V4L04Q02",
+    "id": "V5L04Q02",
     "level": 4,
     "slot": 2,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -266,7 +218,7 @@
     "themeId": 4
   },
   {
-    "id": "V4L04Q03",
+    "id": "V5L04Q03",
     "level": 4,
     "slot": 3,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -279,7 +231,7 @@
     "themeId": 4
   },
   {
-    "id": "V4L04Q04",
+    "id": "V5L04Q04",
     "level": 4,
     "slot": 4,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -292,20 +244,7 @@
     "themeId": 4
   },
   {
-    "id": "V4L04Q05",
-    "level": 4,
-    "slot": 5,
-    "objective": "影像和聲音可能被合成，先用原管道查問。",
-    "units": [
-      3
-    ],
-    "printedPages": "27–30",
-    "label": "倫理延伸",
-    "independentFinal": false,
-    "themeId": 4
-  },
-  {
-    "id": "V4L05Q01",
+    "id": "V5L05Q01",
     "level": 5,
     "slot": 1,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -318,7 +257,7 @@
     "themeId": 5
   },
   {
-    "id": "V4L05Q02",
+    "id": "V5L05Q02",
     "level": 5,
     "slot": 2,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -331,7 +270,7 @@
     "themeId": 5
   },
   {
-    "id": "V4L05Q03",
+    "id": "V5L05Q03",
     "level": 5,
     "slot": 3,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -344,7 +283,7 @@
     "themeId": 5
   },
   {
-    "id": "V4L05Q04",
+    "id": "V5L05Q04",
     "level": 5,
     "slot": 4,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -357,20 +296,7 @@
     "themeId": 5
   },
   {
-    "id": "V4L05Q05",
-    "level": 5,
-    "slot": 5,
-    "objective": "請 AI 解釋或出練習題，最後自己完成。",
-    "units": [
-      13
-    ],
-    "printedPages": "135–141",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 5
-  },
-  {
-    "id": "V4L06Q01",
+    "id": "V5L06Q01",
     "level": 6,
     "slot": 1,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -385,7 +311,7 @@
     "themeId": 6
   },
   {
-    "id": "V4L06Q02",
+    "id": "V5L06Q02",
     "level": 6,
     "slot": 2,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -400,7 +326,7 @@
     "themeId": 6
   },
   {
-    "id": "V4L06Q03",
+    "id": "V5L06Q03",
     "level": 6,
     "slot": 3,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -415,24 +341,9 @@
     "themeId": 6
   },
   {
-    "id": "V4L06Q04",
+    "id": "V5L06Q04",
     "level": 6,
     "slot": 4,
-    "objective": "使用 AI 前想需求，使用後自己檢查。",
-    "units": [
-      13,
-      17,
-      18
-    ],
-    "printedPages": "135–141、172–177、181–185",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 6
-  },
-  {
-    "id": "V4L06Q05",
-    "level": 6,
-    "slot": 5,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
     "units": [
       13,

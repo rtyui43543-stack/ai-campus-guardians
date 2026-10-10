@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { getQuestions } from '../content';
+import { getQuestions, getQuestionsForHistory } from '../content';
 import { createProgress } from './engine';
 import { buildGrowthDashboard, classifyDashboardAttempt, dashboardPercent } from './growthDashboard';
 import type { AttemptRecord, CompletedRun, Progress } from './types';
 
 function run(id: string, levelId = 1, at = '2026-10-08T03:00:00.000Z', review = false,
-  changes: Partial<AttemptRecord>[] = []): CompletedRun {
+  changes: Partial<AttemptRecord>[] = [], firstQuestionId?: string): CompletedRun {
   const mode = levelId <= 6 ? 'starter' : 'advanced';
   return {
     sessionId: id, levelId, mode, review, at,
-    records: getQuestions(levelId, review).map((question, i) => ({
+    records: (firstQuestionId ? getQuestionsForHistory(levelId, review, firstQuestionId) : getQuestions(levelId, review)).map((question, i) => ({
       questionId: question.id, mode, at, action: Number(Object.keys(question.valid)[0]), reason: null,
       status: 'first', retries: 0, hintUsed: false, ...changes[i],
     })),
@@ -62,11 +62,11 @@ describe('growth dashboard projection', () => {
   });
 
   it('uses only each level’s latest run for mutually exclusive answer slices', () => {
-    const mixed = run('latest', 1, '2026-10-08T05:00:00.000Z', false, [
+    const mixed = run('latest', 7, '2026-10-08T05:00:00.000Z', false, [
       {}, { status: 'first', hintUsed: true }, supported,
       { ...demo, hintUsed: true, retries: 2 }, { ...timeout, demoUsed: true, hintUsed: true },
     ]);
-    const dashboard = buildGrowthDashboard(progress([mixed, run('older', 1, '2026-10-08T01:00:00.000Z')]));
+    const dashboard = buildGrowthDashboard(progress([mixed, run('older', 7, '2026-10-08T01:00:00.000Z')]));
     expect(dashboard.performance.map(item => [item.key, item.count, item.percent])).toEqual([
       ['first', 1, 20], ['supported', 2, 40], ['demo', 1, 20], ['timeout', 1, 20],
     ]);
@@ -92,7 +92,7 @@ describe('growth dashboard projection', () => {
   });
 
   it('recovers legacy complete attempts only when explicit runs are absent', () => {
-    const oldMain = run('main'), oldReview = run('review', 1, undefined, true);
+    const oldMain = run('main', 1, undefined, false, [], 'V4L01Q01'), oldReview = run('review', 1, undefined, true);
     const value: Progress = { ...createProgress(), attempts: [...oldMain.records, ...oldReview.records] };
     delete value.runs;
     expect(buildGrowthDashboard(value).runs).toHaveLength(1);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getQuestions } from '../content';
+import { getQuestions, getQuestionsForHistory } from '../content';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   demonstrate, finishSession, restartBattle, retryQuestion, startSession, submitAction,
@@ -19,12 +19,18 @@ function wrong(session: Session): Session {
   const q = currentQuestion(session);
   return submitAction(chooseAction(session, q.choices.findIndex((_, index) => !q.valid[index]?.length)));
 }
-function reachSlot(levelId: number, slot: number): Session {
+function reachSlot(levelId: number, slot: number, legacyFiveQuestions = false): Session {
   let session = startSession(levelId, 'starter');
+  if (legacyFiveQuestions) {
+    const firstId = `V4L${String(levelId).padStart(2, '0')}Q01`;
+    session = { ...session, questionIds: getQuestionsForHistory(levelId, false, firstId).map(question => question.id) };
+    expect(session.questionIds).toHaveLength(5);
+    expect(session.questionIds[0]).toBe(firstId);
+  }
   while (currentQuestion(session).slot < slot) session = advanceSession(solve(session)).session!;
   return session;
 }
-function complete(progress: Progress, levelId: number, review = false): Progress {
+function complete(progress: Progress, levelId: number, review = false, legacyFiveQuestions = false): Progress {
   if (review) {
     const mode = levelId <= 6 ? 'starter' : 'advanced';
     const at = progress.updatedAt;
@@ -34,7 +40,7 @@ function complete(progress: Progress, levelId: number, review = false): Progress
       sessionId: `historical-review-${levelId}`, levelId, mode, review: true, records, at,
     }] };
   }
-  let session = startSession(levelId, 'starter', review);
+  let session = reachSlot(levelId, 1, legacyFiveQuestions);
   for (let i = 0; i < session.questionIds.length - 1; i++) session = advanceSession(solve(session)).session!;
   return finishSession(progress, solve(session));
 }
@@ -143,9 +149,9 @@ describe('new campaign storage and backups', () => {
 
   it.each([2, 8])('preserves a legacy depleted checkpoint for mission %i and applies the new rule only to future answers', async levelId => {
     const storage = await import('./storage');
-    const historicalProgress = complete(createProgress(), levelId);
+    const historicalProgress = complete(createProgress(), levelId, false, levelId === 2);
     // This checkpoint was created before wrong answers stopped consuming energy.
-    const legacyFeedback = { ...wrong(reachSlot(levelId, 4)), energy: 2 };
+    const legacyFeedback = { ...wrong(reachSlot(levelId, 4, levelId === 2)), energy: 2 };
     const legacy = applySession(historicalProgress, legacyFeedback);
     const originalCards = structuredClone(legacy.ultimateCards);
     const restored = storage.parseBackup(storage.exportBackup(legacy));
@@ -170,7 +176,7 @@ describe('new campaign storage and backups', () => {
 
   it.each([1, 7])('maps legacy enabled castle %i to one remaining block rather than upgrading a saved effect', async levelId => {
     const storage = await import('./storage');
-    const legacy = solve(reachSlot(levelId, 4));
+    const legacy = solve(reachSlot(levelId, 4, levelId === 1));
     legacy.enemyBonusDamage = 0;
     delete legacy.barrierCharges;
     const original = applySession(createProgress(), legacy);
@@ -218,7 +224,7 @@ describe('new campaign storage and backups', () => {
 
   it.each([6, 12])('keeps the former tree shield and zero attack damage in old mission %i saves and history', async levelId => {
     const storage = await import('./storage');
-    const oldRelease = { ...solve(reachSlot(levelId, 4)), barrier: true, enemyBonusDamage: 0 };
+    const oldRelease = { ...solve(reachSlot(levelId, 4, levelId === 6)), barrier: true, enemyBonusDamage: 0 };
     delete oldRelease.barrierCharges;
     const progress = applySession(createProgress(), oldRelease);
     const originalCards = structuredClone(progress.ultimateCards);
@@ -276,14 +282,15 @@ describe('new campaign storage and backups', () => {
     const storage = await import('./storage');
     let session = advanceSession(demonstrate(startSession(1, 'starter'))).session!;
     session = advanceSession(solve(retryQuestion(wrong(session)))).session!;
-    while (session.index < 4) session = advanceSession(solve(session)).session!;
+    while (session.index < session.questionIds.length - 1) session = advanceSession(solve(session)).session!;
     const finished = finishSession(createProgress(), solve(session));
     const raw = JSON.parse(storage.exportBackup(finished));
     raw.runs[0].score = 100;
     const restored = storage.parseBackup(JSON.stringify(raw));
     expect(restored).toEqual(finished);
     expect(restored.runs![0]).not.toHaveProperty('score');
-    expect(scoreSession(restored.runs![0])).toMatchObject({ score: 76, firstTryCorrect: 3, wrongAnswers: 1, demos: 1, unknownWrongAnswers: 0 });
+    expect(restored.runs![0].records).toHaveLength(4);
+    expect(scoreSession(restored.runs![0])).toMatchObject({ score: 70, firstTryCorrect: 2, wrongAnswers: 1, demos: 1, unknownWrongAnswers: 0 });
     await storage.saveProgress(restored);
     expect((await storage.loadProgress()).runs).toEqual(finished.runs);
     expect(latestRun(await storage.loadProgress())!.sessionId).toBe(session.id);
@@ -295,7 +302,7 @@ describe('new campaign storage and backups', () => {
     const raw = JSON.parse(storage.exportBackup(completed));
     delete raw.runs;
     const migrated = storage.parseBackup(JSON.stringify(raw));
-    expect(migrated.runs!.map(run => [run.levelId, run.review, run.records.length])).toEqual([[1, false, 5], [7, true, 2]]);
+    expect(migrated.runs!.map(run => [run.levelId, run.review, run.records.length])).toEqual([[1, false, 4], [7, true, 2]]);
     expect(migrated.runs![0].sessionId).toMatch(/^legacy-v2-/);
     expect(scoreSession(migrated.runs![0]).score).toBe(100);
     expect(storage.parseBackup(storage.exportBackup(migrated)).runs).toEqual(migrated.runs);
@@ -364,7 +371,7 @@ describe('new campaign storage and backups', () => {
 
   it('leaves incomplete old histories unscored instead of inventing a perfect or zero score', async () => {
     const storage = await import('./storage');
-    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1)));
+    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1, false, true)));
     delete old.runs;
     old.attempts.pop();
     const migrated = storage.parseBackup(JSON.stringify(old));
@@ -400,7 +407,7 @@ describe('new campaign storage and backups', () => {
 
   it('migrates old proxy demonstration counts without inventing actual wrong answers', async () => {
     const storage = await import('./storage');
-    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1)));
+    const old = JSON.parse(storage.exportBackup(complete(createProgress(), 1, false, true)));
     delete old.runs;
     old.attempts[0] = { ...old.attempts[0], status: 'practice', retries: 2, hintUsed: true };
     const migrated = storage.parseBackup(JSON.stringify(old));

@@ -4,6 +4,13 @@ import { startSession } from '../domain/engine';
 import { BattleMechanics, BattleRules } from './BattleMechanics';
 
 describe('battle shield and ultimate status', () => {
+  it.each([[4, 25, 5, 20], [5, 20, 4, 16]])('explains an active %i-question starter session using its own damage and score rules', (questionCount, points, penalty, hintCap) => {
+    const html = renderToStaticMarkup(<BattleRules timed={false} questionCount={questionCount} />);
+    expect(html).toContain(`本關 ${questionCount} 題，每題 ${points} 分`);
+    expect(html).toContain(`每答錯一次扣 ${penalty} 分，自己答對至少得 ${penalty} 分`);
+    expect(html).toContain(`用過提示，該題最高 ${hintCap} 分`);
+    expect(html).toContain(`本關 ${questionCount} 題，普通攻擊每次扣魔王 ${points} HP`);
+  });
   it('labels a narration pause without resetting the current question seconds', () => {
     const session = { ...startSession(11, 'advanced'), remainingMs: 21_250, elapsedMs: 8_750 };
     const html = renderToStaticMarkup(<BattleMechanics session={session} paused narrationPaused onRules={() => {}} />);

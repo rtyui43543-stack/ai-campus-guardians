@@ -34,7 +34,9 @@ export function BattleMechanics({ session, paused, narrationPaused = false, onRu
   </div>;
 }
 
-export function BattleRules({ timed, finalBoss = false }: { timed: boolean; finalBoss?: boolean }) {
+export function BattleRules({ timed, finalBoss = false, questionCount = finalBoss ? 15 : timed ? 5 : 4 }: { timed: boolean; finalBoss?: boolean; questionCount?: number }) {
+  const questionPoints = finalBoss ? 20 : 100 / questionCount;
+  const errorPenalty = questionPoints / 5;
   return <div className="battle-rule-content">
     <h3>集滿三點，準備必殺技！</h3>
     <ul><li>自己答對一題，能量＋1；答錯保留能量。進階超時才扣 1 點，最低為 0。</li>
@@ -48,7 +50,8 @@ export function BattleRules({ timed, finalBoss = false }: { timed: boolean; fina
       <li>仍依答錯次數降低分數，用過提示最高 16 分。題目與提示朗讀載入、播放期間，以及閱讀解說與規則、回首頁或切到背景時，倒數暫停。朗讀結束或停止後繼續剩餘時間；重播與重試都不重設秒數。</li>
       <li>時間到，該題 0 分，{finalBoss ? '最後魔王基本攻擊扣 20 HP（超時不累計連錯）' : '魔王攻擊扣 12 HP'}，演出後自動進下一題。每次護盾抵擋 12 HP；進階城堡可擋兩次攻擊。</li>
       <li>{finalBoss ? '最終關以擊敗 300 HP 魔王為過關目標；超時題得 0 分，仍可用後續攻擊追回傷害。' : '有超時題仍保留成績，但要重新挑戰並完成五題，才算過關。'}</li>
-    </ul> : <ul><li>每題原始 20 分。錯 1／2／3／4 次以上後答對，分別得 16／12／8／4 分。</li><li>用過提示，該題最高 16 分；伙伴示範 0 分。</li></ul>}
+    </ul> : <ul><li>{finalBoss ? '每題原始 20 分。錯 1／2／3／4 次以上後答對，分別得 16／12／8／4 分。' : `本關 ${questionCount} 題，每題 ${questionPoints} 分；每答錯一次扣 ${errorPenalty} 分，自己答對至少得 ${errorPenalty} 分。`}</li><li>{`用過提示，該題最高 ${questionPoints * .8} 分；伙伴示範 0 分。`}</li></ul>}
+    {!finalBoss && <p>本關 {questionCount} 題，普通攻擊每次扣魔王 {100 / questionCount} HP；必殺另追加傷害或施放守護效果。</p>}
     {finalBoss && <p>最終魔王 {timed ? 300 : 200} HP。最終關最多 15 題，一般命中扣 20 HP，必殺額外傷害依選招種類。魔王 HP 歸零即可提前完成；題目用盡仍未擊敗，須重新挑戰。答題分依實際挑戰題數換算為百分制。</p>}
     {finalBoss && <p>最後魔王基本攻擊：第一次答錯扣 20 HP；連續第二次答錯起，自動施放追擊必殺，再加 10 HP 傷害，合計最多 30 HP。答對後連錯計數歸零；進階超時只受基本 20 HP 攻擊，不累計連錯。寒冰減傷、城堡護盾或鏡界閃避會降低實際扣血。這是血量傷害，另外依原規則計算答題分數。</p>}
     <h3>必殺技還會留下魔法效果</h3>

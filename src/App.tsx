@@ -466,7 +466,7 @@ export function App() {
       <footer className="app-footer"><span>AI 校園守護隊</span><span>讓科技成為照顧每個人的力量。</span><MusicCredits /></footer>
     </div>
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
-    {rulesOpen && <Dialog title="必殺技與計分規則" onClose={() => setRulesOpen(false)}><BattleRules timed={active?.timed === true} finalBoss={battleLevel?.finalBoss === true} /></Dialog>}
+    {rulesOpen && <Dialog title="必殺技與計分規則" onClose={() => setRulesOpen(false)}><BattleRules timed={active?.timed === true} finalBoss={battleLevel?.finalBoss === true} questionCount={active?.questionIds.length} /></Dialog>}
     {explanationOpen && explanation && screen === 'battle' && <BattleExplanationDialog title={explanation.title} text={explanation.text}
       opener={explanationOpener.current} reading={narrationActive && narration.key === explanation.audioKey} onRead={() => narrate(explanation.audioKey)} onClose={closeExplanation} />}
     {pickingSpell && active && !rulesOpen && !intro && <UltimatePicker session={active} onHome={() => navigate('map')} onSelect={id => { const current = progressRef.current?.active; if (current) changeSession(selectUltimate(current, id)); setChooseSpellOpen(false); }} />}
@@ -553,7 +553,7 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory }:
     <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">六個生活主題，自由選關挑戰</span></div>
     <div className="chapter-grid">{chapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
     <FinalBossChallenge progress={progress} onLevel={onLevel} />
-    <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對集能量，解鎖你的必殺技！</h3><p>主題關每關五題，最終決戰最多十五題。點選答案就能出招；能量滿三點，下一題答對釋放必殺。初階不限時；進階每題 30 秒，挑戰速度加分。也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
+    <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對集能量，解鎖你的必殺技！</h3><p>初階主題關每關四題，進階每關五題，最終決戰最多十五題。點選答案就能出招；能量滿三點，下一題答對釋放必殺。初階不限時；進階每題 30 秒，挑戰速度加分。也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
   </>;
 }
 

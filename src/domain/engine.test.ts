@@ -57,7 +57,7 @@ describe('direct-answer battle engine', () => {
 
   it('does not charge repeated clicks or dispatch the same successful attack twice', () => {
     const answered = solve(startSession(1, 'starter'));
-    expect(battleHealth(answered).enemyHp).toBe(80);
+    expect(battleHealth(answered).enemyHp).toBe(75);
     expect(submitAction(answered)).toBe(answered);
     expect(chooseAction(answered, 3)).toBe(answered);
     expect(demonstrate(answered)).toBe(answered);
@@ -82,7 +82,7 @@ describe('direct-answer battle engine', () => {
     expect(isDefeated(session)).toBe(false);
     const next = advanceSession(solve(useHint(session)));
     expect(next.record).toMatchObject({ status: 'supported', hintUsed: true, retries: 8 });
-    expect(next.session).toMatchObject({ shield: 4, repaired: 20, retries: 0, hintUsed: false });
+    expect(next.session).toMatchObject({ shield: 4, repaired: 25, retries: 0, hintUsed: false });
   });
 
   it.each([[100, 88], [20, 8], [16, 4], [13, 1]])('subtracts 12 HP from %i without defeating a surviving player', (before, after) => {
@@ -125,7 +125,7 @@ describe('direct-answer battle engine', () => {
 
   it('restarts the same advanced challenge at full health without erasing existing progress', () => {
     let completedSession = startSession(1, 'starter');
-    for (let i = 0; i < 4; i++) completedSession = advanceSession(solve(completedSession)).session!;
+    for (let i = 0; i < 3; i++) completedSession = advanceSession(solve(completedSession)).session!;
     const completed = finishSession(createProgress(), solve(completedSession));
     const prior = advanceSession(solve(startSession(8, 'advanced'))).session!;
     const depleted = { ...prior, shield: 8 };
@@ -189,19 +189,19 @@ describe('direct-answer battle engine', () => {
   it('finishes once, permits a fresh replay and rejects premature completion', () => {
     let session = startSession(1, 'starter');
     expect(() => finishSession(createProgress(), session)).toThrow('尚未完成');
-    for (let i = 0; i < 4; i++) session = advanceSession(solve(session)).session!;
+    for (let i = 0; i < 3; i++) session = advanceSession(solve(session)).session!;
     session = solve(session);
     expect(advanceSession(session)).toMatchObject({ session: null, finished: true });
     const progress = finishSession(createProgress(), session);
     expect(progress.completed).toEqual([1]);
-    expect(progress.attempts).toHaveLength(5);
+    expect(progress.attempts).toHaveLength(4);
     expect(progress.runs).toHaveLength(1);
     expect(progress.runs![0]).toMatchObject({ sessionId: session.id, levelId: 1, mode: 'starter', review: false });
     expect(progress.runs![0].records).toEqual(progress.attempts);
     expect(progress.active).toBeNull();
     expect(finishSession(progress, session)).toBe(progress);
     expect(finishSession({ ...progress, finishedSessionIds: [] }, session).runs).toHaveLength(1);
-    expect(sessionSummary(progress.attempts)).toEqual({ first: 5, supported: 0, practice: 0, total: 5 });
+    expect(sessionSummary(progress.attempts)).toEqual({ first: 4, supported: 0, practice: 0, total: 4 });
     expect(startSession(1, 'starter').id).not.toBe(session.id);
   });
 

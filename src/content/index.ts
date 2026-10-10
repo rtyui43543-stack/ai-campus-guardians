@@ -2,6 +2,7 @@ import bank from './question-bank.json';
 import legacyBank from './legacy-review-bank.json';
 import legacyFinalBank from './legacy-final-bank.json';
 import legacyReasoningBank from './legacy-reasoning-bank.json';
+import legacyFiveQuestionBank from './legacy-five-question-bank.json';
 import { getLevel } from './levels';
 import type { Mode, Question } from '../domain/types';
 
@@ -26,7 +27,10 @@ export const legacyFinalQuestions: Question[] = (legacyFinalBank.questions as Ed
 /** Pre-reasoning options remain immutable for saved sessions and past scores. */
 export const legacyReasoningQuestions: Question[] = (legacyReasoningBank.questions as EditableQuestion[]).map(adaptQuestion)
   .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);
-export const questionById = new Map([...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions, ...questions].map(q => [q.id, q]));
+/** The five-question starter edition retains its own sequence and original scores. */
+export const legacyFiveQuestionQuestions: Question[] = (legacyFiveQuestionBank.questions as EditableQuestion[]).map(adaptQuestion)
+  .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);
+export const questionById = new Map([...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions, ...legacyFiveQuestionQuestions, ...questions].map(q => [q.id, q]));
 export const getQuestions = (levelId: number, review = false) =>
   (review ? legacyReviewQuestions : questions).filter(q => q.levelId === levelId);
 
@@ -37,6 +41,9 @@ export function getQuestionsForHistory(levelId: number, review = false, firstQue
   }
   if (!review && legacyReasoningQuestions.some(q => q.levelId === levelId && q.id === firstQuestionId)) {
     return legacyReasoningQuestions.filter(q => q.levelId === levelId);
+  }
+  if (!review && legacyFiveQuestionQuestions.some(q => q.levelId === levelId && q.id === firstQuestionId)) {
+    return legacyFiveQuestionQuestions.filter(q => q.levelId === levelId);
   }
   return getQuestions(levelId, review);
 }

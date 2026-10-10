@@ -39,14 +39,15 @@ describe('complete twelve-level campaign', () => {
   it.each(ordinaryLevels.map(level => [level.id, level.title] as const))('completes level %i (%s), accepts each permitted option and restores every checkpoint', (levelId) => {
     let session = startSession(levelId, 'starter');
     const progress = createProgress();
-    expect(session.questionIds).toHaveLength(5);
-    for (let slot = 1; slot <= 5; slot++) {
+    const count = levelId <= 6 ? 4 : 5;
+    expect(session.questionIds).toHaveLength(count);
+    for (let slot = 1; slot <= count; slot++) {
       const question = currentQuestion(session);
       expect(question.slot).toBe(slot);
       for (const action of Object.keys(question.valid).map(Number)) {
         const answer = roundTrip(progress, solve(session, action));
         expect(answer.success).toBe(true);
-        expect(battleHealth(answer).enemyHp).toBe(Math.max(0, 100 - slot * 20 - (answer.enemyBonusDamage ?? 0)));
+        expect(battleHealth(answer).enemyHp).toBe(Math.max(0, 100 - slot * 100 / count - (answer.enemyBonusDamage ?? 0)));
       }
       session = solve(session);
       const next = advanceSession(session);
@@ -55,7 +56,7 @@ describe('complete twelve-level campaign', () => {
       else {
         const completed = finishSession(progress, session);
         expect(completed.completed).toEqual([levelId]);
-        expect(completed.attempts).toHaveLength(5);
+        expect(completed.attempts).toHaveLength(count);
         expect(completed.active).toBeNull();
         expect(parseBackup(exportBackup(completed))).toEqual(completed);
         expect(finishSession(completed, session)).toBe(completed);
@@ -63,14 +64,14 @@ describe('complete twelve-level campaign', () => {
     }
   });
 
-  it('finishes six beginner and six advanced missions as sixty distinct learning records', () => {
+  it('finishes six beginner and six advanced missions as fifty-four distinct learning records', () => {
     expect(ordinaryLevels).toHaveLength(12);
     let progress = createProgress();
     for (const level of ordinaryLevels) progress = completeLevel(progress, level.id).progress;
     expect(progress.completed).toEqual(ordinaryLevels.map(level => level.id));
-    expect(progress.attempts).toHaveLength(60);
-    expect(new Set(progress.attempts.map(record => record.questionId)).size).toBe(60);
-    expect(progress.attempts.filter(record => record.mode === 'starter')).toHaveLength(30);
+    expect(progress.attempts).toHaveLength(54);
+    expect(new Set(progress.attempts.map(record => record.questionId)).size).toBe(54);
+    expect(progress.attempts.filter(record => record.mode === 'starter')).toHaveLength(24);
     expect(progress.attempts.filter(record => record.mode === 'advanced')).toHaveLength(30);
     expect(progress.attempts.every(record => record.status === 'first' && record.reason === null)).toBe(true);
     expect(parseBackup(exportBackup(progress))).toEqual(progress);
@@ -111,7 +112,7 @@ describe('complete twelve-level campaign', () => {
       expect(() => startSession(level.id, level.mode, true)).toThrow('練習已移除');
       expect(progress.completed).toEqual([1]);
     }
-    expect(progress.attempts).toHaveLength(29);
+    expect(progress.attempts).toHaveLength(28);
     expect(parseBackup(exportBackup(progress))).toEqual(progress);
   });
 

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getQuestions } from '../content';
+import { getQuestions, getQuestionsForHistory } from '../content';
 import { levels } from '../content/levels';
 import {
   advanceSession, applySession, chooseAction, createProgress, currentQuestion,
-  demonstrate, restartBattle, retryQuestion, startFinalBossSession, startSession, submitAction, tickQuestion,
+  demonstrate, finishSession, restartBattle, retryQuestion, startFinalBossSession, startSession, submitAction, tickQuestion,
 } from '../domain/engine';
 import type { Mode, Session } from '../domain/types';
 import { battleExplanation, battleVisibility } from './battleVisibility';
@@ -102,7 +102,7 @@ describe('battle text across actual answer and combat transitions', () => {
     expect(battleVisibility(retry, false)).toEqual(allVisible);
   });
 
-  it.each(levels.filter(level => !level.finalBoss))('hides both panels for the $mode chapter $chapterId ultimate and returns Next after the cast', level => {
+  it.each(levels.filter(level => !level.finalBoss))('hides both panels for the $mode chapter $chapterId ultimate and enables navigation after the cast', level => {
     const ready = charge(startSession(level.id, level.mode));
     // Full energy alone must not hide a question the player still needs to answer.
     expect(battleVisibility(ready, false)).toEqual(allVisible);
@@ -111,16 +111,31 @@ describe('battle text across actual answer and combat transitions', () => {
     expect(cast).toMatchObject({ step: 'feedback', success: true, ultimateUsed: true, ultimateId: level.chapterId });
     expect(battleVisibility(cast, true)).toEqual(ultimateCasting);
     // This is also the state after the shorter reduced-motion timer, or a saved resolved cast.
-    // Next must be usable, while the old question and choices remain hidden.
+    // Finish or Next must be usable, while the old question and choices remain hidden.
     expect(battleVisibility(cast, false)).toEqual(ultimateFinished);
 
-    const next = advanceSession(cast).session!;
-    expect(next.index).toBe(cast.index + 1);
-    expect(battleVisibility(next, false)).toEqual(allVisible);
+    const advancement = advanceSession(cast);
+    if (level.mode === 'starter') {
+      expect(cast.questionIds).toHaveLength(4);
+      expect(advancement).toMatchObject({ session: null, finished: true });
+      const completed = finishSession(createProgress(), cast);
+      expect(completed.completed).toContain(level.id);
+      expect(completed.attempts).toHaveLength(4);
+      expect(battleVisibility(completed.active, false)).toEqual(allVisible);
+    } else {
+      const next = advancement.session!;
+      expect(advancement.finished).toBe(false);
+      expect(next.index).toBe(cast.index + 1);
+      expect(battleVisibility(next, false)).toEqual(allVisible);
+    }
   });
 
   it.each(['starter', 'advanced'] as const)('keeps choices visible when a %s mirror guard makes an ordinary enemy attack miss', mode => {
-    const mirrorCast = answer(charge(startSession(mode === 'starter' ? 4 : 10, mode)));
+    let initial = startSession(mode === 'starter' ? 4 : 10, mode);
+    // Starter post-cast guards are still usable in saved five-question editions.
+    if (mode === 'starter') initial = { ...initial, questionIds: getQuestionsForHistory(4, false, 'V4L04Q01').map(question => question.id) };
+    expect(initial.questionIds).toHaveLength(5);
+    const mirrorCast = answer(charge(initial));
     const next = advanceSession(mirrorCast).session!;
     expect(next.mirrorGuard).toBe(true);
     vi.spyOn(Math, 'random').mockReturnValue(0);

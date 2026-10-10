@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getQuestions } from '../content';
+import { getQuestions, getQuestionsForHistory } from '../content';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   demonstrate, expireQuestion, finishSession, restartBattle, retryQuestion, startSession,
@@ -17,8 +17,14 @@ function wrong(session: Session): Session {
   const q = currentQuestion(session);
   return submitAction(chooseAction(session, q.choices.findIndex((_, i) => !q.valid[i]?.length)));
 }
-function reachQuestion(levelId: number, count: number): Session {
+function reachQuestion(levelId: number, count: number, legacyFiveQuestions = false): Session {
   let session = startSession(levelId, 'starter');
+  if (legacyFiveQuestions) {
+    const firstId = `V4L${String(levelId).padStart(2, '0')}Q01`;
+    session = { ...session, questionIds: getQuestionsForHistory(levelId, false, firstId).map(question => question.id) };
+    expect(session.questionIds).toHaveLength(5);
+    expect(session.questionIds[0]).toBe(firstId);
+  }
   while (session.index < count - 1) session = advanceSession(solve(session)).session!;
   return session;
 }
@@ -48,13 +54,15 @@ describe('per-run energy and ultimate rewards', () => {
     expect(released).toMatchObject({ energy: 0, ultimateUsed: true, ultimateId: 1, barrier: true, bonusPoints: 10 });
     expect(submitAction(released)).toBe(released);
     expect(demonstrate(released)).toBe(released);
-    expect(scoreSession(released)).toMatchObject({ score: 80, bonusScore: 10, totalScore: 90, ultimateUses: 1 });
+    expect(scoreSession(released)).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110, ultimateUses: 1 });
     const next = advanceSession(released);
     expect(next.record).toMatchObject({ ultimateUsed: true, ultimateId: 1 });
-    expect(next.session).toMatchObject({ energy: 0, ultimateUsed: false, bonusPoints: 10, barrier: true });
-    expect(next.session?.ultimateId).toBeUndefined();
-    const finished = finishSession(createProgress(), solve(next.session!));
+    expect(next).toMatchObject({ finished: true, session: null });
+    const finished = finishSession(createProgress(), released);
+    expect(finished.runs![0].records).toHaveLength(4);
+    expect(finished.ultimateCards).toHaveLength(1);
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110, perfect: true });
+    expect(parseBackup(exportBackup(finished))).toEqual(finished);
   });
 
   it('keeps accumulated points after an error and releases on the fourth solved answer', () => {
@@ -67,10 +75,10 @@ describe('per-run energy and ultimate rewards', () => {
     // Correcting the third answer finishes charging; the fourth answer then releases.
     const released = solve(session);
     expect(released).toMatchObject({ ultimateUsed: true, energy: 0, ultimateId: 2, bonusPoints: 10 });
-    session = advanceSession(released).session!;
-    const last = solve(session);
-    expect(last).toMatchObject({ ultimateUsed: false, energy: 1, bonusPoints: 10 });
-    expect(scoreSession(last)).toMatchObject({ score: 96, bonusScore: 10, totalScore: 106, wrongAnswers: 1 });
+    expect(advanceSession(released)).toMatchObject({ finished: true, session: null });
+    const finished = finishSession(createProgress(), released);
+    expect(finished.runs![0].records).toHaveLength(4);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 95, bonusScore: 10, totalScore: 105, wrongAnswers: 1 });
   });
 
   it.each([2, 8])('keeps the prepared ultimate through repeated mistakes in mission %i until a correct retry', levelId => {
@@ -87,7 +95,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(corrected).toMatchObject({ energy: 0, ultimateUsed: true, ultimateId: 2, bonusPoints: 10, retries: 3 });
     expect(roundTrip(corrected).ultimateCards).toHaveLength(1);
     expect(submitAction(corrected)).toBe(corrected);
-    expect(scoreSession(corrected)).toMatchObject({ score: 68, bonusScore: 10, wrongAnswers: 3 });
+    expect(scoreSession(corrected)).toMatchObject({ score: levelId === 2 ? 85 : 68, bonusScore: 10, wrongAnswers: 3 });
   });
 
   it.each([1, 7])('keeps partial charge and zero charge through wrong answers in mission %i', levelId => {
@@ -122,19 +130,29 @@ describe('per-run energy and ultimate rewards', () => {
   it('allows hints to charge energy while demonstrations never charge or spend a prepared ultimate', () => {
     const hinted = solve(useHint(startSession(1, 'starter')));
     expect(hinted.energy).toBe(1);
-    expect(scoreSession(hinted).score).toBe(16);
+    expect(scoreSession(hinted).score).toBe(20);
     const ready = reachQuestion(1, 4);
     const demo = demonstrate(ready);
     expect(demo).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0 });
     expect(scoreSession(demo).bonusScore).toBe(0);
-    const fifth = solve(advanceSession(demo).session!);
+    expect(advanceSession(demo)).toMatchObject({ finished: true, session: null });
+    const finished = finishSession(createProgress(), demo);
+    expect(finished.ultimateCards).toEqual([]);
+    expect(finished.runs![0].records).toHaveLength(4);
+    expect(scoreSession(finished.runs![0])).toMatchObject({ score: 75, bonusScore: 0, totalScore: 75, demos: 1, ultimateUses: 0 });
+  });
+
+  it('preserves a prepared ultimate through demonstration in a saved five-question starter mission', () => {
+    const demo = demonstrate(reachQuestion(1, 4, true));
+    expect(demo).toMatchObject({ energy: 3, ultimateUsed: false, bonusPoints: 0 });
+    const fifth = solve(advanceSession(roundTrip(demo).active!).session!);
     expect(fifth).toMatchObject({ ultimateUsed: true, energy: 0 });
     expect(scoreSession(fifth)).toMatchObject({ score: 80, bonusScore: 10, demos: 1 });
   });
 
-  it('uses the starter castle to absorb one attack only, including a saved checkpoint', () => {
+  it('uses the saved five-question starter castle to absorb one attack only, including a checkpoint', () => {
     const levelId = 1;
-    const released = solve(reachQuestion(levelId, 4));
+    const released = solve(reachQuestion(levelId, 4, true));
     let fifth = roundTrip(advanceSession(released).session!).active!;
     const protectedHit = wrong(fifth);
     expect(protectedHit).toMatchObject({ shield: 100, preventedDamage: true, barrier: false, retries: 1 });
@@ -183,24 +201,30 @@ describe('per-run energy and ultimate rewards', () => {
   });
 
   it.each([[1, 5], [7, 10], [2, 10], [4, 10], [5, 10], [6, 10], [8, 15], [10, 15], [11, 15], [12, 15]])('uses mission %i to add %i damage without skipping a question', (levelId, extraDamage) => {
+    const questionCount = levelId <= 6 ? 4 : 5;
     const fourth = solve(reachQuestion(levelId, 4));
     expect(fourth).toMatchObject({ enemyBonusDamage: extraDamage, bonusPoints: 10 });
-    expect(battleHealth(fourth).enemyHp).toBe(20 - extraDamage);
+    expect(battleHealth(fourth).enemyHp).toBe(questionCount === 4 ? 0 : 20 - extraDamage);
     const next = advanceSession(fourth);
-    expect(next.finished).toBe(false);
-    expect(next.session?.index).toBe(4);
-    expect(battleHealth(next.session!).enemyHp).toBe(20 - extraDamage);
-    const final = solve(next.session!);
+    let final = fourth;
+    if (questionCount === 4) {
+      expect(next).toMatchObject({ finished: true, session: null });
+    } else {
+      expect(next.finished).toBe(false);
+      expect(next.session?.index).toBe(4);
+      expect(battleHealth(next.session!).enemyHp).toBe(20 - extraDamage);
+      final = solve(next.session!);
+    }
     expect(battleHealth(final).enemyHp).toBe(0);
     expect(final.enemyBonusDamage).toBe(extraDamage);
     const finished = finishSession(createProgress(), final);
-    expect(finished.runs![0].records).toHaveLength(5);
+    expect(finished.runs![0].records).toHaveLength(questionCount);
     expect(finished.completed).toContain(levelId);
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110 });
   });
 
-  it.each([6, 12])('gives ice mission %i extra attack damage without creating a shield', levelId => {
-    const released = solve(reachQuestion(levelId, 4));
+  it.each([6, 12])('preserves ice mission %i damage and guard on the following saved five-question turn', levelId => {
+    const released = solve(reachQuestion(levelId, 4, levelId === 6));
     expect(released).toMatchObject({ ultimateId: 6, bonusPoints: 10, enemyBonusDamage: levelId === 6 ? 10 : 15, barrier: false, barrierCharges: 0 });
     expect(remainingBarrierCharges(released)).toBe(0);
     expect(submitAction(released)).toBe(released);
@@ -210,8 +234,8 @@ describe('per-run energy and ultimate rewards', () => {
     expect(roundTrip(hit).ultimateCards).toHaveLength(1);
   });
 
-  it.each([1, 7, 8, 10, 11, 12])('clamps mission %i damage to zero HP when a demonstration delays the ultimate until the fifth answer', levelId => {
-    const fourth = demonstrate(reachQuestion(levelId, 4));
+  it.each([1, 7, 8, 10, 11, 12])('clamps saved five-question mission %i damage when a demonstration delays the ultimate until the fifth answer', levelId => {
+    const fourth = demonstrate(reachQuestion(levelId, 4, levelId === 1));
     expect(fourth).toMatchObject({ energy: 3, ultimateUsed: false, enemyBonusDamage: 0 });
     const fifth = advanceSession(fourth).session!;
     const cast = solve(fifth);
@@ -232,13 +256,20 @@ describe('per-run energy and ultimate rewards', () => {
     expect(restored).toMatchObject({ shield: 64 + recoveredHp, enemyBonusDamage: 0, bonusPoints: 10 });
     expect(submitAction(restored)).toBe(restored);
     expect(roundTrip(restored).active!.shield).toBe(64 + recoveredHp);
-    expect(advanceSession(restored).session!.shield).toBe(64 + recoveredHp);
+    const next = advanceSession(restored);
+    if (levelId === 3) {
+      expect(next).toMatchObject({ finished: true, session: null });
+      const historicalRestore = solve({ ...reachQuestion(levelId, 4, true), shield: 64 });
+      expect(advanceSession(roundTrip(historicalRestore).active!).session!.shield).toBe(64 + recoveredHp);
+    } else {
+      expect(next.session!.shield).toBe(64 + recoveredHp);
+    }
     expect(solve({ ...ready, shield: 96 }).shield).toBe(100);
     expect(solve(ready).shield).toBe(100);
   });
 
-  it('keeps earned cards after defeat or a restart but resets all new-battle resources', () => {
-    const fourth = solve(reachQuestion(2, 4));
+  it('keeps earned cards after defeat in a saved five-question mission or restart but resets new-battle resources', () => {
+    const fourth = solve(reachQuestion(2, 4, true));
     const saved = roundTrip(fourth);
     expect(saved.ultimateCards).toHaveLength(1);
     expect(saved.ultimateCards![0]).toMatchObject({ ultimateId: 2, sessionId: fourth.id, questionId: fourth.questionIds[3] });
@@ -249,6 +280,9 @@ describe('per-run energy and ultimate rewards', () => {
     const restarted = restartBattle(roundTrip(defeated.active!, defeated));
     expect(restarted.ultimateCards).toEqual(saved.ultimateCards);
     expect(restarted.active).toMatchObject({ energy: 0, bonusPoints: 0, enemyBonusDamage: 0, barrier: false, shield: 100 });
+    expect(restarted.active!.questionIds).toHaveLength(4);
+    expect(restarted.active!.questionIds[0]).toBe('V5L02Q01');
+    expect(battleHealth(solve(restarted.active!)).enemyHp).toBe(75);
     expect(parseBackup(exportBackup(restarted))).toEqual(restarted);
     const anotherLevel = applySession(restarted, startSession(3, 'starter'));
     expect(anotherLevel.active?.energy).toBe(0);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { questions, legacyReasoningQuestions, getQuestionsForHistory, questionById } from './index';
+import { questions, legacyReasoningQuestions, legacyFiveQuestionQuestions, getQuestionsForHistory, questionById } from './index';
 import { levels } from './levels';
 import { advanceSession, applySession, chooseAction, createProgress, currentQuestion, finishSession, requiresReason, startSession, submitAction } from '../domain/engine';
 import { validateProgress } from '../domain/storage';
@@ -31,20 +31,22 @@ describe('one-click action and rationale choices', () => {
     for (const level of levels) {
       const current = questions.filter(q => q.levelId === level.id);
       const old = legacyReasoningQuestions.filter(q => q.levelId === level.id);
+      const originalSlot = (q: typeof current[number]) => level.id <= 6
+        ? legacyFiveQuestionQuestions.find(item => item.levelId === level.id && item.prompt === q.prompt)!.slot : q.slot;
       for (const q of current) {
-        const previous = old.find(item => item.slot === q.slot)!;
+        const previous = old.find(item => item.slot === originalSlot(q))!;
         expect(q.id).not.toBe(previous.id);
         expect(q.objective).toBe(previous.objective);
         expect(q.source).toEqual(previous.source);
         expect(Object.keys(q.valid)).toEqual(Object.keys(previous.valid));
         expect(q.choices.map(c => c.text)).not.toEqual(previous.choices.map(c => c.text));
       }
-      expect(current.filter(q => q.prompt !== old.find(item => item.slot === q.slot)!.prompt).length).toBeGreaterThanOrEqual(2);
+      expect(current.filter(q => q.prompt !== old.find(item => item.slot === originalSlot(q))!.prompt).length).toBeGreaterThanOrEqual(2);
     }
   });
 
   it('rejects a mistaken rationale even when it proposes the same action', () => {
-    for (const id of ['V4L01Q01', 'V4L02Q01']) {
+    for (const id of ['V5L01Q01', 'V5L02Q01']) {
       const q = questionById.get(id)!;
       const answer = Number(Object.keys(q.valid)[0]);
       const other = q.choices.findIndex((choice, index) => index !== answer && choice.action === q.choices[answer].action);
@@ -72,6 +74,6 @@ describe('one-click action and rationale choices', () => {
     expect(recovered[0].records.map(record => record.questionId)).toEqual(getQuestionsForHistory(1, false, 'V2L01Q01').map(q => q.id));
     expect(scoreSession(recovered[0]).score).toBe(scoreSession(imported.runs![0]).score);
     expect(imported.completed).toContain(1);
-    expect(startSession(1, 'starter').questionIds.every(id => id.startsWith('V4L'))).toBe(true);
+    expect(startSession(1, 'starter').questionIds.every(id => id.startsWith('V5L'))).toBe(true);
   });
 });
