@@ -43,7 +43,41 @@ const cases = [
   { name: 'nine-head final', make: () => createFinalBossSprite('advanced', { loadTexture: () => undefined }) },
 ];
 
+// Actual CSS content-box measurements from the five 60/40 landscape viewports.
+const landscape6040Cases = [
+  { width: 490.667, height: 320.667, minHeroHeight: 150, minEnemyHeight: 90 },
+  { width: 539.865, height: 358.667, minHeroHeight: 150, minEnemyHeight: 90 },
+  { width: 598.667, height: 530.667, minHeroHeight: 200, minEnemyHeight: 140 },
+  { width: 589.0625, height: 682.667, minHeroHeight: 200, minEnemyHeight: 140 },
+  { width: 691.0625, height: 748.667, minHeroHeight: 200, minEnemyHeight: 140 },
+];
+
 describe('battle framing', () => {
+  it.each(landscape6040Cases)('keeps both actors readable and apart in a 60/40 landscape pane at $width × $height',
+    ({ width, height, minHeroHeight, minEnemyHeight }) => {
+    const hero = createCoverHeroSprite({ loadTexture: () => undefined });
+    for (const mode of ['starter', 'advanced'] as const) for (const chapter of [1, 2, 3, 4, 5, 6, 'final'] as const) {
+      const enemy = chapter === 'final' ? createFinalBossSprite(mode, { loadTexture: () => undefined })
+        : createMissionEnemy(chapter, mode, false, { loadTexture: () => undefined });
+      const fit = fitBattleActors({ width, height, viewport: 'dedicated', questionBottom: 0, answersTop: height, resolving: false },
+        measureActorFraming(hero, view()), measureActorFraming(enemy, view()));
+      const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+      hero.root.scale.setScalar(fit.scale); hero.root.position.set(fit.heroX, 0, 0);
+      enemy.root.scale.setScalar(fit.scale); enemy.root.position.set(fit.enemyX, 0, 0);
+      hero.updateVisual({ camera, pose: 'idle', reducedMotion: true });
+      enemy.updateVisual?.({ camera, reducedMotion: true });
+      const heroBounds = projectedBounds(hero, camera), enemyBounds = projectedBounds(enemy, camera);
+      const heroHeight = (heroBounds.max.y - heroBounds.min.y) * height / 2;
+      const enemyHeight = (enemyBounds.max.y - enemyBounds.min.y) * height / 2;
+      const gap = (enemyBounds.min.x - heroBounds.max.x) * width / 2;
+      expect(gap, `${mode}/${chapter}`).toBeGreaterThanOrEqual(8);
+      expect(heroHeight, `${mode}/${chapter}`).toBeGreaterThanOrEqual(minHeroHeight);
+      expect(enemyHeight, `${mode}/${chapter}`).toBeGreaterThanOrEqual(minEnemyHeight);
+      enemy.disposeVisual?.();
+    }
+    hero.disposeVisual();
+  });
+
   it('ignores hidden feedback and the added explanation footer until a visible question or viewport changes', () => {
     const hero = createCoverHeroSprite({ loadTexture: () => undefined });
     const boss = createMissionEnemy(1, 'starter');
@@ -110,6 +144,7 @@ describe('battle framing', () => {
     { width: 328, height: 320, viewport: 'dedicated' },
     { width: 370, height: 330, viewport: 'dedicated' }, { width: 417, height: 368, viewport: 'dedicated' },
     { width: 450, height: 532, viewport: 'dedicated' },
+    ...landscape6040Cases.map(({ width, height }) => ({ width, height, viewport: 'dedicated' as const })),
     { width: 976, height: 240, viewport: 'dedicated' }, { width: 1024, height: 300, viewport: 'dedicated' },
   ])('$width × $height $viewport', ({ width, height, viewport }) => {
     it.each(['starter', 'advanced'] as const)('fits the actual %s final-boss cast deformation and contact responses', mode => {

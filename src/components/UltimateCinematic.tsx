@@ -1,8 +1,7 @@
-import { useId, type CSSProperties } from 'react';
+import { useId, useState, type CSSProperties } from 'react';
 import type { Mode } from '../domain/types';
 import { getUltimateSpell } from '../content/ultimateSpells';
-import { appAssetUrl } from '../platform/urls';
-import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING, type UltimateSummonKind } from './ultimateSummons';
+import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING, summonImageSource, recoverSummonImageSource, type UltimateSummonKind } from './ultimateSummons';
 import '../styles/ultimate-cinematic.css';
 import { CardBook, CardCastle, CardCrystalLance, CardFireFeather, CardIndexPage, CardLeaf, CardLeafPuzzle, CardMirror, CardMirrorFragment, CardPuzzleHeart } from './ultimateCardForms';
 
@@ -18,9 +17,13 @@ const feather = 'M0 0C-18-35-33-96 0-170C35-96 22-34 0 0Z';
 
 function IllustratedSummon({ kind, phase }: { kind: UltimateSummonKind; phase: string }) {
   const art = ULTIMATE_SUMMON_ART[kind];
+  // The cue remounts this component. Pick once so a late full-size download
+  // never makes the creature appear or change resolution halfway through flight.
+  const [source, setSource] = useState(() => summonImageSource(kind));
   return <div className={`ultimate-summon-flight ultimate-summon-${kind}`} data-phase={phase} data-summon-art={kind}>
     <div className="ultimate-summon-wake" aria-hidden="true" />
-    <img className="ultimate-summon-creature" src={appAssetUrl(art.path)} width={art.width} height={art.height} alt="" aria-hidden="true" decoding="sync" draggable={false} />
+    <img className="ultimate-summon-creature" src={source} width={art.width} height={art.height} alt="" aria-hidden="true" loading="eager" fetchPriority="high" decoding="sync" draggable={false}
+      onError={() => setSource(recoverSummonImageSource(kind))} />
   </div>;
 }
 

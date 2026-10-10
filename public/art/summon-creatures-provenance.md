@@ -37,3 +37,9 @@ Use case: stylized-concept / identity-preserve. Asset type: high-detail transpar
 Both reference cards and generated outputs were visually inspected. Both creatures preserve their card identities and detailed fantasy render style. Alpha counts were computed from decoded RGBA data using the bundled Sharp library read-only; the assets were not modified by that inspection. The non-opaque pixels preserve the tool-generated antialiasing, glow, and translucency.
 
 Additional edge verification: all four corner alpha values are zero for both images. In the outermost 5-pixel border (25,500 pixels), the phoenix has only 1,131 nonzero pixels with maximum alpha 3 and mean alpha 0.0576; the ice dragon has 512 nonzero pixels with maximum alpha 3 and mean alpha 0.0232. Neither asset has an opaque rectangular background. Maximum subject alpha is 254 in both outputs.
+
+## Bundled cold-load fallback
+
+`src/assets/summon-phoenix-fallback.webp` and `src/assets/summon-ice-dragon-fallback.webp` are mechanical 512 × 341 resizes of these same PNG sprites, encoded with Sharp as WebP at quality 90 and alphaQuality 100. No creature was redrawn or replaced. Their alpha channels match the resized source exactly. The original 1536 × 1024 PNGs remain unchanged and are used after successful loading and decoding.
+
+The fallback sprites total 219,868 bytes before base64 encoding. Vite `?inline` imports include them in the application bundle, so the three-second cast does not require another image download when the original PNG is cold, slow or fails. Each cast selects its source once; a completed full-resolution preload is used by later casts without changing the current flight or the 900 ms impact.

@@ -6,6 +6,12 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING } from './ultimateSummons';
 
 vi.mock('../platform/urls', () => ({ appAssetUrl: (path: string) => `/ai-campus-guardians${path}` }));
+// These art/choreography contracts use the warm path. Cold, slow and failed
+// requests exercise the actual source selection in ultimateSummons.test.ts.
+vi.mock('./ultimateSummons', async importOriginal => {
+  const module = await importOriginal<typeof import('./ultimateSummons')>();
+  return { ...module, summonImageSource: (kind: keyof typeof module.ULTIMATE_SUMMON_ART) => `/ai-campus-guardians${module.ULTIMATE_SUMMON_ART[kind].path}` };
+});
 
 describe('upgraded ultimate battlefield presentation', () => {
   it('keeps ordinary counterattack cues out of these ultimate cinematics', () => {
@@ -46,7 +52,11 @@ describe('upgraded ultimate battlefield presentation', () => {
       'b8f907f85c5344a51749ebb5da25c9422640bdc043e827c32fbf177e79e2f765',
     ];
     const current = [5, 6].flatMap(chapter => [false, true].map(reducedMotion => {
-      const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-1-30" reducedMotion={reducedMotion} />).replaceAll('/ai-campus-guardians', '');
+      // Network scheduling attributes do not change the protected art, layers or
+      // choreography; exclude them while keeping their original fingerprints.
+      const markup = renderToStaticMarkup(<UltimateCinematic chapter={chapter} mode="advanced" cue="ultimate-1-30" reducedMotion={reducedMotion} />)
+        .replaceAll('/ai-campus-guardians', '')
+        .replaceAll(/ (?:loading|fetchPriority)="(?:eager|high)"/g, '');
       return createHash('sha256').update(markup).digest('hex');
     }));
     expect(current).toEqual(protectedForms);

@@ -4,10 +4,10 @@
 .duel-narrate-caption{display:none}
 .duel-stage:has(.ultimate-illustrated-summon) :is(.duel-hud,.duel-answer-area,.duel-damage){z-index:7}
 
-@media (orientation:landscape) and (max-width:1366px), (min-width:480px) and (max-height:650px){
+@media (orientation:landscape) and (max-width:1366px), (orientation:landscape) and (min-width:480px) and (max-height:650px){
   .duel-stage{
-    display:grid;grid-template-columns:minmax(0,1fr);
-    grid-template-rows:56px auto minmax(0,1fr) auto;
+    display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);
+    grid-template-rows:56px minmax(0,1fr);
     gap:8px;height:100dvh;min-height:0;
     padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
     background:radial-gradient(ellipse at 50% 30%,#456d54,#193e37 78%);
@@ -28,41 +28,68 @@
   .duel-stage .duel-round{display:flex;flex-direction:column;justify-content:center;grid-row:1;grid-column:3;padding:3px 8px;font-size:12px}
   .duel-stage .duel-round b{font-size:18px;margin-top:2px}
   .duel-stage .duel-bubble{
-    position:relative;inset:auto;transform:none;grid-row:2;grid-column:1;
-    width:100%;max-height:none;border-radius:16px;padding:10px 16px;
-    overflow:visible;box-shadow:0 4px 16px #061d2730;
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;
+    position:relative;inset:auto;transform:none;grid-row:1;grid-column:1;
+    width:100%;min-height:0;max-height:min(48cqh,280px);border-radius:16px;padding:10px 14px;
+    overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#e9d88b #163e35;
+    box-shadow:0 4px 16px #061d2730;
+    display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:4px 5px;
   }
   .duel-stage .duel-question-meta{display:contents}
-  .duel-stage .duel-question-meta>span{grid-column:1;grid-row:2;align-self:center;font-size:12px}
-  .duel-stage .duel-question-meta>div{grid-column:2;grid-row:2;align-self:center;gap:4px}
+  .duel-stage .duel-question-meta>span{display:none}
+  .duel-stage .duel-question-meta>div{display:contents}
+  .duel-stage .duel-music{grid-column:3;grid-row:2;align-self:center}
+  .duel-stage .duel-music span{display:none}
+  .duel-stage .duel-narrate{grid-column:4;grid-row:2;align-self:center}
   .duel-stage .duel-tool{min-width:44px;min-height:44px;padding:6px}
   .duel-stage .duel-narrate{gap:5px}
   .duel-stage .duel-narrate-caption{display:inline;font-size:13px;font-weight:700}
   .duel-stage .duel-bubble h1{grid-column:1/-1;grid-row:1;font-size:clamp(21px,2.2vw,26px);line-height:1.45;letter-spacing:0;text-wrap:pretty}
   .duel-stage .duel-bubble.is-resolving{height:var(--duel-question-height,auto);overflow:hidden}
-  .duel-stage .battle-mechanics{grid-row:2;grid-column:1;margin:0;padding:0;border:0;gap:4px 10px;justify-content:flex-start;font-size:14px}
-  .duel-stage .duel-question-meta>span{display:none}
-  .duel-stage .battle-time-tools{margin-left:auto;gap:4px}
+  .duel-stage .battle-mechanics{display:contents;font-size:14px}
+  .duel-stage .battle-energy{grid-row:2;grid-column:1;justify-self:start;align-self:center;min-width:0;flex-wrap:wrap;gap:3px}
+  .duel-stage :is(.battle-ready-note,.battle-status-effects){grid-column:1/-1}
+  .duel-stage .battle-time-tools{grid-row:2;grid-column:2;align-self:center;margin:0;gap:4px}
+  .duel-stage .battle-clock{padding:4px;gap:3px;flex-wrap:wrap;max-width:76px}
+  .duel-stage .battle-clock>small{flex-basis:100%;text-align:center;line-height:1.25}
   .duel-stage .battle-rules-button{width:44px;height:44px;flex-shrink:0}
   .duel-stage .battle-ready-note{font-size:14px;line-height:1.45;margin:0}
   .duel-stage .battle-status-effects{padding:0;gap:4px}
   .duel-stage .battle-status{font-size:12px;padding:3px 6px}
   .duel-stage .duel-evidence,.duel-stage .duel-hint,.duel-stage .duel-feedback{grid-column:1/-1;margin-top:4px;font-size:15px;line-height:1.5}
   .duel-stage .duel-combat-window{
-    display:block;position:relative;grid-row:3;grid-column:1;min-width:0;min-height:0;
+    display:block;position:relative;grid-row:2;grid-column:1;min-width:0;min-height:0;
     border:1px solid #e4d39170;border-radius:18px;overflow:hidden;
     container-type:size;box-shadow:0 3px 16px #001a2730;
   }
-  .duel-stage .duel-answer-area{position:relative;inset:auto;grid-row:4;grid-column:1;min-width:0}
-  .duel-stage .duel-choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .duel-stage .duel-reading-panel{
+    display:grid;grid-template-rows:max-content minmax(0,1fr);gap:8px;
+    position:relative;grid-column:2;grid-row:2;min-width:0;min-height:0;overflow:hidden;
+    container-type:size;border-radius:16px;
+  }
+  .duel-stage .duel-answer-area{
+    position:relative;inset:auto;grid-row:2;grid-column:1;min-width:0;min-height:0;
+    display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;overflow:hidden;
+  }
+  .duel-stage .duel-answer-area:has(.duel-explanation-actions){grid-template-rows:minmax(0,1fr) auto auto}
+  .duel-stage .duel-choices{
+    grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(min-content,1fr);gap:8px;
+    min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+    scrollbar-width:thin;scrollbar-color:#e9d88b #163e35;scrollbar-gutter:stable;
+  }
   .duel-stage .duel-choice{min-height:64px;padding:10px 13px;gap:9px;font-size:18px;line-height:1.45;overflow-wrap:anywhere;white-space:normal}
   .duel-stage .duel-letter{width:30px;height:30px;font-size:17px}
-  .duel-stage .duel-controls{flex-wrap:nowrap;gap:8px;margin-top:8px;min-height:44px}
+  .duel-stage .duel-controls{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:5px;margin:0;min-width:0;min-height:44px}
   .duel-stage :is(.duel-hint-button,.duel-next){min-height:44px;font-size:14px;padding:8px 12px}
+  .duel-stage .duel-hint-button{justify-self:start}
+  .duel-stage .duel-controls>.duel-next{justify-self:end}
+  .duel-stage .duel-controls>:is(.duel-select-note,.duel-retry-actions){justify-self:end;min-width:0}
+  .duel-stage .duel-controls .duel-retry-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px}
+  .duel-stage .duel-controls button{min-width:0;white-space:normal}
   .duel-stage .duel-score{font-size:15px;padding:3px 8px;line-height:1.4}
   .duel-stage .duel-score>.duel-bonus-score{font-size:12px}
   .duel-stage .duel-select-note{font-size:13px;padding:7px 9px}
+  .duel-stage .duel-explanation-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0;min-width:0}
+  .duel-stage .duel-explanation-actions button{min-height:44px;min-width:0;padding:6px 8px;font-size:14px;white-space:normal}
   .duel-stage .duel-attack-name{top:8px;max-width:calc(100% - 20px);font-size:16px;line-height:1.3;padding:6px 12px;z-index:7}
   .duel-stage .duel-combat-window .duel-damage{
     top:clamp(54px,calc(var(--actor-impact-y,55%) - 12px),calc(100% - 65px));
@@ -78,11 +105,18 @@
   .duel-stage .arena-turn-pop.critical-pop{top:45px;font-size:12px}
 }
 
-/* Use available height as well as orientation: browser bars on a small tablet
-   need the same split view as a phone, with only the reading pane scrollable. */
+/* Browser bars can leave a landscape phone only a few hundred pixels high.
+   Once the question is intentionally hidden, its empty slot need not squeeze
+   the retained choices or the post-cast explanation and retry controls. */
+@media (orientation:landscape) and (min-width:480px) and (max-height:360px){
+  .duel-stage .duel-reading-panel:has(.duel-bubble.is-resolving){grid-template-rows:0 minmax(0,1fr);row-gap:0}
+  .duel-stage .duel-bubble.is-resolving{height:0;max-height:0;padding:0;border-width:0}
+}
+
+/* Compact only the chrome on a shallow viewport. The 60/40 split is shared
+   by phones and tablets; long choices scroll without moving the question. */
 @media (orientation:landscape) and (max-height:650px) and (min-width:480px){
   .duel-stage{
-    grid-template-columns:minmax(0,45fr) minmax(0,55fr);
     grid-template-rows:48px minmax(0,1fr);gap:8px;
     padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
   }
@@ -94,64 +128,61 @@
   .duel-stage .duel-round{font-size:11px;padding:2px 7px}
   .duel-stage .duel-round b{font-size:16px}
   .duel-stage .duel-combat-window{grid-column:1;grid-row:2;border-radius:15px}
-  .duel-stage .duel-reading-panel{
-    display:flex;flex-direction:column;position:relative;grid-column:2;grid-row:2;
-    min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;
-    scrollbar-width:thin;scrollbar-color:#e9d88b #163e35;gap:5px;
-    border-radius:15px;
-  }
-  .duel-stage .duel-bubble{flex-shrink:0;padding:8px 10px;gap:2px 4px;border-radius:15px;backdrop-filter:none}
+  .duel-stage .duel-reading-panel{gap:5px;border-radius:15px}
+  .duel-stage .duel-bubble{padding:8px 10px;gap:2px 4px;border-radius:15px;backdrop-filter:none}
   .duel-stage .duel-bubble h1{font-size:18px;line-height:1.45}
-  .duel-stage .battle-mechanics{font-size:12px;gap:2px 4px}
-  .duel-stage .battle-mechanics{display:contents}
-  .duel-stage .battle-energy{grid-row:2;grid-column:1;justify-self:start;align-self:center;max-width:calc(100% - 128px);gap:3px;flex-wrap:wrap}
-  .duel-stage .battle-time-tools{grid-row:2;grid-column:1;justify-self:end;align-self:center}
-  .duel-stage :is(.battle-ready-note,.battle-status-effects){grid-column:1/-1}
+  .duel-stage .battle-mechanics{font-size:12px}
+  .duel-stage .battle-energy{grid-column:1/-1;grid-row:2}
+  .duel-stage .battle-time-tools{grid-column:1/3;grid-row:3;justify-self:start}
+  .duel-stage .duel-music{grid-row:3}
+  .duel-stage .duel-narrate{grid-row:3}
   .duel-stage .energy-label{gap:3px;font-size:12px}
   .duel-stage .energy-label>svg{width:14px;height:14px}
   .duel-stage .energy-gems{gap:0}
   .duel-stage .energy-gems svg{width:15px;height:15px}
   .duel-stage .battle-energy>b{font-size:13px}
-  .duel-stage .battle-clock{padding:4px;gap:3px;flex-wrap:wrap;max-width:86px}
-  .duel-stage .battle-clock>small{flex-basis:100%;text-align:center;line-height:1.25}
   .duel-stage .battle-clock b{font-size:17px}
   .duel-stage .battle-clock small{font-size:10px}
   .duel-stage .battle-ready-note{font-size:12px;line-height:1.35}
   .duel-stage .battle-barrier{font-size:11px}
-  .duel-stage .duel-music span{display:none}
-  .duel-stage .duel-question-meta>div{gap:0}
-  .duel-stage .duel-answer-area{flex:1;display:flex;flex-direction:column;gap:5px}
-  .duel-stage .duel-choices{flex:1;gap:6px}
+  .duel-stage .duel-answer-area{gap:5px}
+  .duel-stage .duel-choices{gap:6px}
   .duel-stage .duel-choice{display:block;padding:7px 9px;min-height:60px;font-size:16px;line-height:1.4;border-radius:11px}
   .duel-stage .duel-letter{display:inline-flex;width:23px;height:23px;font-size:14px;margin-right:5px;vertical-align:baseline}
   .duel-stage .duel-choice>span:nth-child(2){display:inline}
   .duel-stage .duel-choice>svg{vertical-align:middle;margin-left:4px}
-  .duel-stage .duel-controls{flex-shrink:0;margin:0;gap:5px;min-height:44px}
+  .duel-stage .duel-controls{gap:4px;min-height:44px}
   .duel-stage :is(.duel-hint-button,.duel-next){padding:7px 8px;font-size:12px;gap:4px}
   .duel-stage .duel-score{font-size:13px;padding:3px 6px}
   .duel-stage .duel-score>.duel-bonus-score{font-size:11px}
   .duel-stage .duel-select-note{font-size:11px;padding:5px 6px}
   .duel-stage .duel-retry-actions{gap:4px}
-  .duel-stage .duel-explanation-actions{flex-shrink:0;margin:0;gap:5px}
   .duel-stage .duel-explanation-actions button{font-size:13px;padding:5px 8px}
   .duel-stage .duel-hint,.duel-stage .duel-evidence,.duel-stage .duel-feedback{font-size:14px}
-  .duel-stage .duel-reading-panel:has(.duel-answer-area.is-ultimate-resolving){scrollbar-width:none}
-  .duel-stage .duel-reading-panel:has(.duel-answer-area.is-ultimate-resolving)::-webkit-scrollbar{display:none}
+  .duel-stage .duel-choices[inert]{scrollbar-width:none}
+  .duel-stage .duel-choices[inert]::-webkit-scrollbar{display:none}
 }
 
-/* Phone landscape needs more reading width for the complete action + reason.
-   Keep the choice type at 15px rather than truncating a third text line. */
-@media (orientation:landscape) and (min-width:480px) and (max-width:950px) and (max-height:480px){
-  .duel-stage{grid-template-columns:minmax(0,40fr) minmax(0,60fr)}
-  .duel-stage .duel-choice{font-size:15px}
-}
-
-/* Taller tablets reserve post-cast explanation space before the first attack,
-   so the actors keep the same framing when those buttons appear. */
-@media (orientation:landscape) and (min-height:651px) and (max-width:1366px){
-  .duel-stage .duel-bubble{max-height:24dvh;overflow:auto;scrollbar-width:thin}
-  .duel-stage .duel-bubble.is-resolving{overflow:hidden}
-  .duel-stage .duel-answer-area::after{content:"";display:block;height:44px;margin-top:8px}
-  .duel-stage .duel-answer-area:has(.duel-explanation-actions)::after{display:none}
-  .duel-stage .duel-explanation-actions{height:44px;margin-top:8px;min-width:0}
+/* A 40% column on a small phone cannot fit three controls side by side.
+   Keep action labels on one line and give the score its own compact row. */
+@media (orientation:landscape) and (min-width:480px) and (max-width:720px){
+  .duel-stage{grid-template-rows:52px minmax(0,1fr)}
+  .duel-stage .duel-bubble{grid-template-columns:minmax(0,1fr) auto auto}
+  .duel-stage .battle-time-tools{grid-column:1/-1;grid-row:3}
+  .duel-stage .duel-music{grid-column:2;grid-row:4}
+  .duel-stage .duel-narrate{grid-column:3;grid-row:4}
+  .duel-stage .duel-controls{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:44px auto;row-gap:4px}
+  .duel-stage .duel-controls>.duel-hint-button{grid-column:1;grid-row:1}
+  .duel-stage .duel-controls>:is(.duel-next,.duel-select-note,.duel-retry-actions){grid-column:2;grid-row:1}
+  .duel-stage .duel-controls :is(.duel-hint-button,.duel-next){white-space:nowrap;min-height:44px}
+  .duel-stage .duel-score{
+    grid-column:1/-1;grid-row:2;justify-self:center;display:flex;align-items:baseline;gap:4px;
+    margin:0;padding:1px 6px;font-size:13px;line-height:1.2;
+  }
+  .duel-stage .duel-score :is(.duel-answer-score,.duel-bonus-score){line-height:1.2}
+  .duel-stage .duel-controls .duel-retry-actions{flex-wrap:nowrap}
+  .duel-stage .duel-controls:has(.duel-retry-actions>:nth-child(2))>.duel-hint-button{display:none}
+  .duel-stage .duel-controls:has(.duel-retry-actions>:nth-child(2))>.duel-retry-actions{
+    grid-column:1/-1;justify-self:stretch;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+  }
 }
