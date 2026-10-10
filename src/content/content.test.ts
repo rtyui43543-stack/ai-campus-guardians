@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { auditAudio, auditContent, auditLegacyReview, auditLegacyFinal, expectedAudio } from '../../scripts/check-content';
+import { auditAudio, auditContent, auditLegacyReview, auditLegacyFinal, auditLegacyReasoning, expectedAudio } from '../../scripts/check-content';
 import { buildQuestionCSV, buildQuestionHTML, buildQuestionMarkdown } from '../../scripts/export-questions';
 import { buildTeacherGuide } from '../../scripts/export-teacher-guide';
-import { questionBank, questionById, questions, legacyReviewQuestions, legacyFinalQuestions, getQuestions, getQuestionsForHistory } from './index';
+import { questionBank, questionById, questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, getQuestions, getQuestionsForHistory } from './index';
 import { levels } from './levels';
 import { allUltimateSpells } from './ultimateSpells';
 import { getOpeningStory, getLevelStory } from './stories';
@@ -34,7 +34,9 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
     }
     expect(legacyReviewQuestions).toHaveLength(24);
     expect(auditLegacyReview().errors).toEqual([]);
-    expect(questionById.size).toBe(144);
+    expect(questionById.size).toBe(234);
+    expect(legacyReasoningQuestions).toHaveLength(90);
+    expect(auditLegacyReasoning().errors).toEqual([]);
     expect(questions.some(q => q.variantOf)).toBe(false);
     expect(getQuestions(1, true).map(q => q.id)).toEqual(['V2L01Q06', 'V2L01Q07']);
     expect(getQuestions(13, true)).toEqual([]);
@@ -48,7 +50,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
       expect(new Set(finalQuestions.map(q => q.themeId))).toEqual(new Set([1,2,3,4,5,6]));
       expect([1,2,3,4,5,6].map(theme => finalQuestions.filter(q => q.themeId === theme).length)).toEqual([3,3,2,2,2,3]);
       for (const final of finalQuestions) {
-        expect(final.id).toMatch(/^V3F(13|14)Q\d{2}$/);
+        expect(final.id).toMatch(/^V4F(13|14)Q\d{2}$/);
         expect(final.copiedFrom).toBeUndefined();
         expect(main.some(original => original.prompt === final.prompt), final.id).toBe(false);
         expect(main.some(original => JSON.stringify(original.choices) === JSON.stringify(final.choices)), final.id).toBe(false);
@@ -72,8 +74,9 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
       const archive = getQuestionsForHistory(levelId, false, `V2L${levelId}Q01`);
       expect(archive).toHaveLength(15);
       expect(archive.every(q => q.id.startsWith(`V2L${levelId}`))).toBe(true);
-      expect(getQuestions(levelId).every(q => q.id.startsWith(`V3F${levelId}`))).toBe(true);
-      expect(getQuestionsForHistory(levelId, false, `V3F${levelId}Q01`)).toEqual(getQuestions(levelId));
+      expect(getQuestions(levelId).every(q => q.id.startsWith(`V4F${levelId}`))).toBe(true);
+      expect(getQuestionsForHistory(levelId, false, `V4F${levelId}Q01`)).toEqual(getQuestions(levelId));
+      expect(getQuestionsForHistory(levelId, false, `V3F${levelId}Q01`)).toEqual(legacyReasoningQuestions.filter(q => q.levelId === levelId));
       for (const q of archive) expect(questionById.get(q.id)).toEqual(q);
     }
   });
@@ -98,7 +101,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
   });
 
   it('accepts both complete participation plans and rejects excluding students without equipment', () => {
-    const scene = { ...startSession(12, 'advanced'), questionIds: ['V2L12Q03'], index: 0 };
+    const scene = { ...startSession(12, 'advanced'), questionIds: ['V4L12Q03'], index: 0 };
     expect(submitAction(chooseAction(scene, 1)).success).toBe(true);
     expect(submitAction(chooseAction(scene, 3)).success).toBe(true);
     expect(submitAction(chooseAction(scene, 0)).success).toBe(false);
@@ -126,7 +129,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
       q.choices.forEach((choice, i) => expect(row[header.indexOf('選項' + 'ABCD'[i])]).toBe(choice.text));
       expect(row[header.indexOf('正確選項')]).toBe(q.correct.map(i => 'ABCD'[i]).join('、'));
     }
-    for (const legacy of [...legacyReviewQuestions, ...legacyFinalQuestions]) expect(rows.some(row => row[header.indexOf('題目ID')] === legacy.id)).toBe(false);
+    for (const legacy of [...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions]) expect(rows.some(row => row[header.indexOf('題目ID')] === legacy.id)).toBe(false);
     expect(buildQuestionHTML()).toContain('綜合第15題');
     expect(buildQuestionHTML()).not.toContain('複習第');
   });
@@ -163,7 +166,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
     expect(guide).toContain('單次原始傷害最多30HP');
     expect(guide).toContain('主題魔王攻擊12HP／最終魔王20HP');
     expect(guide).not.toContain('最終題保留<code>copiedFrom</code>');
-    expect(guide).toContain('V3F13Q01–15');
+    expect(guide).toContain('V4F13Q01–15');
   });
 
   it('generates only the mission’s actual difficulty narration and speaks all four choices', () => {
@@ -179,8 +182,8 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
   it('has every current narration key linked to a matching offline MP3', () => {
     const result = auditAudio();
     expect(result.errors).toEqual([]);
-    expect(result.summary.keys).toBe(906);
-    expect(result.summary.clips).toBe(696);
+    expect(result.summary.keys).toBe(1536);
+    expect(result.summary.clips).toBe(1326);
   });
 
   it('includes 46 offline story narrations, new final clips, and preserved keys for the old final edition', () => {
@@ -190,7 +193,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
     const storyKeys = Object.keys(index).filter(key => key.startsWith('story.'));
     expect(storyKeys).toHaveLength(46);
     expect(storyKeys.sort()).toEqual(beats.map(beat => 'story.' + beat.id).sort());
-    expect(Object.keys(index).filter(key => !key.startsWith('story.'))).toHaveLength(860);
+    expect(Object.keys(index).filter(key => !key.startsWith('story.'))).toHaveLength(1490);
     for (const beat of beats) {
       const key = 'story.' + beat.id;
       expect(offlineIndex[key], beat.id).toBe(index[key]);

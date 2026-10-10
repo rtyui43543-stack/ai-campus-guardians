@@ -54,3 +54,10 @@
 /* Three-digit HP stays on one line without taking the name's remaining space. */
 @media(max-width:600px){.duel-meter>div{gap:4px}.duel-meter>div>span{min-width:0}.duel-meter b{flex-shrink:0;white-space:nowrap}}
 @media(max-width:600px) and (max-height:740px){.duel-stage{min-height:520px}.duel-hud{top:8px;gap:5px}.duel-meter{padding:7px 9px}.duel-round{font-size:11px}.duel-round b{font-size:12px}.duel-bubble{top:82px;padding:8px 12px 10px;max-height:28%;border-radius:13px}.duel-bubble h1{font-size:17px;line-height:1.45}.duel-question-meta{font-size:10px}.duel-tool{min-width:28px;min-height:28px}.duel-feedback,.duel-evidence,.duel-hint{font-size:12px}.duel-answer-area{bottom:9px;left:12px;right:12px}.duel-choice{min-height:58px;font-size:14px;padding:7px 9px;line-height:1.35}.duel-controls{min-height:33px;margin-top:7px}.duel-hint-button,.duel-next{padding:7px 9px;font-size:12px}.duel-attack-name{font-size:13px}.duel-damage{top:50%}}
+/* Let rationale text use the full phone button width after its letter badge. */
+@media(max-width:600px){
+  .duel-choice.reasoned-choice{display:block}
+  .reasoned-choice .duel-letter{display:inline-flex;width:23px;height:23px;margin-right:6px;vertical-align:baseline}
+  .reasoned-choice>span:nth-child(2){display:inline}
+  .reasoned-choice>svg{vertical-align:middle;margin-left:4px}
+}

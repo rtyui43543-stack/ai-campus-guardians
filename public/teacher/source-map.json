@@ -1,6 +1,6 @@
 [
   {
-    "id": "V2L01Q01",
+    "id": "V4L01Q01",
     "level": 1,
     "slot": 1,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -16,7 +16,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L01Q02",
+    "id": "V4L01Q02",
     "level": 1,
     "slot": 2,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -32,7 +32,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L01Q03",
+    "id": "V4L01Q03",
     "level": 1,
     "slot": 3,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -48,7 +48,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L01Q04",
+    "id": "V4L01Q04",
     "level": 1,
     "slot": 4,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -64,7 +64,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L01Q05",
+    "id": "V4L01Q05",
     "level": 1,
     "slot": 5,
     "objective": "只給任務需要的資料，密碼不交出去。",
@@ -80,7 +80,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L02Q01",
+    "id": "V4L02Q01",
     "level": 2,
     "slot": 1,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -96,7 +96,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L02Q02",
+    "id": "V4L02Q02",
     "level": 2,
     "slot": 2,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -112,7 +112,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L02Q03",
+    "id": "V4L02Q03",
     "level": 2,
     "slot": 3,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -128,7 +128,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L02Q04",
+    "id": "V4L02Q04",
     "level": 2,
     "slot": 4,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -144,7 +144,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L02Q05",
+    "id": "V4L02Q05",
     "level": 2,
     "slot": 5,
     "objective": "先查課本或原公告，再使用 AI 的答案。",
@@ -160,7 +160,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L03Q01",
+    "id": "V4L03Q01",
     "level": 3,
     "slot": 1,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -176,7 +176,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L03Q02",
+    "id": "V4L03Q02",
     "level": 3,
     "slot": 2,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -192,7 +192,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L03Q03",
+    "id": "V4L03Q03",
     "level": 3,
     "slot": 3,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -208,7 +208,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L03Q04",
+    "id": "V4L03Q04",
     "level": 3,
     "slot": 4,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -224,7 +224,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L03Q05",
+    "id": "V4L03Q05",
     "level": 3,
     "slot": 5,
     "objective": "分清 AI 幫忙、自己練習和請大人協助。",
@@ -240,7 +240,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L04Q01",
+    "id": "V4L04Q01",
     "level": 4,
     "slot": 1,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -253,7 +253,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L04Q02",
+    "id": "V4L04Q02",
     "level": 4,
     "slot": 2,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -266,7 +266,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L04Q03",
+    "id": "V4L04Q03",
     "level": 4,
     "slot": 3,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -279,7 +279,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L04Q04",
+    "id": "V4L04Q04",
     "level": 4,
     "slot": 4,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -292,7 +292,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L04Q05",
+    "id": "V4L04Q05",
     "level": 4,
     "slot": 5,
     "objective": "影像和聲音可能被合成，先用原管道查問。",
@@ -305,7 +305,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L05Q01",
+    "id": "V4L05Q01",
     "level": 5,
     "slot": 1,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -318,7 +318,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L05Q02",
+    "id": "V4L05Q02",
     "level": 5,
     "slot": 2,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -331,7 +331,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L05Q03",
+    "id": "V4L05Q03",
     "level": 5,
     "slot": 3,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -344,7 +344,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L05Q04",
+    "id": "V4L05Q04",
     "level": 5,
     "slot": 4,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -357,7 +357,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L05Q05",
+    "id": "V4L05Q05",
     "level": 5,
     "slot": 5,
     "objective": "請 AI 解釋或出練習題，最後自己完成。",
@@ -370,7 +370,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L06Q01",
+    "id": "V4L06Q01",
     "level": 6,
     "slot": 1,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -385,7 +385,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L06Q02",
+    "id": "V4L06Q02",
     "level": 6,
     "slot": 2,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -400,7 +400,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L06Q03",
+    "id": "V4L06Q03",
     "level": 6,
     "slot": 3,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -415,7 +415,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L06Q04",
+    "id": "V4L06Q04",
     "level": 6,
     "slot": 4,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -430,7 +430,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L06Q05",
+    "id": "V4L06Q05",
     "level": 6,
     "slot": 5,
     "objective": "使用 AI 前想需求，使用後自己檢查。",
@@ -445,7 +445,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L07Q01",
+    "id": "V4L07Q01",
     "level": 7,
     "slot": 1,
     "objective": "分享資料前，確認用途、同意和查看對象。",
@@ -461,7 +461,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L07Q02",
+    "id": "V4L07Q02",
     "level": 7,
     "slot": 2,
     "objective": "分享資料前，確認用途、同意和查看對象。",
@@ -477,7 +477,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L07Q03",
+    "id": "V4L07Q03",
     "level": 7,
     "slot": 3,
     "objective": "分享資料前，確認用途、同意和查看對象。",
@@ -493,7 +493,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L07Q04",
+    "id": "V4L07Q04",
     "level": 7,
     "slot": 4,
     "objective": "分享資料前，確認用途、同意和查看對象。",
@@ -509,7 +509,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L07Q05",
+    "id": "V4L07Q05",
     "level": 7,
     "slot": 5,
     "objective": "分享資料前，確認用途、同意和查看對象。",
@@ -525,7 +525,7 @@
     "themeId": 1
   },
   {
-    "id": "V2L08Q01",
+    "id": "V4L08Q01",
     "level": 8,
     "slot": 1,
     "objective": "比較日期和原來源，證據不夠就先保留。",
@@ -541,7 +541,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L08Q02",
+    "id": "V4L08Q02",
     "level": 8,
     "slot": 2,
     "objective": "比較日期和原來源，證據不夠就先保留。",
@@ -557,7 +557,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L08Q03",
+    "id": "V4L08Q03",
     "level": 8,
     "slot": 3,
     "objective": "比較日期和原來源，證據不夠就先保留。",
@@ -573,7 +573,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L08Q04",
+    "id": "V4L08Q04",
     "level": 8,
     "slot": 4,
     "objective": "比較日期和原來源，證據不夠就先保留。",
@@ -589,7 +589,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L08Q05",
+    "id": "V4L08Q05",
     "level": 8,
     "slot": 5,
     "objective": "比較日期和原來源，證據不夠就先保留。",
@@ -605,7 +605,7 @@
     "themeId": 2
   },
   {
-    "id": "V2L09Q01",
+    "id": "V4L09Q01",
     "level": 9,
     "slot": 1,
     "objective": "依任務看合適線索，認錯時修正資料和規則。",
@@ -619,7 +619,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L09Q02",
+    "id": "V4L09Q02",
     "level": 9,
     "slot": 2,
     "objective": "依任務看合適線索，認錯時修正資料和規則。",
@@ -633,7 +633,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L09Q03",
+    "id": "V4L09Q03",
     "level": 9,
     "slot": 3,
     "objective": "依任務看合適線索，認錯時修正資料和規則。",
@@ -647,7 +647,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L09Q04",
+    "id": "V4L09Q04",
     "level": 9,
     "slot": 4,
     "objective": "依任務看合適線索，認錯時修正資料和規則。",
@@ -661,7 +661,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L09Q05",
+    "id": "V4L09Q05",
     "level": 9,
     "slot": 5,
     "objective": "依任務看合適線索，認錯時修正資料和規則。",
@@ -675,7 +675,7 @@
     "themeId": 3
   },
   {
-    "id": "V2L10Q01",
+    "id": "V4L10Q01",
     "level": 10,
     "slot": 1,
     "objective": "查原始來源，尊重被合成影像的人。",
@@ -688,7 +688,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L10Q02",
+    "id": "V4L10Q02",
     "level": 10,
     "slot": 2,
     "objective": "查原始來源，尊重被合成影像的人。",
@@ -701,7 +701,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L10Q03",
+    "id": "V4L10Q03",
     "level": 10,
     "slot": 3,
     "objective": "查原始來源，尊重被合成影像的人。",
@@ -714,7 +714,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L10Q04",
+    "id": "V4L10Q04",
     "level": 10,
     "slot": 4,
     "objective": "查原始來源，尊重被合成影像的人。",
@@ -727,7 +727,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L10Q05",
+    "id": "V4L10Q05",
     "level": 10,
     "slot": 5,
     "objective": "查原始來源，尊重被合成影像的人。",
@@ -740,7 +740,7 @@
     "themeId": 4
   },
   {
-    "id": "V2L11Q01",
+    "id": "V4L11Q01",
     "level": 11,
     "slot": 1,
     "objective": "依老師規則用 AI，交出能自己說明的作業。",
@@ -753,7 +753,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L11Q02",
+    "id": "V4L11Q02",
     "level": 11,
     "slot": 2,
     "objective": "依老師規則用 AI，交出能自己說明的作業。",
@@ -766,7 +766,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L11Q03",
+    "id": "V4L11Q03",
     "level": 11,
     "slot": 3,
     "objective": "依老師規則用 AI，交出能自己說明的作業。",
@@ -779,7 +779,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L11Q04",
+    "id": "V4L11Q04",
     "level": 11,
     "slot": 4,
     "objective": "依老師規則用 AI，交出能自己說明的作業。",
@@ -792,7 +792,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L11Q05",
+    "id": "V4L11Q05",
     "level": 11,
     "slot": 5,
     "objective": "依老師規則用 AI，交出能自己說明的作業。",
@@ -805,7 +805,7 @@
     "themeId": 5
   },
   {
-    "id": "V2L12Q01",
+    "id": "V4L12Q01",
     "level": 12,
     "slot": 1,
     "objective": "有目的、有查證，保留自己的學習和替代方式。",
@@ -820,7 +820,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L12Q02",
+    "id": "V4L12Q02",
     "level": 12,
     "slot": 2,
     "objective": "有目的、有查證，保留自己的學習和替代方式。",
@@ -835,7 +835,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L12Q03",
+    "id": "V4L12Q03",
     "level": 12,
     "slot": 3,
     "objective": "有目的、有查證，保留自己的學習和替代方式。",
@@ -850,7 +850,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L12Q04",
+    "id": "V4L12Q04",
     "level": 12,
     "slot": 4,
     "objective": "有目的、有查證，保留自己的學習和替代方式。",
@@ -865,7 +865,7 @@
     "themeId": 6
   },
   {
-    "id": "V2L12Q05",
+    "id": "V4L12Q05",
     "level": 12,
     "slot": 5,
     "objective": "有目的、有查證，保留自己的學習和替代方式。",
@@ -880,7 +880,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F13Q01",
+    "id": "V4F13Q01",
     "level": 13,
     "slot": 1,
     "objective": "辨認公開展示時不必要的身分與行蹤資料。",
@@ -896,7 +896,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F13Q02",
+    "id": "V4F13Q02",
     "level": 13,
     "slot": 2,
     "objective": "利用題幹的起訖時間核算 AI 的數字。",
@@ -912,7 +912,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F13Q03",
+    "id": "V4F13Q03",
     "level": 13,
     "slot": 3,
     "objective": "分清外觀線索與實際分類規則。",
@@ -928,7 +928,7 @@
     "themeId": 3
   },
   {
-    "id": "V3F13Q04",
+    "id": "V4F13Q04",
     "level": 13,
     "slot": 4,
     "objective": "正面使用合成媒體，清楚區分創作與真實紀錄。",
@@ -941,7 +941,7 @@
     "themeId": 4
   },
   {
-    "id": "V3F13Q05",
+    "id": "V4F13Q05",
     "level": 13,
     "slot": 5,
     "objective": "修正 AI 在個人遊記中捏造的經歷。",
@@ -954,7 +954,7 @@
     "themeId": 5
   },
   {
-    "id": "V3F13Q06",
+    "id": "V4F13Q06",
     "level": 13,
     "slot": 6,
     "objective": "在 AI 路線規劃中照顧不同移動需要。",
@@ -969,7 +969,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F13Q07",
+    "id": "V4F13Q07",
     "level": 13,
     "slot": 7,
     "objective": "檢查分享截圖中容易被忽略的行蹤資訊。",
@@ -985,7 +985,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F13Q08",
+    "id": "V4F13Q08",
     "level": 13,
     "slot": 8,
     "objective": "核對 AI 翻譯是否保留原指示的意思。",
@@ -1001,7 +1001,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F13Q09",
+    "id": "V4F13Q09",
     "level": 13,
     "slot": 9,
     "objective": "知道表情分類不等於人的真實情緒。",
@@ -1017,7 +1017,7 @@
     "themeId": 3
   },
   {
-    "id": "V3F13Q10",
+    "id": "V4F13Q10",
     "level": 13,
     "slot": 10,
     "objective": "辨認聲音重組造成的錯誤發言歸屬。",
@@ -1030,7 +1030,7 @@
     "themeId": 4
   },
   {
-    "id": "V3F13Q11",
+    "id": "V4F13Q11",
     "level": 13,
     "slot": 11,
     "objective": "區分實際觀察與 AI 整理資料的分工。",
@@ -1043,7 +1043,7 @@
     "themeId": 5
   },
   {
-    "id": "V3F13Q12",
+    "id": "V4F13Q12",
     "level": 13,
     "slot": 12,
     "objective": "依同學感受調整 AI 的活動建議。",
@@ -1058,7 +1058,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F13Q13",
+    "id": "V4F13Q13",
     "level": 13,
     "slot": 13,
     "objective": "把裝置權限和任務目的分開判斷。",
@@ -1074,7 +1074,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F13Q14",
+    "id": "V4F13Q14",
     "level": 13,
     "slot": 14,
     "objective": "核對摘要有沒有遺漏投票中的不同意見。",
@@ -1090,7 +1090,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F13Q15",
+    "id": "V4F13Q15",
     "level": 13,
     "slot": 15,
     "objective": "分清 AI 的文字規劃與人執行實際工作的責任。",
@@ -1105,7 +1105,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F14Q01",
+    "id": "V4F14Q01",
     "level": 14,
     "slot": 1,
     "objective": "判斷學習紀錄的公開範圍與必要性。",
@@ -1121,7 +1121,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F14Q02",
+    "id": "V4F14Q02",
     "level": 14,
     "slot": 2,
     "objective": "核對 AI 變更規模時是否完整處理各項條件。",
@@ -1137,7 +1137,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F14Q03",
+    "id": "V4F14Q03",
     "level": 14,
     "slot": 3,
     "objective": "依任務定義分類標準並覆核工具輸出。",
@@ -1151,7 +1151,7 @@
     "themeId": 3
   },
   {
-    "id": "V3F14Q04",
+    "id": "V4F14Q04",
     "level": 14,
     "slot": 4,
     "objective": "辨認合成演練被移除背景後造成的誤導。",
@@ -1164,7 +1164,7 @@
     "themeId": 4
   },
   {
-    "id": "V3F14Q05",
+    "id": "V4F14Q05",
     "level": 14,
     "slot": 5,
     "objective": "區分示範資料與實際研究數據，誠實記錄缺漏。",
@@ -1177,7 +1177,7 @@
     "themeId": 5
   },
   {
-    "id": "V3F14Q06",
+    "id": "V4F14Q06",
     "level": 14,
     "slot": 6,
     "objective": "在 AI 規劃中同時處理安全條件與任務目標。",
@@ -1192,7 +1192,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F14Q07",
+    "id": "V4F14Q07",
     "level": 14,
     "slot": 7,
     "objective": "比較工具資料用途與既有同意範圍。",
@@ -1208,7 +1208,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F14Q08",
+    "id": "V4F14Q08",
     "level": 14,
     "slot": 8,
     "objective": "核對 AI 統計說法的受訪範圍與代表性。",
@@ -1224,7 +1224,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F14Q09",
+    "id": "V4F14Q09",
     "level": 14,
     "slot": 9,
     "objective": "在新使用條件下驗證辨識，安排人工替代流程。",
@@ -1238,7 +1238,7 @@
     "themeId": 3
   },
   {
-    "id": "V3F14Q10",
+    "id": "V4F14Q10",
     "level": 14,
     "slot": 10,
     "objective": "不以真假聲音二分取代完整脈絡查證。",
@@ -1251,7 +1251,7 @@
     "themeId": 4
   },
   {
-    "id": "V3F14Q11",
+    "id": "V4F14Q11",
     "level": 14,
     "slot": 11,
     "objective": "評估 AI 編修是否改變原意，保留學習者的判斷。",
@@ -1264,7 +1264,7 @@
     "themeId": 5
   },
   {
-    "id": "V3F14Q12",
+    "id": "V4F14Q12",
     "level": 14,
     "slot": 12,
     "objective": "檢查無障礙輔助內容並安排可用的替代方式。",
@@ -1279,7 +1279,7 @@
     "themeId": 6
   },
   {
-    "id": "V3F14Q13",
+    "id": "V4F14Q13",
     "level": 14,
     "slot": 13,
     "objective": "辨識影像中的附帶個資並改用目的所需的欄位。",
@@ -1295,7 +1295,7 @@
     "themeId": 1
   },
   {
-    "id": "V3F14Q14",
+    "id": "V4F14Q14",
     "level": 14,
     "slot": 14,
     "objective": "保留原來源的不確定性，不把預估改成保證。",
@@ -1311,7 +1311,7 @@
     "themeId": 2
   },
   {
-    "id": "V3F14Q15",
+    "id": "V4F14Q15",
     "level": 14,
     "slot": 15,
     "objective": "綜合檢查 AI 計畫的資料必要性、預算與人的覆核。",

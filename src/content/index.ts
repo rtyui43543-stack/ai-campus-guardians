@@ -1,6 +1,7 @@
 import bank from './question-bank.json';
 import legacyBank from './legacy-review-bank.json';
 import legacyFinalBank from './legacy-final-bank.json';
+import legacyReasoningBank from './legacy-reasoning-bank.json';
 import { getLevel } from './levels';
 import type { Mode, Question } from '../domain/types';
 
@@ -22,7 +23,10 @@ export const legacyReviewQuestions: Question[] = (legacyBank.questions as Editab
 /** Old final sessions keep their original answers; no new session receives these copied questions. */
 export const legacyFinalQuestions: Question[] = (legacyFinalBank.questions as EditableQuestion[]).map(adaptQuestion)
   .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);
-export const questionById = new Map([...questions, ...legacyReviewQuestions, ...legacyFinalQuestions].map(q => [q.id, q]));
+/** Pre-reasoning options remain immutable for saved sessions and past scores. */
+export const legacyReasoningQuestions: Question[] = (legacyReasoningBank.questions as EditableQuestion[]).map(adaptQuestion)
+  .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);
+export const questionById = new Map([...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions, ...questions].map(q => [q.id, q]));
 export const getQuestions = (levelId: number, review = false) =>
   (review ? legacyReviewQuestions : questions).filter(q => q.levelId === levelId);
 
@@ -30,6 +34,9 @@ export const getQuestions = (levelId: number, review = false) =>
 export function getQuestionsForHistory(levelId: number, review = false, firstQuestionId?: string) {
   if (!review && legacyFinalQuestions.some(q => q.levelId === levelId && q.id === firstQuestionId)) {
     return legacyFinalQuestions.filter(q => q.levelId === levelId);
+  }
+  if (!review && legacyReasoningQuestions.some(q => q.levelId === levelId && q.id === firstQuestionId)) {
+    return legacyReasoningQuestions.filter(q => q.levelId === levelId);
   }
   return getQuestions(levelId, review);
 }

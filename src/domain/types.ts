@@ -2,7 +2,12 @@ export type Mode = 'starter' | 'advanced';
 export type QuestionKind = 'knowledge' | 'principle' | 'tradeoff';
 export type Phase = 'notice' | 'evidence' | 'action' | 'reason' | 'transfer' | 'remedy';
 export type SourceLabel = 'textbook' | 'extension' | 'mixed';
-export interface Choice { text: string; feedback: string }
+export interface Choice {
+  text: string; feedback: string;
+  /** Current options combine these into one directly selectable answer. */
+  action?: string;
+  rationale?: string;
+}
 export interface Evidence { title: string; body: string }
 export interface Source { units: number[]; pages: string; label: SourceLabel }
 export interface QuestionSpec {

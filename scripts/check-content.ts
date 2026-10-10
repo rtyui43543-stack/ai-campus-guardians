@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { questions, legacyReviewQuestions, legacyFinalQuestions, presentQuestion, questionBank } from '../src/content';
+import { questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, questionById, presentQuestion, questionBank } from '../src/content';
 import { chapters, levels } from '../src/content/levels';
 import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
@@ -37,7 +37,7 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
   const answerPositions = new Set<number>();
   for (const q of items) {
     const prefix = `${q.id}：`;
-    const expectedId = `${q.levelId >= 13 ? 'V3F' : 'V2L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
+    const expectedId = `${q.levelId >= 13 ? 'V4F' : 'V4L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
     if (q.id !== expectedId) errors.push(prefix + 'ID與關卡/題次不符。');
     if (!q.prompt.trim() || !q.objective.trim() || !q.explanation.trim() || !q.hint.trim()) errors.push(prefix + '題幹、目標、解析或提示缺漏。');
     if (q.prompt.length > 70 || q.hint.length > 60 || q.explanation.length > 100) errors.push(prefix + '超過生活化題目閱讀預算。');
@@ -66,6 +66,8 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     for (const choice of p.choices) {
       if (!choice.text.trim() || !choice.feedback.trim()) errors.push(prefix + '選項或針對性回饋為空。');
       if (choice.text.length > 30) errors.push(prefix + '選項超過30字。');
+      if (!choice.action?.trim() || !choice.rationale?.trim()) errors.push(prefix + '每個選項都需要具體做法與理由。');
+      else if (choice.text !== `${choice.action}，${choice.rationale}`) errors.push(prefix + '選項文字必須與做法及理由一致。');
     }
     const actions = Object.keys(p.valid);
     if (!actions.length) errors.push(prefix + '沒有正確選項。');
@@ -81,7 +83,24 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
   if (!items.some(q => q.levelId === 12 && q.slot === 3 && Object.keys(q.valid).length >= 2)) errors.push('最後合作關需接受至少兩個完整合理方案。');
   errors.push(...auditLegacyReview().errors);
   errors.push(...auditLegacyFinal().errors);
-  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+  errors.push(...auditLegacyReasoning().errors);
+  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, legacyReasoning: legacyReasoningQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+}
+
+/** Keep each prior edition separate; never reinterpret old chosen indices. */
+export function auditLegacyReasoning(items: readonly Question[] = legacyReasoningQuestions): AuditResult {
+  const errors: string[] = [];
+  if (items.length !== 90 || new Set(items.map(q => q.id)).size !== 90) errors.push('做法理由改版前應封存完整90題。');
+  for (const level of levels) {
+    const archived = items.filter(q => q.levelId === level.id);
+    const count = level.finalBoss ? 15 : 5;
+    if (archived.map(q => q.slot).join(',') !== Array.from({ length: count }, (_, i) => i + 1).join(',')) errors.push(`歷史第${level.id}關應保留完整題序。`);
+  }
+  for (const q of items) {
+    const expected = `${q.levelId >= 13 ? 'V3F' : 'V2L'}${String(q.levelId).padStart(2, '0')}Q${String(q.slot).padStart(2, '0')}`;
+    if (q.id !== expected || questions.some(current => current.id === q.id)) errors.push(q.id + '：舊版選項不可進入新開題庫。');
+  }
+  return { errors, summary: { legacyReasoning: items.length } };
 }
 
 /** The replaced final edition is immutable historical source material, never new-play content. */
@@ -92,7 +111,7 @@ export function auditLegacyFinal(items: readonly Question[] = legacyFinalQuestio
   for (const levelId of [13,14]) if (items.filter(q => q.levelId === levelId).map(q => q.slot).sort((a,b) => a-b).join(',') !== Array.from({length:15}, (_,i)=>i+1).join(',')) errors.push(`歷史最終關${levelId}應保留完整15題。`);
   for (const q of items) {
     if (q.id !== `V2L${q.levelId}Q${String(q.slot).padStart(2, '0')}` || questions.some(item => item.id === q.id)) errors.push(q.id + '：封存最終題不可進入現行題庫。');
-    const original = questions.find(item => item.id === q.copiedFrom);
+    const original = questionById.get(q.copiedFrom ?? '');
     if (!original || original.prompt !== q.prompt || JSON.stringify(original.choices) !== JSON.stringify(q.choices) || JSON.stringify(original.valid) !== JSON.stringify(q.valid)) errors.push(q.id + '：封存答案應保留原版內容。');
   }
   return { errors, summary: { legacyFinals: items.length, uniqueIds: ids.size } };
@@ -109,7 +128,7 @@ export function auditLegacyReview(items: readonly Question[] = legacyReviewQuest
   for (const q of items) {
     const prefix = `${q.id}：`;
     const expected = `V2L${String(q.levelId).padStart(2, '0')}Q${q.slot === 6 ? '03' : '05'}`;
-    if (q.variantOf !== expected || !questions.some(item => item.id === expected) || q.variantOf === q.id) errors.push(prefix + '歷史變式需指向同關第3或第5個主題。');
+    if (q.variantOf !== expected || !questionById.has(expected) || q.variantOf === q.id) errors.push(prefix + '歷史變式需指向同關第3或第5個主題。');
     if (questions.some(item => item.id === q.id)) errors.push(prefix + '歷史題不可回到現行題庫。');
     if (q.choices.some(choice => !choice.text.trim() || !choice.feedback.trim())) errors.push(prefix + '選項或針對性回饋為空。');
     for (const [action, reasons] of Object.entries(q.valid)) if (!Number.isInteger(Number(action)) || !q.choices[Number(action)] || reasons.join(',') !== '0') errors.push(prefix + '單步判定表不合法。');
@@ -135,8 +154,8 @@ export function expectedAudio() {
   }
   for (const level of levels) add(`level.${level.id}`, level.title + '。' + level.intro + '。這一關，' + level.objective);
   for (const chapter of chapters) add(`chapter.${chapter.id}`, chapter.title + '。' + chapter.description);
-  // Keep old final keys so an already-started saved session still has its original offline narration.
-  for (const q of [...questions, ...legacyFinalQuestions]) {
+  // Saved sessions use the exact text and narration from their editorial edition.
+  for (const q of [...questions, ...legacyReasoningQuestions, ...legacyFinalQuestions]) {
     const mode = levels.find(level => level.id === q.levelId)!.mode;
     const p = presentQuestion(q, mode);
     const key = `${q.id}.${mode}`;
