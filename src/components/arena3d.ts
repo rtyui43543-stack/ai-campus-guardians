@@ -4,7 +4,7 @@ import { createCoverHero } from './coverHero';
 import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
-import { fitNineHeadStoryCamera } from './finalBossFraming';
+import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming } from './arenaFraming';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
@@ -181,6 +181,9 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   renderer.domElement.setAttribute('data-boss', enemy.root.userData.missionBossId);
   renderer.domElement.setAttribute('data-boss-mode', companion ? 'companion' : mode);
   hero.root.rotation.y = .13; enemy.root.rotation.y = -.15;
+  const heroFraming = measureActorFraming(hero, camera);
+  const enemyFraming = measureActorFraming(enemy, camera);
+  const trackBattleFrame = createBattleFrameTracker();
   const drone = createDrone(scene);
   let effectTheme = theme;
   let effects = createThemedSpellEffects(scene, effectTheme, mode, finalBoss);
@@ -209,33 +212,34 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     camera.left = -viewWidth / 2; camera.right = viewWidth / 2;
     camera.top = viewHeight / 2; camera.bottom = -viewHeight / 2;
     const portrait = aspect < .85;
-    modelScale = portrait ? .8 : 1;
-    let lookY = portrait ? 1.30 : 1.80;
-    const elevation = portrait ? 3.9 : 4.7;
-    if (!cinemaShot && bubble && answers) {
-      // Frame the complete pointed hat and boots inside the playable gap.
-      // Short phones and extra hint text change this gap without covering the answers.
+    modelScale = 1;
+    let lookY = 1.55, elevation = 3.8;
+    heroX = -Math.min(3.35, viewWidth * .235); enemyX = -heroX;
+    if (!cinemaShot && stage && bubble && answers) {
       const bounds = host.getBoundingClientRect();
-      const top = Math.max(height * .27, bubble.getBoundingClientRect().bottom - bounds.top + 12);
-      const bottom = Math.min(height * .76, answers.getBoundingClientRect().top - bounds.top - 10);
-      const cosPitch = 15 / Math.hypot(15, elevation);
-      const available = Math.max(height * .16, bottom - top);
-      // The hero's camera-facing art keeps its full projected height at any pitch.
-      modelScale = clamp(available / height * viewHeight / 3.82, .40, portrait ? .8 : 1);
-      lookY = (bottom / height - .5) * viewHeight / cosPitch;
-    }
-    if (!cinemaShot && portrait && mode === 'advanced' && !companion) {
-      // Wider advanced species also need a horizontal limit; height alone cuts off
-      // the cloud giant's fist or the fox's tail at the edge of a narrow phone.
-      const outerExtent = Math.max(2, Number(enemy.root.userData.outerRightExtent) || 2);
-      modelScale = Math.min(modelScale, (viewWidth * .265 - .10) / outerExtent);
+      const explanation = answers?.querySelector<HTMLElement>('.duel-explanation-actions');
+      const extraFooter = explanation
+        ? explanation.getBoundingClientRect().height + parseFloat(getComputedStyle(explanation).marginTop || '0') : 0;
+      const layout = trackBattleFrame({ width, height,
+        questionBottom: bubble.getBoundingClientRect().bottom - bounds.top,
+        answersTop: answers.getBoundingClientRect().top - bounds.top + extraFooter,
+        resolving: bubble.classList.contains('is-resolving') });
+      const fitted = fitBattleActors(layout, heroFraming, enemyFraming);
+      modelScale = fitted.scale; lookY = fitted.lookY; elevation = fitted.elevation;
+      heroX = fitted.heroX; enemyX = fitted.enemyX; camera.zoom = 1;
+      const hud = stage?.querySelector<HTMLElement>('.duel-hud');
+      if (hud && stage instanceof HTMLElement) {
+        stage.style.setProperty('--duel-skill-top', `${hud.getBoundingClientRect().bottom - bounds.top + 12}px`);
+      }
+    } else if (!cinemaShot) {
+      // Welcome/banner Arenas retain their existing presentation.
+      modelScale = portrait ? .8 : 1;
+      lookY = portrait ? 1.30 : 1.80; elevation = portrait ? 3.9 : 4.7;
+      camera.zoom = 1;
     }
     camera.position.set(0, lookY + elevation, 15);
     camera.lookAt(0, lookY, 0); camera.updateProjectionMatrix();
     framingY = lookY; framingElevation = elevation;
-    if (cinemaShot) { modelScale = 1; framingY = 1.55; framingElevation = 3.8; }
-    else camera.zoom = 1;
-    heroX = -Math.min(3.35, viewWidth * .235); enemyX = -heroX;
     hero.root.scale.setScalar(modelScale); enemy.root.scale.setScalar(modelScale);
     hero.root.position.x = heroX; enemy.root.position.x = enemyX;
     drone.scale.setScalar(modelScale);
@@ -301,13 +305,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         y: THREE.MathUtils.lerp(shotFromY, desiredY, travel),
         zoom: THREE.MathUtils.lerp(shotFromZoom, desiredZoom, travel),
       };
-      // A hero close-up formerly pushed half of the nine-headed dragon outside the
-      // right edge. Preserve actor positions, but fit both complete silhouettes.
-      const safeShot = finalBoss && mode === 'advanced'
-        ? fitNineHeadStoryCamera(camera.right - camera.left, camera.top - camera.bottom, requestedShot,
-          { heroX, enemyX, enemyLeft: Number(enemy.root.userData.outerLeftExtent) || 2,
-            enemyRight: Number(enemy.root.userData.outerRightExtent) || 2 }, framingElevation)
-        : requestedShot;
+      const safeShot = fitStoryActors(camera.right - camera.left, camera.top - camera.bottom, requestedShot,
+        { heroX, enemyX, hero: heroFraming, enemy: enemyFraming }, framingElevation);
       shotLookX = safeShot.x; shotLookY = safeShot.y; camera.zoom = safeShot.zoom;
       camera.position.set(shotLookX, shotLookY + framingElevation, 15);
       camera.lookAt(shotLookX, shotLookY, 0); camera.updateProjectionMatrix();

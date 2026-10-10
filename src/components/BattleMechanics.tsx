@@ -4,7 +4,7 @@ import { getLevel } from '../content/levels';
 import { getUltimateSpell } from '../content/ultimateSpells';
 import { remainingBarrierCharges } from '../domain/engine';
 
-export function BattleMechanics({ session, paused, onRules, onChooseSpell }: { session: Session; paused: boolean; onRules: () => void; onChooseSpell?: () => void }) {
+export function BattleMechanics({ session, paused, narrationPaused = false, onRules, onChooseSpell }: { session: Session; paused: boolean; narrationPaused?: boolean; onRules: () => void; onChooseSpell?: () => void }) {
   const energy = session.energy ?? 0;
   const barrierCharges = remainingBarrierCharges(session);
   const level = getLevel(session.levelId);
@@ -25,8 +25,8 @@ export function BattleMechanics({ session, paused, onRules, onChooseSpell }: { s
       {level.finalBoss && (session.wrongStreak ?? 0) > 0 && <span className="battle-status boss-warning"><Flame size={16} />{(session.wrongStreak ?? 0) >= 2 ? '連錯追擊 · 魔王必殺 30 HP' : '再連錯一次 · 魔王必殺 30 HP'}</span>}
     </div>}
     <div className="battle-time-tools">
-      {session.timed && <span className={'battle-clock ' + ((session.remainingMs ?? 30000) <= 10000 ? 'is-low' : '')} aria-label={`本題剩餘 ${Math.ceil((session.remainingMs ?? 30000) / 1000)} 秒${paused ? '，倒數暫停' : ''}`}>
-        <Clock3 size={18} /><b>{Math.ceil((session.remainingMs ?? 30000) / 1000)}<small> 秒</small></b>{paused && <small>暫停</small>}
+      {session.timed && <span className={'battle-clock ' + ((session.remainingMs ?? 30000) <= 10000 ? 'is-low ' : '') + (narrationPaused ? 'battle-narration-paused' : '')} aria-label={`本題剩餘 ${Math.ceil((session.remainingMs ?? 30000) / 1000)} 秒${narrationPaused ? '，朗讀期間倒數暫停' : paused ? '，倒數暫停' : ''}`}>
+        <Clock3 size={18} /><b>{Math.ceil((session.remainingMs ?? 30000) / 1000)}<small> 秒</small></b>{paused && <small>{narrationPaused ? '朗讀暫停倒數' : '暫停'}</small>}
       </span>}
       <button type="button" className="battle-rules-button" onClick={onRules} aria-label="查看必殺技與計分規則"><HelpCircle size={21} /></button>
     </div>
@@ -45,12 +45,12 @@ export function BattleRules({ timed, finalBoss = false }: { timed: boolean; fina
     </ul>
     <h3>{timed ? '進階：每題 30 秒' : '初階：不限時'}</h3>
     {timed ? <ul><li>10 秒內答對最高 20 分；10 秒後至 20 秒內最高 16 分；20 秒後至倒數歸零前最高 12 分。</li>
-      <li>仍依答錯次數降低分數，用過提示最高 16 分。倒數在閱讀解說與規則、回首頁或切到背景時暫停；重試保留本題剩餘時間。</li>
+      <li>仍依答錯次數降低分數，用過提示最高 16 分。題目與提示朗讀載入、播放期間，以及閱讀解說與規則、回首頁或切到背景時，倒數暫停。朗讀結束或停止後繼續剩餘時間；重播與重試都不重設秒數。</li>
       <li>時間到，該題 0 分，{finalBoss ? '最後魔王基本攻擊扣 20 HP（超時不累計連錯）' : '魔王攻擊扣 12 HP'}，演出後自動進下一題。每次護盾抵擋 12 HP；進階城堡可擋兩次攻擊。</li>
       <li>{finalBoss ? '最終關以擊敗 300 HP 魔王為過關目標；超時題得 0 分，仍可用後續攻擊追回傷害。' : '有超時題仍保留成績，但要重新挑戰並完成五題，才算過關。'}</li>
     </ul> : <ul><li>每題原始 20 分。錯 1／2／3／4 次以上後答對，分別得 16／12／8／4 分。</li><li>用過提示，該題最高 16 分；伙伴示範 0 分。</li></ul>}
     {finalBoss && <p>最終魔王 {timed ? 300 : 200} HP。最終關最多 15 題，一般命中扣 20 HP，必殺額外傷害依選招種類。魔王 HP 歸零即可提前完成；題目用盡仍未擊敗，須重新挑戰。答題分依實際挑戰題數換算為百分制。</p>}
-    {finalBoss && <p>最後魔王攻擊：第一次答錯扣 20 HP；連續第二次答錯起，自動施放追擊必殺，再加 10 HP 傷害，合計最多 30 HP。答對後連錯計數歸零。這是血量傷害，另外依原規則計算答題分數。</p>}
+    {finalBoss && <p>最後魔王基本攻擊：第一次答錯扣 20 HP；連續第二次答錯起，自動施放追擊必殺，再加 10 HP 傷害，合計最多 30 HP。答對後連錯計數歸零；進階超時只受基本 20 HP 攻擊，不累計連錯。寒冰減傷、城堡護盾或鏡界閃避會降低實際扣血。這是血量傷害，另外依原規則計算答題分數。</p>}
     <h3>必殺技還會留下魔法效果</h3>
     <ul>
       <li>火焰：命中後魔王持續燃燒，後續每題完成扣 4 HP。</li>

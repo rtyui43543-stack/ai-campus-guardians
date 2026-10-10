@@ -9,6 +9,26 @@ let loaded: Promise<void> | null = null;
 let player: HTMLAudioElement | null = null;
 let context: AudioContext | null = null;
 let narrationRequest = 0;
+export interface NarrationState {
+  readonly requestId: number;
+  readonly phase: 'idle' | 'loading' | 'playing';
+  readonly key: string | null;
+  readonly error?: string;
+}
+let narrationState: NarrationState = { requestId: 0, phase: 'idle', key: null };
+const narrationListeners = new Set<(state: NarrationState) => void>();
+let disposeNarration: (() => void) | null = null;
+
+export const getNarrationState = () => narrationState;
+export function subscribeNarration(listener: (state: NarrationState) => void): () => void {
+  narrationListeners.add(listener);
+  listener(narrationState);
+  return () => { narrationListeners.delete(listener); };
+}
+function reportNarration(phase: NarrationState['phase'], key: string | null, error?: string) {
+  narrationState = { requestId: narrationRequest, phase, key, ...(error ? { error } : {}) };
+  for (const listener of narrationListeners) listener(narrationState);
+}
 let activeBattleStop: (() => void) | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 let noiseContext: AudioContext | null = null;
@@ -68,8 +88,16 @@ export function loadAudio() {
   }).catch(() => { loaded = null; });
   return loaded;
 }
-function pauseNarration() { player?.pause(); if (player) player.currentTime = 0; setBattleMusicDucked(false); }
-export function stopAudio() { narrationRequest++; pauseNarration(); }
+function pauseNarration() {
+  const dispose = disposeNarration;
+  disposeNarration = null; player = null;
+  dispose?.();
+  setBattleMusicDucked(false);
+}
+/** Loading counts as narration so an answer timer pauses before the first await. */
+export function stopAudio() {
+  narrationRequest++; pauseNarration(); reportNarration('idle', null);
+}
 /** A progress reset also stops scheduled synthesized battle sounds; later gestures create a fresh context. */
 export function stopAllAudio(): void {
   stopAudio();
@@ -82,29 +110,56 @@ export function stopAllAudio(): void {
   if (previous) void previous.close().catch(() => { /* Reset does not depend on optional sound support. */ });
 }
 export async function playAudio(key: string): Promise<void> {
+  if (narrationState.phase !== 'idle' && narrationState.key === key) { stopAudio(); return; }
   const request = ++narrationRequest;
-  await loadAudio();
-  if (request !== narrationRequest) return;
-  const asset = audioIndex[key];
-  if (!asset) throw new Error('這段朗讀尚未準備好，請確認已完成離線下載。');
-  const url = appAssetUrl(asset);
-  if (player && !player.paused && player.src === url) { stopAudio(); return; }
   pauseNarration();
-  if (!player) {
-    player = new Audio();
-    player.hidden = true; player.preload = 'auto';
-    player.setAttribute('aria-hidden','true');
-    player.setAttribute('data-testid','offline-narration');
-    player.addEventListener('ended', () => setBattleMusicDucked(false));
-    player.addEventListener('pause', () => { if (player?.paused) setBattleMusicDucked(false); });
-    player.addEventListener('error', () => setBattleMusicDucked(false));
-    document.body.appendChild(player);
-  }
-  player.src = url;
-  setBattleMusicDucked(true);
-  try { await player.play(); } catch (error) {
+  reportNarration('loading', key);
+  let local: HTMLAudioElement | null = null;
+  let disposeLocal: (() => void) | null = null;
+  try {
+    await loadAudio();
     if (request !== narrationRequest) return;
-    setBattleMusicDucked(false); throw error;
+    const asset = audioIndex[key];
+    if (!asset) throw new Error('這段朗讀尚未準備好，請確認已完成離線下載。');
+    // A fresh element isolates pending play() promises and queued media events.
+    // A stopped old request can never pause or finish a newer narration.
+    local = new Audio();
+    const current = local;
+    const isCurrent = () => request === narrationRequest && current === player;
+    const finish = (error?: string) => {
+      if (!isCurrent()) return;
+      pauseNarration(); reportNarration('idle', null, error);
+    };
+    const ended = () => finish();
+    const paused = () => { if (current.paused) finish(); };
+    const failed = () => finish('這段朗讀播放失敗，請確認離線內容已下載，再按朗讀重試。');
+    const playing = () => { if (isCurrent()) reportNarration('playing', key); };
+    disposeLocal = () => {
+      current.removeEventListener('ended', ended); current.removeEventListener('pause', paused);
+      current.removeEventListener('error', failed); current.removeEventListener('playing', playing);
+      current.pause();
+      try { current.currentTime = 0; } catch { /* A clip that failed to load may not be seekable. */ }
+      current.remove?.();
+    };
+    player = current; disposeNarration = disposeLocal;
+    current.hidden = true; current.preload = 'auto';
+    current.setAttribute('aria-hidden','true');
+    current.setAttribute('data-testid','offline-narration');
+    current.addEventListener('ended', ended); current.addEventListener('pause', paused);
+    current.addEventListener('error', failed); current.addEventListener('playing', playing);
+    current.src = appAssetUrl(asset);
+    document.body.appendChild(current);
+    setBattleMusicDucked(true);
+    await current.play();
+    if (!isCurrent()) { disposeLocal(); return; }
+    if (current.paused) finish(); else reportNarration('playing', key);
+  } catch (error) {
+    if (request !== narrationRequest) return;
+    // An earlier media error can already have released the pause reason.
+    if (local && local !== player && narrationState.phase === 'idle') return;
+    pauseNarration();
+    reportNarration('idle', null, error instanceof Error ? error.message : '朗讀播放失敗，請重試。');
+    throw error;
   }
 }
 export function tone(success: boolean) {

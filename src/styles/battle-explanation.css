@@ -1,0 +1,15 @@
+.duel-explanation-actions{display:flex;justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.duel-explanation-open,.duel-explanation-audio{display:inline-flex;justify-content:center;align-items:center;gap:7px;min-height:44px;padding:9px 14px;border:1px solid #b9e2cb;border-radius:12px;background:#123d35f2;color:#fff5ce;font:inherit;font-size:14px;font-weight:700;line-height:1.4;cursor:pointer;box-shadow:0 2px 8px #062b2526}
+.duel-explanation-open:hover,.duel-explanation-audio:hover{background:#22604c}
+.duel-explanation-open svg,.duel-explanation-audio svg{flex-shrink:0}
+.duel-explanation-dialog{box-sizing:border-box;width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 32px);margin:auto;padding:22px;border:2px solid #d5b35e;border-radius:20px;background:#fffdf0;color:#153f35;font-family:inherit;box-shadow:0 18px 70px #031c3580;overflow:auto;overscroll-behavior:contain}
+.duel-explanation-dialog::backdrop{background:#062b35b3;backdrop-filter:blur(3px)}
+.duel-explanation-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.duel-explanation-title{margin:4px 0 0;font-size:23px;line-height:1.4;overflow-wrap:anywhere}
+.duel-explanation-close{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid #aac6b6;border-radius:12px;background:#e7f1e7;color:#164738;cursor:pointer}
+.duel-explanation-copy{margin:18px 0 22px;font-size:20px;line-height:1.85;white-space:pre-line;overflow-wrap:anywhere}
+.duel-explanation-dialog button:focus-visible{outline:3px solid #1579bb;outline-offset:3px}
+.battle-clock.battle-narration-paused{border-color:#95dbc5;color:#e7fff6}
+.battle-narration-paused small{white-space:nowrap}
+@media(max-width:600px){.duel-explanation-open,.duel-explanation-audio{padding:8px 11px;font-size:13px}.duel-explanation-dialog{padding:16px;border-radius:16px}.duel-explanation-title{font-size:21px}.duel-explanation-copy{font-size:18px;line-height:1.8}}
+@media(max-height:500px){.duel-explanation-dialog{padding:14px}.duel-explanation-copy{margin:12px 0;font-size:17px}.duel-explanation-actions{margin-top:5px}}

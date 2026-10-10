@@ -3,10 +3,10 @@ import { getQuestions } from '../content';
 import { levels } from '../content/levels';
 import {
   advanceSession, applySession, chooseAction, createProgress, currentQuestion,
-  restartBattle, retryQuestion, startFinalBossSession, startSession, submitAction, tickQuestion,
+  demonstrate, restartBattle, retryQuestion, startFinalBossSession, startSession, submitAction, tickQuestion,
 } from '../domain/engine';
 import type { Mode, Session } from '../domain/types';
-import { battleVisibility } from './battleVisibility';
+import { battleExplanation, battleVisibility } from './battleVisibility';
 
 const allVisible = { hideQuestion: false, hideAnswers: false, hideControls: false };
 const questionHidden = { hideQuestion: true, hideAnswers: false, hideControls: false };
@@ -38,6 +38,39 @@ function unlocked(mode: Mode) {
 }
 
 describe('battle text across actual answer and combat transitions', () => {
+  it.each(['starter', 'advanced'] as const)('offers %s short feedback only after an ordinary cast, while leaving the large question hidden', mode => {
+    const initial = startSession(mode === 'starter' ? 1 : 7, mode);
+    expect(battleExplanation(initial, false)).toBeNull();
+    const wrong = answer(initial, false);
+    expect(battleExplanation(wrong, true)).toBeNull();
+    const explanation = battleExplanation(wrong, false)!;
+    expect(explanation).toMatchObject({ title: '再想一下', text: currentQuestion(wrong).choices[wrong.selected!].feedback,
+      audioKey: `${wrong.questionIds[0]}.${mode}.choice.${wrong.selected}` });
+    expect(battleVisibility(wrong, false).hideQuestion).toBe(true);
+    expect(battleExplanation(retryQuestion(wrong), false)).toBeNull();
+    const correct = answer(retryQuestion(wrong));
+    expect(battleExplanation(correct, false)).toMatchObject({ title: '答對的原因', text: currentQuestion(correct).explanation,
+      audioKey: `${correct.questionIds[0]}.${mode}.explanation` });
+    expect(battleExplanation(advanceSession(correct).session!, false)).toBeNull();
+  });
+
+  it('distinguishes partner demonstrations from timeout auto-advance and exposes the demonstrated action and explanation', () => {
+    const demo = demonstrate(answer(startSession(1, 'starter'), false));
+    const question = currentQuestion(demo);
+    expect(battleExplanation(demo, true)).toBeNull();
+    expect(battleExplanation(demo, false)).toMatchObject({ title: '伙伴示範解說',
+      text: `正確做法：${question.choices[demo.selected!].text}\n${question.explanation}`, audioKey: `${question.id}.starter.explanation` });
+    const expired = tickQuestion(startSession(7, 'advanced'), 30_000);
+    expect(battleExplanation(expired, false)).toBeNull();
+  });
+
+  it('offers a post-ultimate explanation without revealing either old question or choices', () => {
+    const cast = answer(charge(startSession(5, 'starter')));
+    expect(battleExplanation(cast, true)).toBeNull();
+    expect(battleExplanation(cast, false)?.title).toBe('答對的原因');
+    expect(battleVisibility(cast, false)).toEqual(ultimateFinished);
+  });
+
   it('does not hide navigation when there is no active battle', () => {
     expect(battleVisibility(null, false)).toEqual(allVisible);
   });

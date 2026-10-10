@@ -52,6 +52,22 @@ describe('upgraded ultimate battlefield presentation', () => {
     expect(current).toEqual(protectedForms);
   });
 
+  it('carries the same material into starter pages, mirrored fragments and fire feathers after contact', () => {
+    for(const reducedMotion of [false,true]) {
+      const thunder=renderToStaticMarkup(<UltimateCinematic chapter={2} mode="starter" cue="ultimate-1-30" reducedMotion={reducedMotion} />);
+      // Both the flying pages and the separate impact pages retain book paper,
+      // gilded bookmarks and ink rather than turning into generic particles.
+      expect(thunder.match(/class="card-ivory-index-page"/g)).toHaveLength(20);
+      const mirror=renderToStaticMarkup(<UltimateCinematic chapter={4} mode="starter" cue="ultimate-1-30" reducedMotion={reducedMotion} />);
+      expect(mirror.match(/class="card-faceted-mirror-fragment"/g)).toHaveLength(18);
+      expect(mirror).toContain('data-card-material="beveled-gold-prism-mirror"');
+      const fire=renderToStaticMarkup(<UltimateCinematic chapter={5} mode="starter" cue="ultimate-1-30" reducedMotion={reducedMotion} />);
+      expect(fire.match(/class="card-golden-fire-feather"/g)).toHaveLength(44);
+      expect(fire).toContain('data-card-material="red-gold-flame-feather"');
+      expect(fire.match(/class="ultimate-summon-creature"/g)).toHaveLength(1);
+    }
+  });
+
   it('matches every revised cast to concrete collection motifs in normal and reduced motion', () => {
     const starter = [['card-crystal-castle', 'card-keyhole-shield'], ['card-navy-index-book', 'ultimate-index-orbit-pages'], ['card-leaf-puzzle-heart', 'card-botanical-puzzle'], ['card-gemmed-oval-mirror', 'card-mirror-false-mask'], ['ultimate-summon-phoenix', 'fire-feather-burst'], ['card-snowflake-lance', 'card-snowflake']];
     const advanced = [['card-sky-castle', 'card-floating-foundation'], ['card-navy-index-book', 'ultimate-flying-pages'], ['card-botanical-puzzle', 'card-botanical-branches'], ['card-gemmed-oval-mirror', 'card-false-mirror-fragments']];

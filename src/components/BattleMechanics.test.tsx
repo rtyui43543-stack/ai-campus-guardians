@@ -4,6 +4,17 @@ import { startSession } from '../domain/engine';
 import { BattleMechanics, BattleRules } from './BattleMechanics';
 
 describe('battle shield and ultimate status', () => {
+  it('labels a narration pause without resetting the current question seconds', () => {
+    const session = { ...startSession(11, 'advanced'), remainingMs: 21_250, elapsedMs: 8_750 };
+    const html = renderToStaticMarkup(<BattleMechanics session={session} paused narrationPaused onRules={() => {}} />);
+    expect(html).toContain('本題剩餘 22 秒，朗讀期間倒數暫停');
+    expect(html).toContain('朗讀暫停倒數');
+    expect(html).toContain('battle-narration-paused');
+    expect(session.remainingMs).toBe(21_250);
+    const rules = renderToStaticMarkup(<BattleRules timed />);
+    expect(rules).toContain('重播與重試都不重設秒數');
+    expect(rules).toContain('朗讀載入、播放期間');
+  });
   it('shows remaining advanced castle charges and then removes the depleted badge', () => {
     const session = startSession(7, 'advanced');
     for (const charges of [2, 1, 0]) {

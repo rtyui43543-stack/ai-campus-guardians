@@ -19,3 +19,6 @@
 .arena3d.reduced-motion .arena-status-aura i{animation:none}.arena3d.reduced-motion .arena-turn-pop{animation:combat-status-pop 1.2s 0s ease both}
 @media(prefers-reduced-motion:reduce){.arena-status-aura i{animation:none}.arena-turn-pop{animation-duration:1.2s;animation-delay:0s}}
 @media(max-width:600px){.arena-status-aura{width:16%}.enemy-burning{left:65%}.hero-regenerating,.hero-frost{left:18%}.hero-mirror{left:19%;width:13%}.arena-turn-pop{font-size:13px;padding:4px 6px}.burn-pop{left:64%}.healing-pop{left:16%}.critical-pop{left:58%}}
+/* Keep the enemy's cast announcement in the same clear upper area as spell names. */
+.arena-turn-pop.critical-pop{left:50%;top:calc(var(--duel-skill-top,105px) + 60px);width:max-content;max-width:calc(100% - 28px);white-space:normal;text-align:center;text-wrap:balance;animation-name:combat-status-centered}
+@keyframes combat-status-centered{0%,100%{opacity:0;transform:translate(-50%,8px)}12%,72%{opacity:1;transform:translate(-50%,-5px)}}

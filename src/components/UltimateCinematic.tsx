@@ -4,7 +4,7 @@ import { getUltimateSpell } from '../content/ultimateSpells';
 import { appAssetUrl } from '../platform/urls';
 import { ULTIMATE_SUMMON_ART, ULTIMATE_SUMMON_TIMING, type UltimateSummonKind } from './ultimateSummons';
 import '../styles/ultimate-cinematic.css';
-import { CardBook, CardCastle, CardCrystalLance, CardLeaf, CardLeafPuzzle, CardMirror, CardPuzzleHeart } from './ultimateCardForms';
+import { CardBook, CardCastle, CardCrystalLance, CardFireFeather, CardIndexPage, CardLeaf, CardLeafPuzzle, CardMirror, CardMirrorFragment, CardPuzzleHeart } from './ultimateCardForms';
 
 export interface UltimateCinematicProps {
   chapter: number;
@@ -82,8 +82,8 @@ function CastleProjection({ id, upgraded = false }: { id: string; upgraded?: boo
 function IndexProjection({ id }: { id: string }) {
   return <div className="ultimate-index-projection" data-sequence="great-book-charge-pages-flight-lightning-impact">
     <div className="ultimate-index-book-charge" data-phase="great-book-charge"><svg viewBox="-260 -250 520 500" aria-hidden="true"><g className="ultimate-index-open-pages"><CardBook id={`${id}-charge`} /></g><path d="M-180-130-212-71-180-45-221 42M174-148 213-99 185-68 228 19" fill="none" stroke="#c9f6ff" strokeWidth="8" /></svg></div>
-    <div className="ultimate-index-scroll-flight" data-phase="thunder-book-flight"><svg viewBox="-260 -250 520 500" aria-hidden="true"><g className="ultimate-thunder-book"><CardBook id={`${id}-flight`} /></g><g className="ultimate-index-orbit-pages" fill="#fff4cf" stroke="#c5a153" strokeWidth="3">{Array.from({ length: 8 }, (_, i) => <g key={i} transform={`rotate(${i*45}) translate(0 -200) rotate(${-i*45})`}><path d="M-21-32Q0-42 21-32V32Q0 21-21 32Z"/><path d="M-12-14H12M-12 0H12M-12 14H8" fill="none" strokeWidth="2" /></g>)}</g></svg></div>
-    <div className="ultimate-index-lightning-impact" data-phase="branching-lightning-impact"><svg viewBox="-320 -310 640 620" aria-hidden="true"><g className="ultimate-index-hit-bolts" fill="none" stroke="#cef5ff" strokeWidth="8">{Array.from({ length: 7 }, (_,i)=><path key={i} d="M0-278 31-198 2-171 31-87-6 0" transform={`rotate(${i*360/7})`} />)}</g><g className="ultimate-index-hit-pages" fill="#fff1c8" stroke="#d7b568" strokeWidth="3">{Array.from({ length: 12 },(_,i)=><g key={i} transform={`rotate(${i*30}) translate(0 -187) rotate(${i*9})`}><path d="M-25-34H25V34H-25Z"/><path d="M-15-12H15M-15 3H10" fill="none"/></g>)}</g><g transform="scale(.65)"><CardBook id={`${id}-impact`} check /></g></svg></div><div className="ultimate-index-storm-wash" />
+    <div className="ultimate-index-scroll-flight" data-phase="thunder-book-flight"><svg viewBox="-260 -250 520 500" aria-hidden="true"><g className="ultimate-thunder-book"><CardBook id={`${id}-flight`} /></g><g className="ultimate-index-orbit-pages">{Array.from({ length: 8 }, (_, i) => <g key={i} transform={`rotate(${i*45}) translate(0 -200) rotate(${-i*45})`}><CardIndexPage /></g>)}</g></svg></div>
+    <div className="ultimate-index-lightning-impact" data-phase="branching-lightning-impact"><svg viewBox="-320 -310 640 620" aria-hidden="true"><g className="ultimate-index-hit-bolts" fill="none" stroke="#cef5ff" strokeWidth="8">{Array.from({ length: 7 }, (_,i)=><path key={i} d="M0-278 31-198 2-171 31-87-6 0" transform={`rotate(${i*360/7})`} />)}</g><g className="ultimate-index-hit-pages">{Array.from({ length: 12 },(_,i)=><g key={i} transform={`rotate(${i*30}) translate(0 -187) rotate(${i*9})`}><CardIndexPage /></g>)}</g><g transform="scale(.65)"><CardBook id={`${id}-impact`} check /></g></svg></div><div className="ultimate-index-storm-wash" />
   </div>;
 }
 
@@ -91,7 +91,7 @@ function MirrorProjection({ id }: { id: string }) {
   return <div className="ultimate-mirror-projection" data-sequence="gemmed-mirror-array-flight-mask-shatter">
     <div className="ultimate-mirror-array-charge" data-phase="mirror-array-charge"><svg viewBox="-280 -280 560 560" aria-hidden="true">{[-2,-1,0,1,2].map((i)=><g key={i} transform={`translate(${i*88} ${Math.abs(i)*24-20}) scale(${i===0?.86:.5})`}><CardMirror id={`${id}-orbit-${i}`} falseFace={i===-2} /></g>)}</svg></div>
     <div className="ultimate-mirror-blade-flight" data-phase="gemmed-mirror-flight"><svg viewBox="-250 -270 500 540" aria-hidden="true"><g className="ultimate-colossal-mirror-blade" transform="scale(1.15)"><CardMirror id={`${id}-flight`} /></g></svg></div>
-    <div className="ultimate-mirror-mask-impact" data-phase="false-mask-shatter"><svg viewBox="-300 -280 600 560" aria-hidden="true"><g className="ultimate-card-mask-break"><CardMirror id={`${id}-impact`} falseFace /></g><g className="ultimate-mirror-hit-fragments" fill="#bca9f2" stroke="#eff9ff" strokeWidth="3">{Array.from({length:18},(_,i)=><path key={i} d="M0-38 21-3 8 33-18 16-19-17Z" transform={`rotate(${i*20}) translate(0 -222) rotate(${i*11})`} />)}</g></svg></div><div className="ultimate-mirror-prism-wash" />
+    <div className="ultimate-mirror-mask-impact" data-phase="false-mask-shatter"><svg viewBox="-300 -280 600 560" aria-hidden="true"><g className="ultimate-card-mask-break"><CardMirror id={`${id}-impact`} falseFace /></g><g className="ultimate-mirror-hit-fragments">{Array.from({length:18},(_,i)=><g key={i} transform={`rotate(${i*20}) translate(0 -222) rotate(${i*11})`}><CardMirrorFragment /></g>)}</g></svg></div><div className="ultimate-mirror-prism-wash" />
   </div>;
 }
 
@@ -106,15 +106,15 @@ function StarterPhoenixProjection({ id }: { id: string }) {
     <div className="ultimate-starter-fire-array" data-phase="fire-feather-array">
       <svg viewBox="-250 -250 500 500" aria-hidden="true" focusable="false">
         <path d="M0-167 145-83 145 83 0 167-145 83-145-83Z" fill="none" stroke="#efb55d" strokeWidth="6" />
-        <g fill="#ffa345" stroke="#b3662d" strokeWidth="3">{Array.from({ length: 12 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 30}) translate(0 -205) rotate(180) scale(.42)`} />)}</g>
-        <path d={feather} transform="translate(0 80) scale(1.05)" fill="#ffcf67" stroke="#c87932" strokeWidth="4" />
+        <g>{Array.from({ length: 12 }, (_, i) => <g key={i} transform={`rotate(${i * 30}) translate(0 -205) rotate(180) scale(.42)`}><CardFireFeather /></g>)}</g>
+        <g transform="translate(0 80) scale(1.05)"><CardFireFeather /></g>
       </svg>
     </div>
     <PhoenixProjectile id={id} fieldBurn={false} illustrated />
     <div className="ultimate-starter-fire-impact" data-phase="fire-feather-burst">
       <svg viewBox="-320 -300 640 600" aria-hidden="true" focusable="false">
-        <g className="ultimate-starter-fire-plumes" fill="#f68b3c" stroke="#b7652e" strokeWidth="3">{Array.from({ length: 13 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 360 / 13}) translate(0 -72) scale(.85 1.2)`} />)}</g>
-        <g className="ultimate-starter-fire-fragments" fill="#ffd679">{Array.from({ length: 18 }, (_, i) => <path key={i} d={feather} transform={`rotate(${i * 20}) translate(0 -251) rotate(180) scale(.21)`} />)}</g>
+        <g className="ultimate-starter-fire-plumes">{Array.from({ length: 13 }, (_, i) => <g key={i} transform={`rotate(${i * 360 / 13}) translate(0 -72) scale(.85 1.2)`}><CardFireFeather /></g>)}</g>
+        <g className="ultimate-starter-fire-fragments">{Array.from({ length: 18 }, (_, i) => <g key={i} transform={`rotate(${i * 20}) translate(0 -251) rotate(180) scale(.21)`}><CardFireFeather /></g>)}</g>
       </svg>
     </div>
     <div className="ultimate-starter-fire-wash" />

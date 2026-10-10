@@ -525,48 +525,134 @@ function normalVariant(parent: THREE.Object3D, theme: number): Variant {
 }
 
 /** Card-matched versions are ultimate-only: ordinary attacks retain their art. */
+const cardGold = 0xe6c36b;
+function polishCardObject<T extends THREE.Object3D>(root: T): T {
+  root.traverse(node => {
+    if (!(node instanceof THREE.Mesh)) return;
+    const m = node.material as THREE.MeshStandardMaterial;
+    // The card's metal is a rim, not an opaque glow over the illustrated form.
+    if (m.color.getHex() === cardGold) m.metalness = .65;
+    m.roughness = m.metalness > .4 ? .22 : .34;
+    m.emissiveIntensity = m.transparent ? .10 : .08;
+  });
+  return root;
+}
+function cardCastleSeal(parent: THREE.Object3D, advanced: boolean, size = 1) {
+  const result = group(parent, 'card-castle-seal');
+  result.userData.cardMaterial = advanced ? 'ivory-gold-sky-dome' : 'transparent-crystal-gold';
+  polygon(result, [[-.32,.30],[0,.40],[.32,.30],[.27,-.16],[0,-.39],[-.27,-.16]], cardGold, .10);
+  const face = polygon(result, [[-.25,.25],[0,.32],[.25,.25],[.20,-.12],[0,-.30],[-.20,-.12]], advanced ? 0x2d6883 : 0x83cabb, .04);
+  face.position.z = .08;
+  if (advanced) {
+    const points = Array.from({length:10}, (_, i) => {
+      const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? .065 : .17;
+      return [Math.cos(a) * r, Math.sin(a) * r];
+    });
+    polygon(result, points, cream, .025).position.z = .12;
+  } else {
+    body(result, new THREE.CircleGeometry(.065, 12), 0x426659, 0, .045, .12);
+    polygon(result, [[-.035,.025],[.035,.025],[.06,-.12],[-.06,-.12]], 0x426659, .025).position.z = .12;
+  }
+  result.scale.setScalar(size);
+  return polishCardObject(result);
+}
 function cardCastle(parent: THREE.Object3D, advanced: boolean) {
   const result = group(parent, 'guardian-castle');
-  box(result, 1.65, .40, .15, advanced ? 0xefdda7 : 0x73dece, 0, .2, 0, .25, advanced ? 1 : .75);
+  result.userData.cardMaterial = advanced ? 'ivory-gold-sky-dome' : 'transparent-crystal-gold';
+  box(result, 1.65, .40, .15, advanced ? 0xf2e2b6 : 0x73dece, 0, .2, 0, .15, advanced ? 1 : .46);
+  tube(result,[[-.825,0,.10],[-.825,.40,.10],[.825,.40,.10],[.825,0,.10],[-.825,0,.10]],.012,cardGold);
   for (const x of [-.72, -.36, 0, .36, .72]) {
     const top = 1.08 - Math.abs(x)*.55;
-    box(result, .30, top, .24, advanced ? 0xffebc1 : 0x72e4d6, x, top*.5, 0, .3, advanced ? 1 : .75);
+    box(result, .30, top, .24, advanced ? 0xffebc1 : 0x72e4d6, x, top*.5, 0, .16, advanced ? 1 : .60);
     const roof = body(result, new THREE.ConeGeometry(.23, .42, 6), advanced ? 0x206c93 : 0x29b6cf, x, top+.20, 0, .45);
     roof.name = 'card-pointed-tower';
-    box(result,.035,top,.02,cream,x,top*.5,.13);
+    tube(result,[[x-.15,0,.13],[x-.15,top,.13],[x+.15,top,.13],[x+.15,0,.13]],.011,cardGold);
+    box(result,.018,top,.015,cream,x-.10,top*.5,.135);
+    box(result,.30,.018,.018,cardGold,x,top*.42,.14,.65);
     box(result,.065,.18,.025,0x286679,x,top-.23,.15);
+    body(result,new THREE.OctahedronGeometry(.035),cream,x,top+.43,0,.55);
+    if (advanced) box(result,.075,.24,.012,0x15557f,x,top-.51,.15);
   }
-  padlock(result,.70).position.set(0,.42,.22);
+  cardCastleSeal(result,advanced,.70).position.set(0,.42,.22);
   if (advanced) {
-    const dome = body(result, new THREE.SphereGeometry(1.22,16,8,0,Math.PI*2,0,Math.PI/2),0x8de6ff,0,.05,0,0,.14);
+    const dome = body(result, new THREE.SphereGeometry(1.22,16,8,0,Math.PI*2,0,Math.PI/2),0x8de6ff,0,.05,0,0,.09);
     dome.name='card-sky-dome';
+    const rim = body(result,new THREE.TorusGeometry(1.22,.012,4,24),0xc7f4ff,0,.05,0,0,.75); rim.rotation.x=Math.PI/2;
+    for (const z of [-.50,.50]) {
+      const r = Math.sqrt(1.22**2-z**2);
+      tube(result,Array.from({length:13},(_,i)=>[Math.cos(i*Math.PI/12)*r,.05+Math.sin(i*Math.PI/12)*r,z]),.010,0xbcefff);
+    }
+    const island=polygon(result,[[-.90,0],[.90,0],[.65,-.22],[.28,-.20],[0,-.38],[-.32,-.21],[-.66,-.24]],0x739c8b,.18); island.position.y=-.06;
   }
-  return result;
+  return polishCardObject(result);
 }
 function cardIndexBook(parent: THREE.Object3D) {
-  const result = openBook(parent);
-  result.name='card-navy-index-book';
-  result.traverse(node => { if (node instanceof THREE.Mesh) {const m=node.material as THREE.MeshStandardMaterial;
-    if(m.color.getHex()===0xc96a36) {m.color.setHex(0x183960);m.emissive.setHex(0x183960);}
-  }});
+  const result = group(parent,'card-navy-index-book');
+  result.userData.cardMaterial='navy-leather-gold-ivory-pages';
+  for (const side of [-1,1]) {
+    const page=group(result,'book-page');page.position.x=side*.22;page.rotation.y=-side*.22;
+    box(page,.43,.56,.07,0x183960,0,0,0,.10);
+    box(page,.40,.51,.05,0xf7e8c3,0,.01,.06);
+    tube(page,[[-.20,-.26,.05],[-.20,.26,.05],[.20,.26,.05],[.20,-.26,.05],[-.20,-.26,.05]],.010,cardGold);
+    for (let i=0;i<4;i++) box(page,.31,.009,.012,0xbb9b65,0,-.23+i*.012,.090);
+    for (let i=0;i<4;i++) box(page,.26-i%2*.025,.012,.010,0xb8a07a,0,.14-i*.075,.095);
+    const bookmark=box(page,.035,.08,.016,side<0?0x81b798:0xd49a49,side*.13,.28,.075);bookmark.rotation.z=-side*.13;
+  }
+  box(result,.022,.58,.08,cardGold,0,0,.07,.60);
   const lens=group(result,'card-book-magnifier');
-  body(lens,new THREE.TorusGeometry(.105,.016,5,16),0xf1ca65,0,0,.12);
-  box(lens,.03,.15,.02,0xf1ca65,-.10,-.13,.12).rotation.z=-.6;
+  body(lens,new THREE.CircleGeometry(.09,16),0x609abb,0,0,.115,.15,.35);
+  body(lens,new THREE.TorusGeometry(.105,.016,5,16),cardGold,0,0,.12,.65);
+  box(lens,.03,.15,.02,cardGold,-.10,-.13,.12,.65).rotation.z=-.6;
+  tube(lens,[[-.04,.03,.14],[.02,.065,.14],[.055,.035,.14]],.006,0xe9faff);
   lens.position.set(.20,-.03,.02);
-  return result;
+  return polishCardObject(result);
 }
 function cardFramedMirror(parent: THREE.Object3D) {
   const result=group(parent,'card-gemmed-oval-mirror');
-  const outer=body(result,new THREE.CircleGeometry(.33,16),0xf2cf74);outer.scale.y=1.7;
-  const glass=body(result,new THREE.CircleGeometry(.29,16),0x9cdbed,0,0,.045);glass.scale.y=1.68;
-  for(const y of [-.52,.52]) {const jewel=polygon(result,[[0,-.10],[-.07,0],[0,.10],[.07,0]],0xab87dd,.035);jewel.position.set(0,y,.08);}
+  result.userData.cardMaterial='beveled-gold-prism-mirror';
+  const outer=body(result,new THREE.CircleGeometry(.33,24),cardGold,0,0,0,.68);outer.scale.y=1.7;
+  const bevel=body(result,new THREE.TorusGeometry(.31,.016,5,24),cream,0,0,.025,.45);bevel.scale.y=1.7;
+  const glass=body(result,new THREE.CircleGeometry(.285,24),0xa6ddee,0,0,.045,.20,.62);glass.scale.y=1.68;
+  for(const [x,y] of [[0,-.52],[0,.52],[-.32,0],[.32,0]]) {
+    const jewel=body(result,new THREE.OctahedronGeometry(.072),0xab87dd,x,y,.075,.34);jewel.scale.set(.8,1.35,.5);
+  }
+  tube(result,[[-.18,-.15,.07],[.12,.29,.07]],.009,0xf0fcff);
+  tube(result,[[-.08,-.28,.07],[.21,.15,.07]],.007,0xe8ebff);
   tube(result,[[-.11,0,.09],[-.02,-.10,.09],[.15,.13,.09]],.022,cream);
-  return result;
+  return polishCardObject(result);
 }
 function cardLeafPuzzle(parent: THREE.Object3D, index:number) {
   const result=group(parent,'card-botanical-puzzle');
-  polygon(result,[[-.2,-.2],[.2,-.2],[.2,-.06],[.28,-.06],[.30,0],[.28,.06],[.2,.06],[.2,.2],[.05,.2],[.05,.28],[-.05,.28],[-.05,.2],[-.2,.2]], index%3===2?0xe1c568:0x83dcb0,.04);
-  leaf(result,index%3===2?0x85892e:0x347d4a,.54).position.set(0,-.02,.05);
+  result.userData.cardMaterial='gold-edged-leaf-crystal';
+  const points=[[-.2,-.2],[.2,-.2],[.2,-.06],[.28,-.06],[.30,0],[.28,.06],[.2,.06],[.2,.2],[.05,.2],[.05,.28],[-.05,.28],[-.05,.2],[-.2,.2]];
+  polygon(result,points,cardGold,.035);
+  const crystal=polygon(result,points.map(([x,y])=>[x*.88,y*.88]),index%3===2?0xdfc65e:0x80d6b0,.025);crystal.position.z=.025;
+  const m=crystal.material as THREE.MeshStandardMaterial;m.transparent=true;m.opacity=.65;m.depthWrite=false;
+  const sprout=leaf(result,index%3===2?0x97a148:0x39804a,.54);sprout.position.set(0,-.02,.05);
+  for (const side of [-1,1]) tube(sprout,[[0,-.02,.055],[side*.065,.06,.055],[side*.09,.16,.055]],.010,cardGold);
+  tube(result,[[-.17,.17,.052],[-.06,.17,.052]],.009,0xf0ffe6);
+  return polishCardObject(result);
+}
+function cardMirrorShard(parent:THREE.Object3D,index=0) {
+  const result=mirrorShard(parent,index);
+  result.userData.cardMaterial='beveled-gold-prism-mirror';
+  const meshes=result.children.filter(child=>child instanceof THREE.Mesh) as THREE.Mesh[];
+  const rim=meshes[0].material as THREE.MeshStandardMaterial;rim.color.setHex(cardGold);rim.metalness=.65;
+  const glass=meshes[1].material as THREE.MeshStandardMaterial;glass.transparent=true;glass.opacity=.72;glass.depthWrite=false;
+  return polishCardObject(result);
+}
+function cardThunderPage(parent:THREE.Object3D) {
+  const result=thunderPage(parent);
+  result.userData.cardMaterial='navy-leather-gold-ivory-pages';
+  box(result,.030,.08,.014,cardGold,.10,.21,.04,.55);
+  result.traverse(node=> {if(node instanceof THREE.Mesh && node.name==='branching-lightning') {
+    const m=node.material as THREE.MeshStandardMaterial;m.color.setHex(0xc4f1ff);m.emissive.setHex(0x77cfff);
+  }});
+  return polishCardObject(result);
+}
+function cardLightning(parent:THREE.Object3D,height=1) {
+  const result=lightning(parent,height),m=result.material as THREE.MeshStandardMaterial;
+  m.color.setHex(0xc4f1ff);m.emissive.setHex(0x77cfff);m.emissiveIntensity=.12;
   return result;
 }
 
@@ -584,12 +670,12 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     const crest = group(strike, 'castle-emblem-projectile');
     shield(crest, 0x2ab99c).scale.setScalar(1.55);
     const flyingKeep = cardCastle(crest, mode === 'advanced'); flyingKeep.scale.setScalar(.46); flyingKeep.position.set(0, -.10, .23);
-    padlock(crest, .58).position.set(0, -.20, .32);
+    cardCastleSeal(crest, mode === 'advanced', .58).position.set(0, -.20, .32);
     const impact = group(root, 'castle-seal-impact');
-    const seal = padlock(impact, 1.4);
+    const seal = cardCastleSeal(impact, mode === 'advanced', 1.4);
     const fragments = Array.from({ length: mode === 'advanced' ? 16 : 12 }, (_, i) => {
       const token = group(impact, 'castle-crest-fragment');
-      shield(token, i % 2 ? 0x5bc9b0 : 0x319ca0).scale.setScalar(.30);
+      cardCastleSeal(token, mode === 'advanced', .30);
       return token;
     });
     const wave = impactWave(root, 'castle-seal-shockwave', 0x53bfa6);
@@ -619,18 +705,18 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     const array = ritualRing(formation, 'thunder-index-summoning-array', 0xe3bb5a, .78);
     const index = group(strike, 'colossal-thunder-index');
     cardIndexBook(index).scale.setScalar(2.0);
-    const scrolls = Array.from({ length: 5 }, () => thunderPage(index));
+    const scrolls = Array.from({ length: 5 }, () => cardThunderPage(index));
     scrolls.forEach((page, i) => {
       page.position.set(-.55 - i * .12, (i - 2) * .19, .14);
       page.rotation.z = (i - 2) * .25; page.scale.setScalar(1.25);
     });
     const impact = group(root, 'thunder-index-impact');
-    const bolts = Array.from({ length: 7 }, (_, i) => lightning(impact, i === 0 ? 1.75 : 1.05));
+    const bolts = Array.from({ length: 7 }, (_, i) => cardLightning(impact, i === 0 ? 1.75 : 1.05));
     bolts.forEach((bolt, i) => {
       bolt.position.set((i % 3 - 1) * .40, Math.floor(i / 3) * .31 - .25, i * .018);
       bolt.rotation.z = (i % 3 - 1) * .65;
     });
-    const pages = Array.from({ length: 18 }, () => thunderPage(impact));
+    const pages = Array.from({ length: 18 }, () => cardThunderPage(impact));
     const wave = impactWave(root, 'thunder-index-page-wave', 0xe6b94e);
     update = f => {
       anchor(formation, f.start, f, 1.10); formation.visible = visibleDuring(f, .02, .70);
@@ -652,7 +738,7 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     };
   } else if (theme === 2) {
     const pages = Array.from({ length: 8 }, () => cardIndexBook(root));
-    const bolts = Array.from({ length: 7 }, (_, i) => lightning(strike, i === 0 ? 1.7 : .9));
+    const bolts = Array.from({ length: 7 }, (_, i) => cardLightning(strike, i === 0 ? 1.7 : .9));
     bolts.forEach((bolt, i) => { bolt.position.set((i % 3 - 1) * .46, Math.floor(i / 3) * .43 - .45, i * .015); bolt.rotation.z = (i % 3 - 1) * .35; });
     cardIndexBook(formation);
     update = f => {
@@ -691,12 +777,12 @@ function ultimateVariant(parent: THREE.Object3D, theme: number, mode: Mode): Var
     const blade = cardFramedMirror(cleaver); blade.scale.setScalar(2.65); blade.rotation.z = -Math.PI / 2;
     blade.position.x = -.98;
     for (const side of [-1, 1]) {
-      const facet = mirrorShard(cleaver, 1); facet.position.set(-1.10, side * .34, -.05);
+      const facet = cardMirrorShard(cleaver, 1); facet.position.set(-1.10, side * .34, -.05);
       facet.rotation.z = side * .45 - Math.PI / 2; facet.scale.setScalar(1.20);
     }
     const brokenMasks = Array.from({ length: 3 }, () => mask(root));
     const impact = group(root, 'mirror-mask-shatter-impact');
-    const fragments = Array.from({ length: 24 }, (_, i) => mirrorShard(impact, i));
+    const fragments = Array.from({ length: 24 }, (_, i) => cardMirrorShard(impact, i));
     const wave = impactWave(root, 'mirror-cleaver-ripple', 0xb590e1);
     update = f => {
       anchor(formation, f.start, f); formation.visible = visibleDuring(f, .03, .70);

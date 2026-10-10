@@ -17,6 +17,49 @@ const visibleMeshes = (object: THREE.Object3D) => nodes(object).filter(node => {
 });
 
 describe('themed spell performances', () => {
+  it('retains the collection material through charge, travel and contact without repainting ordinary attacks', () => {
+    const expected = ['transparent-crystal-gold', 'navy-leather-gold-ivory-pages', 'gold-edged-leaf-crystal', 'beveled-gold-prism-mirror'];
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter=1;chapter<=4;chapter++) {
+      const fx=createThemedSpellEffects(new THREE.Scene(),chapter,mode);
+      const family=chapter===1 && mode==='advanced'?'ivory-gold-sky-dome':expected[chapter-1];
+      for (const time of [.15,.60,1.4]) {
+        fx.update(frame({ultimate:true,time}));
+        const matching=visibleMeshes(fx.root).filter(mesh => {
+          let object:THREE.Object3D|null=mesh;
+          while(object) { if(object.userData.cardMaterial===family) return true; object=object.parent; }
+          return false;
+        }) as THREE.Mesh[];
+        expect(matching.length).toBeGreaterThan(2);
+        // Card rims reflect metallic highlights while the form keeps a solid
+        // silhouette. No added additive blend or flashing material is used.
+        expect(matching.some(mesh=>(mesh.material as THREE.MeshStandardMaterial).metalness>.4)).toBe(true);
+        expect(matching.every(mesh=>(mesh.material as THREE.Material).blending===THREE.NormalBlending)).toBe(true);
+      }
+      const normal=fx.root.getObjectByName(`normal-${chapter}`)!;
+      expect(nodes(normal).some(node=>node.userData.cardMaterial)).toBe(false);
+      fx.dispose();
+    }
+  });
+
+  it('replays the richer card forms with pooled resources and disposes their transparent and metallic meshes once', () => {
+    for (const mode of ['starter','advanced'] as const) for(let chapter=1;chapter<=4;chapter++) {
+      const scene=new THREE.Scene(),fx=createThemedSpellEffects(scene,chapter,mode);
+      const meshes=nodes(fx.root).filter((node):node is THREE.Mesh=>node instanceof THREE.Mesh);
+      const geometryIds=meshes.map(mesh=>mesh.geometry.uuid);
+      const materials=[...new Set(meshes.flatMap(mesh=>Array.isArray(mesh.material)?mesh.material:[mesh.material]))];
+      const geometries=[...new Set(meshes.map(mesh=>mesh.geometry))];
+      const spies=[...materials,...geometries].map(resource=>vi.spyOn(resource,'dispose'));
+      for(let replay=0;replay<3;replay++) {
+        for(const time of [.15,.60,1.4,ULTIMATE_CAST_SECONDS]) fx.update(frame({ultimate:true,time}));
+        expect(fx.root.visible).toBe(false);fx.clear();
+      }
+      expect(meshes.map(mesh=>mesh.geometry.uuid)).toEqual(geometryIds);
+      fx.dispose();fx.dispose();
+      expect(scene.children).toHaveLength(0);
+      for(const spy of spies) expect(spy).toHaveBeenCalledTimes(1);
+    }
+  });
+
   it('gives both sides a bounded charge, directional trail and contact burst without an early hit or extra replay resources', () => {
     for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
       const fx = createThemedSpellEffects(new THREE.Scene(), chapter, mode);
