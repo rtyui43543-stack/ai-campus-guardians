@@ -35,3 +35,29 @@
 .enemy-cinematic.is-reduced .enemy-impact-fragments{display:none}
 @media(max-width:600px){.enemy-cinematic-charge{width:min(38vw,240px)}.enemy-cinematic-flight{width:min(45vw,270px)}.enemy-cinematic-impact{width:min(35vw,210px)}.enemy-cinematic .enemy-secondary-detail{display:none}.enemy-cinematic-charge,.enemy-cinematic-flight,.enemy-cinematic-impact{filter:drop-shadow(0 2px 3px #25163780)}}
 @media(prefers-reduced-motion:reduce){.enemy-cinematic,.enemy-cinematic *{animation:none!important}.enemy-cinematic .enemy-cinematic-charge{opacity:.72;transform:translate(-50%,-50%) scale(.83)}.enemy-cinematic .enemy-cinematic-flight{display:none}.enemy-cinematic .enemy-cinematic-impact{opacity:.7;transform:translate(-50%,-50%) scale(.77)}.enemy-cinematic .enemy-nine-head-array,.enemy-cinematic .enemy-grimoire-open-pages,.enemy-cinematic .enemy-rune-seal-split,.enemy-cinematic .enemy-phantom-impact-flames{transform:none;opacity:1}.enemy-cinematic .enemy-impact-fragments{display:none}}
+
+/* Match the allocated battle pane rather than the device's full width. The
+   nine heads remain one complete silhouette, and their existing launch and
+   contact times still line up with the arena and HP changes. */
+@media (orientation: landscape) and (max-width: 1366px), (min-width: 601px) and (max-height: 650px) {
+  .duel-combat-window .enemy-cinematic-charge {
+    width: min(44cqw, 59cqh, 340px);
+  }
+  .duel-combat-window .enemy-cinematic-flight {
+    width: min(47cqw, 62cqh, 390px);
+  }
+  .duel-combat-window .enemy-cinematic-impact {
+    width: min(40cqw, 44cqh, 330px);
+  }
+  .duel-combat-window .enemy-cinematic .enemy-guard-intercept {
+    width: min(34cqw, 41cqh, 240px);
+  }
+  .duel-combat-window .enemy-cinematic .enemy-missed-dissipation {
+    width: min(31cqw, 38cqh, 210px);
+  }
+}
+@container combat-window (max-width: 420px) {
+  .enemy-cinematic .enemy-secondary-detail {
+    display: none;
+  }
+}

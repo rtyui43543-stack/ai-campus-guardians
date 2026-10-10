@@ -14,7 +14,7 @@
 
 發布可選原始碼包（可維護題庫）或已建置的靜態網站包；兩者都支援 GitHub Pages 的 /儲存庫名稱/ 子路徑。原始碼包包含 .github/workflows/deploy-pages.yml 與預錄音檔，上傳後在 Settings → Pages 選 GitHub Actions。靜態包在 Pages 選 Deploy from a branch。使用 GitHub Desktop／git 推送解壓後的內容，不要只上傳 ZIP。
 
-完整四步發布流程、手機／平板安裝方式與離線檢查見 [docs/github-pages.md](docs/github-pages.md)。本機產生兩種 GitHub 包：先 npm run build，再 npm run package:github；輸出在 release。日後更新時才需連網下載新版；清除網站資料或移除 App 可能刪除離線內容與進度，請先匯出備份。
+完整四步發布流程、手機／平板安裝方式與離線檢查見 [docs/github-pages.md](docs/github-pages.md)。橫式版面規格、尺寸驗收與實機限制見 [docs/landscape-layout-acceptance.md](docs/landscape-layout-acceptance.md)。本機產生兩種 GitHub 包：先 npm run build，再 npm run package:github；輸出在 release。日後更新時才需連網下載新版；清除網站資料或移除 App 可能刪除離線內容與進度，請先匯出備份。
 
 ## 從零重新冒險
 

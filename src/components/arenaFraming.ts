@@ -46,13 +46,16 @@ export interface BattleFrameLayout {
   questionBottom: number;
   answersTop: number;
   resolving: boolean;
+  /** An allocated battle pane has its own canvas, outside the reading controls. */
+  viewport?: 'dedicated';
 }
 
 /** Hidden feedback still has layout: preserve the last visible question's slot. */
 export function createBattleFrameTracker() {
   let previous: BattleFrameLayout | undefined;
   return (layout: BattleFrameLayout): BattleFrameLayout => {
-    if (!previous || !layout.resolving) previous = { ...layout };
+    if (!previous || !layout.resolving || layout.viewport === 'dedicated'
+      || previous.viewport !== layout.viewport) previous = { ...layout };
     else if (layout.width !== previous.width || layout.height !== previous.height) {
       // An orientation change must fit the new viewport without measuring hidden
       // feedback text or the post-cast explanation buttons as a new question.
@@ -68,16 +71,19 @@ export function fitBattleActors(layout: BattleFrameLayout, hero: ActorFramingBou
   explanationReserve = 52) {
   const { width, height } = layout;
   const viewHeight = 8.8, viewWidth = viewHeight * width / height;
-  const portrait = width / height < .85, elevation = portrait ? 3.9 : 4.7;
-  const heroX = -Math.min(3.35, viewWidth * .235), enemyX = -heroX;
+  const dedicated = layout.viewport === 'dedicated';
+  const portrait = width / height < .85, elevation = portrait && !dedicated ? 3.9 : 4.7;
+  // A wide tablet battle pane needs separate lanes across its actual width;
+  // the old 3.35-world-unit cap crowded both actors into the screen centre.
+  const heroX = dedicated ? -viewWidth * .235 : -Math.min(3.35, viewWidth * .235), enemyX = -heroX;
   const edge = (width <= 600 ? 14 : 24) / width * viewWidth;
-  const top = Math.max(height * .27, layout.questionBottom + 12);
+  const top = dedicated ? Math.min(40, height * .16) : Math.max(height * .27, layout.questionBottom + 12);
   // The explanation actions appear after a cast; their space is reserved before
   // casting so they neither cover the boots nor resize either actor afterwards.
-  const bottom = Math.min(height * .76, layout.answersTop - 10) - explanationReserve;
+  const bottom = dedicated ? height - 14 : Math.min(height * .76, layout.answersTop - 10) - explanationReserve;
   const actorTop = Math.max(hero.maxY, enemy.maxY * 1.09) + .18;
   const actorBottom = Math.min(hero.minY, enemy.minY * 1.09, -.16);
-  let scale = Math.min(portrait ? .8 : 1,
+  let scale = Math.min(dedicated ? Infinity : portrait ? .8 : 1,
     Math.max(1, bottom - top) / height * viewHeight / (actorTop - actorBottom));
   // Include the actual hurt/dodge step, boss recoil and critical enlargement.
   // Height alone cannot protect a pointed hat or a wide cloud giant on phones.
@@ -90,6 +96,17 @@ export function fitBattleActors(layout: BattleFrameLayout, hero: ActorFramingBou
   const cosPitch = 15 / Math.hypot(15, elevation);
   const lookY = ((bottom / height - .5) * viewHeight + actorBottom * scale) / cosPitch;
   return { viewWidth, viewHeight, heroX, enemyX, scale, lookY, elevation, top, bottom };
+}
+
+/** Preserve a launched spell's caster-relative origin when the pane rotates. */
+export function reframeLaunchOrigin(origin: THREE.Vector3, success: boolean,
+  previous: { heroX: number; enemyX: number; scale: number },
+  current: { heroX: number; enemyX: number; scale: number }) {
+  const ratio = current.scale / previous.scale;
+  const previousCasterX = success ? previous.heroX : previous.enemyX;
+  const casterX = success ? current.heroX : current.enemyX;
+  return new THREE.Vector3(casterX + (origin.x - previousCasterX) * ratio,
+    origin.y * ratio, origin.z * ratio);
 }
 
 /** Fit both full silhouettes throughout wide shots, greetings and close-up pans. */

@@ -4,7 +4,8 @@ import { createCoverHeroSprite, type HeroSpritePose } from './coverHeroSprite';
 import { createMissionEnemy, type MissionEnemyRig } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
 import { contactReaction, enemyCastMotion } from './combatChoreography';
-import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming } from './arenaFraming';
+import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming, reframeLaunchOrigin,
+  type BattleFrameLayout } from './arenaFraming';
 
 function view(width = 8, height = 8.8, y = 1.8, elevation = 4.7, x = 0, zoom = 1) {
   const camera = new THREE.OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, .1, 60);
@@ -70,11 +71,51 @@ describe('battle framing', () => {
     hero.disposeVisual();
   });
 
-  describe.each([[360, 800], [390, 844], [768, 1024], [1024, 768], [1440, 900]])('%s × %s', (width, height) => {
+  it('fits the allocated pane rather than hidden question and answer geometry during a cast or rotation', () => {
+    const hero = createCoverHeroSprite({ loadTexture: () => undefined });
+    const enemy = createMissionEnemy(1, 'starter');
+    const track = createBattleFrameTracker();
+    const heroBounds = measureActorFraming(hero, view()), enemyBounds = measureActorFraming(enemy, view());
+    const waiting = fitBattleActors(track({ width: 370, height: 330, questionBottom: 0, answersTop: 330,
+      resolving: false, viewport: 'dedicated' }), heroBounds, enemyBounds);
+    const casting = fitBattleActors(track({ width: 370, height: 330, questionBottom: 290, answersTop: 60,
+      resolving: true, viewport: 'dedicated' }), heroBounds, enemyBounds);
+    expect(casting).toEqual(waiting);
+    const rotated = fitBattleActors(track({ width: 976, height: 300, questionBottom: 200, answersTop: 230,
+      resolving: true, viewport: 'dedicated' }), heroBounds, enemyBounds);
+    expect(rotated.scale).toBeGreaterThan(1);
+    expect(rotated.top).toBe(40); expect(rotated.bottom).toBe(286);
+    const portrait = track({ width: 390, height: 844, questionBottom: 286, answersTop: 625, resolving: true });
+    expect(portrait.questionBottom).toBe(286); expect(portrait.answersTop).toBe(625);
+    hero.disposeVisual();
+  });
+
+  it.each([true, false])('keeps the original caster-relative launch point when rotating mid-flight (hero=%s)', success => {
+    const previous = { heroX: -2.7, enemyX: 2.7, scale: .7 };
+    const current = { heroX: -8.4, enemyX: 8.4, scale: 1.6 };
+    const previousX = success ? previous.heroX : previous.enemyX;
+    const currentX = success ? current.heroX : current.enemyX;
+    const origin = new THREE.Vector3(previousX + .85 * previous.scale, 2.5 * previous.scale, .5 * previous.scale);
+    const reframed = reframeLaunchOrigin(origin, success, previous, current);
+    expect((reframed.x - currentX) / current.scale).toBeCloseTo(.85);
+    expect(reframed.y / current.scale).toBeCloseTo(2.5);
+    expect(reframed.z / current.scale).toBeCloseTo(.5);
+    expect(reframeLaunchOrigin(reframed, success, current, previous).distanceTo(origin)).toBeLessThan(.0001);
+    expect(reframeLaunchOrigin(origin, success, previous, previous)).toEqual(origin);
+  });
+
+  describe.each<Pick<BattleFrameLayout, 'width' | 'height' | 'viewport'>>([
+    { width: 360, height: 800 }, { width: 390, height: 844 }, { width: 768, height: 1024 },
+    { width: 1024, height: 768 }, { width: 1440, height: 900 },
+    { width: 328, height: 320, viewport: 'dedicated' },
+    { width: 370, height: 330, viewport: 'dedicated' }, { width: 417, height: 368, viewport: 'dedicated' },
+    { width: 450, height: 532, viewport: 'dedicated' },
+    { width: 976, height: 240, viewport: 'dedicated' }, { width: 1024, height: 300, viewport: 'dedicated' },
+  ])('$width × $height $viewport', ({ width, height, viewport }) => {
     it.each(['starter', 'advanced'] as const)('fits the actual %s final-boss cast deformation and contact responses', mode => {
       const hero = createCoverHeroSprite({ loadTexture: () => undefined });
       const enemy = createFinalBossSprite(mode, { loadTexture: () => undefined });
-      const fit = fitBattleActors({ width, height, questionBottom: height * .36, answersTop: height * .78, resolving: false },
+      const fit = fitBattleActors({ width, height, viewport, questionBottom: height * .36, answersTop: height * .78, resolving: false },
         measureActorFraming(hero, view()), measureActorFraming(enemy, view()));
       const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
       const cameraPosition = camera.position.clone(), cameraRotation = camera.quaternion.clone(), projection = camera.projectionMatrix.clone();
@@ -144,9 +185,18 @@ describe('battle framing', () => {
       const hero = createCoverHeroSprite({ loadTexture: () => undefined });
       for (let chapter = 1; chapter <= 6; chapter++) {
         const enemy = createMissionEnemy(chapter, mode, false, { loadTexture: () => undefined });
-        const fit = fitBattleActors({ width, height, questionBottom: height * .36, answersTop: height * .78, resolving: false },
+        const fit = fitBattleActors({ width, height, viewport, questionBottom: height * .36, answersTop: height * .78, resolving: false },
           measureActorFraming(hero, view()), measureActorFraming(enemy, view()));
         const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+        if (viewport === 'dedicated' && width / height < 1.2) {
+          hero.root.scale.setScalar(fit.scale); hero.root.position.set(fit.heroX, 0, 0);
+          enemy.root.scale.setScalar(fit.scale); enemy.root.position.set(fit.enemyX, 0, 0);
+          hero.updateVisual({ camera, pose: 'idle', reducedMotion: true });
+          enemy.updateVisual?.({ camera, reducedMotion: true });
+          const waitingHero = projectedBounds(hero, camera), waitingEnemy = projectedBounds(enemy, camera);
+          expect((waitingEnemy.min.x - waitingHero.max.x) * width / 2).toBeGreaterThanOrEqual(8);
+          expect((waitingHero.max.y - waitingHero.min.y) * height / 2).toBeGreaterThanOrEqual(width === 450 ? 160 : 110);
+        }
         const parts: { object: THREE.Object3D; rotation: THREE.Euler }[] = [];
         enemy.root.traverse(object => {
           if (['book-spirit-paper-wing', 'paper-dragon-left-wing', 'paper-dragon-right-wing', 'lion-gear-crown'].includes(object.name)) {
@@ -186,9 +236,18 @@ describe('battle framing', () => {
       const hero = createCoverHeroSprite({ loadTexture: () => undefined });
       const enemy = make();
       const measuringCamera = view();
-      const fit = fitBattleActors({ width, height, questionBottom: height * .36, answersTop: height * .78, resolving: false },
+      const fit = fitBattleActors({ width, height, viewport, questionBottom: height * .36, answersTop: height * .78, resolving: false },
         measureActorFraming(hero, measuringCamera), measureActorFraming(enemy, measuringCamera));
       const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+      if (viewport === 'dedicated' && width / height < 1.2) {
+        hero.root.scale.setScalar(fit.scale); hero.root.position.set(fit.heroX, 0, 0);
+        enemy.root.scale.setScalar(fit.scale); enemy.root.position.set(fit.enemyX, 0, 0);
+        hero.updateVisual({ camera, pose: 'idle', reducedMotion: true });
+        enemy.updateVisual?.({ camera, reducedMotion: true });
+        const visibleHero = projectedBounds(hero, camera), visibleEnemy = projectedBounds(enemy, camera);
+        expect((visibleEnemy.min.x - visibleHero.max.x) * width / 2).toBeGreaterThanOrEqual(8);
+        expect((visibleHero.max.y - visibleHero.min.y) * height / 2).toBeGreaterThanOrEqual(width === 450 ? 160 : 110);
+      }
       for (const pose of poses) for (const reaction of [false, true]) {
         hero.root.scale.setScalar(fit.scale); enemy.root.scale.setScalar(fit.scale * (reaction ? 1.09 : 1));
         hero.root.position.set(fit.heroX - (reaction ? .30 * fit.scale : 0), -.09, 0);

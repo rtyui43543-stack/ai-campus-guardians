@@ -4,7 +4,7 @@ import { createCoverHero } from './coverHero';
 import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
-import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming } from './arenaFraming';
+import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming, reframeLaunchOrigin } from './arenaFraming';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
@@ -201,7 +201,8 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   let reportedPhase = '';
   const start = new THREE.Vector3(), target = new THREE.Vector3(), moving = new THREE.Vector3();
   const baseHeroRotation = .13, baseEnemyRotation = -.15;
-  const stage = host.closest('.duel-stage');
+  const stage = host.closest<HTMLElement>('.duel-stage');
+  const combatWindow = host.closest<HTMLElement>('.duel-combat-window');
   const bubble = stage?.querySelector<HTMLElement>('.duel-bubble');
   const answers = stage?.querySelector<HTMLElement>('.duel-answer-area');
   const castingParts: { object: THREE.Object3D; rotation: THREE.Euler }[] = [];
@@ -215,6 +216,18 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   };
   const resize = () => {
     const width = Math.max(1, host.clientWidth), height = Math.max(1, host.clientHeight);
+    if (bubble && !bubble.classList.contains('is-resolving')) {
+      // Feedback adds children to the hidden question. Keep its visible slot so
+      // a tablet grid gives the battle pane the same height throughout the cast.
+      const questionHeight = bubble.getBoundingClientRect().height;
+      if (questionHeight > 0) bubble.style.setProperty('--duel-question-height', `${questionHeight}px`);
+    }
+    const windowBounds = combatWindow?.getBoundingClientRect();
+    // The same wrapper is display:contents on the existing portrait/desktop
+    // layouts. Only a real allocated box changes the camera's coordinate space.
+    const dedicated = Boolean(windowBounds && windowBounds.width > 0 && windowBounds.height > 0);
+    const projectionSurface = dedicated ? combatWindow : stage;
+    const previousScale = modelScale, previousHeroX = heroX, previousEnemyX = enemyX;
     const aspect = width / height, viewHeight = cinemaShot ? 6 : 8.8, viewWidth = viewHeight * aspect;
     camera.left = -viewWidth / 2; camera.right = viewWidth / 2;
     camera.top = viewHeight / 2; camera.bottom = -viewHeight / 2;
@@ -222,25 +235,27 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     modelScale = 1;
     let lookY = 1.55, elevation = 3.8;
     heroX = -Math.min(3.35, viewWidth * .235); enemyX = -heroX;
-    if (!cinemaShot && stage && bubble && answers) {
+    if (!cinemaShot && stage && (dedicated || (bubble && answers))) {
       const bounds = host.getBoundingClientRect();
       const explanation = answers?.querySelector<HTMLElement>('.duel-explanation-actions');
       const extraFooter = explanation
         ? explanation.getBoundingClientRect().height + parseFloat(getComputedStyle(explanation).marginTop || '0') : 0;
       const layout = trackBattleFrame({ width, height,
-        questionBottom: bubble.getBoundingClientRect().bottom - bounds.top,
-        answersTop: answers.getBoundingClientRect().top - bounds.top + extraFooter,
-        resolving: bubble.classList.contains('is-resolving') });
+        questionBottom: dedicated ? 0 : bubble!.getBoundingClientRect().bottom - bounds.top,
+        answersTop: dedicated ? height : answers!.getBoundingClientRect().top - bounds.top + extraFooter,
+        resolving: Boolean(bubble?.classList.contains('is-resolving')),
+        viewport: dedicated ? 'dedicated' : undefined });
       const fitted = fitBattleActors(layout, heroFraming, enemyFraming);
       modelScale = fitted.scale; lookY = fitted.lookY; elevation = fitted.elevation;
       heroX = fitted.heroX; enemyX = fitted.enemyX; camera.zoom = 1;
-      if (stage instanceof HTMLElement) {
-        stage.style.setProperty('--combat-top', `${fitted.top}px`);
-        stage.style.setProperty('--combat-bottom', `${Math.max(fitted.top + 1, fitted.bottom)}px`);
+      if (projectionSurface) {
+        projectionSurface.style.setProperty('--combat-top', `${fitted.top}px`);
+        projectionSurface.style.setProperty('--combat-bottom', `${Math.max(fitted.top + 1, fitted.bottom)}px`);
       }
       const hud = stage?.querySelector<HTMLElement>('.duel-hud');
-      if (hud && stage instanceof HTMLElement) {
-        stage.style.setProperty('--duel-skill-top', `${hud.getBoundingClientRect().bottom - bounds.top + 12}px`);
+      if (projectionSurface && (dedicated || hud)) {
+        projectionSurface.style.setProperty('--duel-skill-top', dedicated ? '8px'
+          : `${hud!.getBoundingClientRect().bottom - bounds.top + 12}px`);
       }
     } else if (!cinemaShot) {
       // Welcome/banner Arenas retain their existing presentation.
@@ -253,23 +268,36 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     framingY = lookY; framingElevation = elevation;
     hero.root.scale.setScalar(modelScale); enemy.root.scale.setScalar(modelScale);
     hero.root.position.x = heroX; enemy.root.position.x = enemyX;
-    if (!cinemaShot && stage instanceof HTMLElement) {
+    if (!cinemaShot && projectionSurface) {
       const heroAnchor = new THREE.Vector3(heroX, 1.4 * modelScale, .5).project(camera);
       const enemyAnchor = new THREE.Vector3(enemyX, 1.5 * modelScale, .5).project(camera);
       const missAnchor = new THREE.Vector3(heroX - .58 * modelScale, .85 * modelScale, .5).project(camera);
       const guardAnchor = new THREE.Vector3(heroX + .25 * modelScale, 1.4 * modelScale, .5).project(camera);
-      stage.style.setProperty('--hero-lane-x', `${(heroAnchor.x + 1) * 50}%`);
-      stage.style.setProperty('--enemy-lane-x', `${(enemyAnchor.x + 1) * 50}%`);
-      stage.style.setProperty('--enemy-miss-x', `${(missAnchor.x + 1) * 50}%`);
-      stage.style.setProperty('--enemy-miss-y', `${(1 - missAnchor.y) * 50}%`);
-      stage.style.setProperty('--enemy-guard-x', `${(guardAnchor.x + 1) * 50}%`);
-      stage.style.setProperty('--actor-cast-y', `${(1 - enemyAnchor.y) * 50}%`);
-      stage.style.setProperty('--actor-impact-y', `${(1 - heroAnchor.y) * 50}%`);
+      projectionSurface.style.setProperty('--hero-lane-x', `${(heroAnchor.x + 1) * 50}%`);
+      projectionSurface.style.setProperty('--enemy-lane-x', `${(enemyAnchor.x + 1) * 50}%`);
+      projectionSurface.style.setProperty('--enemy-miss-x', `${(missAnchor.x + 1) * 50}%`);
+      projectionSurface.style.setProperty('--enemy-miss-y', `${(1 - missAnchor.y) * 50}%`);
+      projectionSurface.style.setProperty('--enemy-guard-x', `${(guardAnchor.x + 1) * 50}%`);
+      projectionSurface.style.setProperty('--actor-cast-y', `${(1 - enemyAnchor.y) * 50}%`);
+      projectionSurface.style.setProperty('--actor-impact-y', `${(1 - heroAnchor.y) * 50}%`);
+      if (!dedicated && combatWindow) {
+        for (const property of ['--combat-top', '--combat-bottom', '--duel-skill-top', '--hero-lane-x',
+          '--enemy-lane-x', '--enemy-miss-x', '--enemy-miss-y', '--enemy-guard-x', '--actor-cast-y', '--actor-impact-y']) {
+          combatWindow.style.removeProperty(property);
+        }
+      }
+      if (attack?.launchOrigin) {
+        // A rotation during flight changes both lanes and scale. Keep the launch
+        // point attached to the original caster, rather than the old viewport.
+        attack.launchOrigin.copy(reframeLaunchOrigin(attack.launchOrigin, attack.success,
+          { heroX: previousHeroX, enemyX: previousEnemyX, scale: previousScale },
+          { heroX, enemyX, scale: modelScale }));
+      }
     }
     drone.scale.setScalar(modelScale);
     renderer.setSize(width, height, false); dirty = true;
   };
-  const observer = new ResizeObserver(() => { if (!attack) resize(); });
+  const observer = new ResizeObserver(resize);
   observer.observe(host);
   if (bubble) observer.observe(bubble);
   if (answers) observer.observe(answers);

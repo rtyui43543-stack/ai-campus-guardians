@@ -18,6 +18,7 @@ import './magic-campus-theme.css';
 import './styles/cover-world.css';
 import './styles/battle-mechanics.css';
 import './styles/growth-dashboard.css';
+import './styles/battle-layout.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>
