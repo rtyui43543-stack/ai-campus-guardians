@@ -244,9 +244,32 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
       const speed = reducedMotion ? 6 : 1;
       limiter.attack.setValueAtTime(.001, start + .885 / speed);
       contactLift.gain.setValueAtTime(1, start + .885 / speed);
-      contactLift.gain.linearRampToValueAtTime(1.10, start + .899 / speed);
+      contactLift.gain.linearRampToValueAtTime(1.44, start + .899 / speed);
+      contactLift.gain.setValueAtTime(1.44, start + .97 / speed);
+      contactLift.gain.linearRampToValueAtTime(1.18, start + 1.04 / speed);
+      contactLift.gain.linearRampToValueAtTime(1, start + 1.14 / speed);
+      if (plan.voices.some(voice => voice.layer?.endsWith('-pursuit-contact'))) {
+        contactLift.gain.setValueAtTime(1, start + 1.205 / speed);
+        contactLift.gain.linearRampToValueAtTime(1.44, start + 1.219 / speed);
+        contactLift.gain.setValueAtTime(1.44, start + 1.27 / speed);
+        contactLift.gain.linearRampToValueAtTime(1, start + 1.4 / speed);
+      }
+      // A transparent ceiling only bends rare peaks above .90. The half-gain
+      // input gives the waveshaper a ±2 range, so no flat digital clipping occurs
+      // when the short contact lift uses more headroom than the old thick tail.
+      const headroom = current.createGain(), ceiling = current.createWaveShaper();
+      nodes.push(headroom, ceiling); headroom.gain.value = .5;
+      const curve = new Float32Array(4097);
+      for (let i = 0; i < curve.length; i++) {
+        const input = (i / (curve.length - 1) * 2 - 1) * 2, magnitude = Math.abs(input);
+        curve[i] = Math.sign(input) * (magnitude <= .90 ? magnitude : .90 + .075 * (1 - Math.exp(-((magnitude - .90) / .075))));
+      }
+      ceiling.curve = curve; ceiling.oversample = 'none';
+      contactLift.connect(headroom); headroom.connect(ceiling); ceiling.connect(current.destination);
+    } else {
+      contactLift.connect(current.destination);
     }
-    mix.connect(limiter); limiter.connect(contactLift); contactLift.connect(current.destination);
+    mix.connect(limiter); limiter.connect(contactLift);
     const trackSource = (source: AudioScheduledSourceNode, end: number) => {
       sources.add(source);
       source.onended = () => {
@@ -295,8 +318,16 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
       const source = current.createBufferSource(), gain = current.createGain();
       nodes.push(source, gain); source.buffer = cue.buffer;
       gain.gain.setValueAtTime(0, at);
-      gain.gain.linearRampToValueAtTime(cue.gain, at + Math.min(.006, cue.duration * .1));
-      gain.gain.setValueAtTime(cue.gain, end - Math.min(.045, cue.duration * .22));
+      if (cue.id === 'heavy-impact' || cue.id === 'explosion') {
+        const speed = reducedMotion ? 6 : 1;
+        gain.gain.linearRampToValueAtTime(cue.gain * 1.16, at + Math.min(.002 / speed, cue.duration * .05));
+        gain.gain.setValueAtTime(cue.gain * 1.16, at + Math.min(.025 / speed, cue.duration * .15));
+        gain.gain.exponentialRampToValueAtTime(cue.gain * .65, at + Math.min(.095 / speed, cue.duration * .45));
+        gain.gain.exponentialRampToValueAtTime(cue.gain * .25, end - Math.min(.045, cue.duration * .22));
+      } else {
+        gain.gain.linearRampToValueAtTime(cue.gain, at + Math.min(.006, cue.duration * .1));
+        gain.gain.setValueAtTime(cue.gain, end - Math.min(.045, cue.duration * .22));
+      }
       gain.gain.linearRampToValueAtTime(0, end);
       if (current.createStereoPanner) {
         const pan = current.createStereoPanner(); nodes.push(pan);

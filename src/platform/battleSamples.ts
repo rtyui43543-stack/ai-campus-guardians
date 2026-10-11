@@ -46,7 +46,7 @@ export function buildBattleSampleCues(plan: BattlePlan, reducedMotion = false): 
         * (id === 'heavy-impact' || id === 'explosion' ? DAMAGE_IMPACT_GAIN : 1),
       pan, panTo, replaces, ...(filter ? { filter } : {}) });
   };
-  const launch = (voice: BattleSoundVoice) => voice.phase === 'launch';
+  const launch = (voice: BattleSoundVoice) => voice.phase === 'launch' && voice.layer !== 'hit-rush';
   const hasDamage = plan.voices.some(voice => voice.phase === 'impact' && voice.kind === 'triangle');
 
   if (plan.voices.some(voice => voice.creature === 'phoenix'))

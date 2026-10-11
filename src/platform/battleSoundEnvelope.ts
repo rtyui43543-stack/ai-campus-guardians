@@ -9,13 +9,21 @@ export interface BattleEnvelopePoint {
 /** Shared with acoustic acceptance renders so their envelopes match gameplay. */
 export function battleVoiceEnvelope(voice: Pick<BattleSoundVoice, 'gain' | 'duration' | 'envelope'>,
   at = 0): BattleEnvelopePoint[] {
+  if (voice.envelope === 'accelerate') return [
+    { method: 'setValueAtTime', value: .0001, time: at },
+    { method: 'exponentialRampToValueAtTime', value: voice.gain, time: at + voice.duration * .82 },
+    { method: 'exponentialRampToValueAtTime', value: .0001, time: at + voice.duration },
+  ];
   const attack = voice.envelope === 'swell' ? voice.duration * .32
-    : voice.envelope === 'punch' ? Math.min(.004, voice.duration * .1) : Math.min(.012, voice.duration * .15);
+    : voice.envelope === 'strike' ? Math.min(.002, voice.duration * .06)
+      : voice.envelope === 'punch' ? Math.min(.004, voice.duration * .1) : Math.min(.012, voice.duration * .15);
   const points: BattleEnvelopePoint[] = [
     { method: 'setValueAtTime', value: 0, time: at },
     { method: 'linearRampToValueAtTime', value: voice.gain, time: at + attack },
   ];
-  if (voice.envelope === 'punch') {
+  if (voice.envelope === 'strike') {
+    points.push({ method: 'setValueAtTime', value: voice.gain, time: at + Math.min(.022, voice.duration * .22) });
+  } else if (voice.envelope === 'punch') {
     points.push({ method: 'setValueAtTime', value: voice.gain, time: at + Math.min(.065, voice.duration * .3) });
   } else if (voice.envelope === 'gust') {
     [.58, .92, .63, .85, .43].forEach((level, i) => points.push({ method: 'linearRampToValueAtTime',

@@ -23,7 +23,7 @@ export interface BattleSoundVoice {
   resonance?: number;
   /** A voice is synthesized from a glottal source and moving formants, not a tone. */
   creature?: 'phoenix' | 'dragon';
-  envelope?: 'sustain' | 'swell' | 'gust' | 'punch';
+  envelope?: 'sustain' | 'swell' | 'gust' | 'punch' | 'strike' | 'accelerate';
   panTo?: number;
   layer?: string;
 }

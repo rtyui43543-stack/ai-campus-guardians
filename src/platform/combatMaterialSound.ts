@@ -3,18 +3,23 @@ import type { BattleSoundVoice } from './battleSoundDesign';
 /** Damage contact gets the extra headroom; anticipation and travel stay quieter. */
 export const DAMAGE_IMPACT_GAIN = 1.85;
 
-/** A compact slam/crack/aftershock survives sample replacement on small speakers.
- * All three parts describe one contact, rather than adding another damage event. */
+/** Accelerate into a sharp crack, then a chesty slam 14 ms later. The low recoil
+ * finishes in 180 ms instead of smearing the contact into a long rumble. */
 export function buildDamageContact(pan: number, enhanced: boolean, reducedMotion: boolean): BattleSoundVoice[] {
   const speed = reducedMotion ? 6 : 1;
   const strength = DAMAGE_IMPACT_GAIN * (reducedMotion ? .8 : 1) * (enhanced ? 1.12 : 1);
   const voices: BattleSoundVoice[] = [
-    { phase: 'impact', kind: 'triangle', layer: 'hit-slam', at: .9, duration: .21,
-      from: 285, to: 105, gain: .075, pan, envelope: 'punch' },
-    { phase: 'impact', kind: 'noise', layer: 'hit-crack', at: .912, duration: .095,
-      from: 2300, to: 780, gain: .075, pan, filter: 'bandpass', resonance: .75, envelope: 'punch' },
-    { phase: 'impact', kind: 'sine', layer: 'hit-aftershock', at: .985, duration: .32,
-      from: 145, to: 55, gain: .085, pan: pan * .55, envelope: 'punch' },
+    { phase: 'launch', kind: 'noise', layer: 'hit-rush', at: .79, duration: .105,
+      from: 900, to: 4300, gain: .072, pan: -pan, panTo: pan,
+      filter: 'bandpass', resonance: .8, envelope: 'accelerate' },
+    { phase: 'impact', kind: 'noise', layer: 'hit-crack', at: .9, duration: .048,
+      from: 3100, to: 1400, gain: .115, pan, filter: 'bandpass', resonance: .75, envelope: 'strike' },
+    { phase: 'impact', kind: 'triangle', layer: 'hit-slam', at: .914, duration: .13,
+      from: 390, to: 105, gain: .135, pan, envelope: 'strike' },
+    { phase: 'impact', kind: 'noise', layer: 'hit-grit', at: .927, duration: .079,
+      from: 1750, to: 650, gain: .09, pan, filter: 'bandpass', resonance: .8, envelope: 'strike' },
+    { phase: 'impact', kind: 'sine', layer: 'hit-aftershock', at: .943, duration: .135,
+      from: 150, to: 65, gain: .08, pan: pan * .55, envelope: 'strike' },
   ];
   return voices.map(voice => ({ ...voice, at: voice.at / speed, duration: voice.duration / speed,
     gain: voice.gain * strength }));

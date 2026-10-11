@@ -242,7 +242,7 @@ class MockNode {
   connect = vi.fn(); disconnect = vi.fn();
   gain = new MockParam(); frequency = new MockParam(); Q = new MockParam(); pan = new MockParam();
   threshold = new MockParam(); knee = new MockParam(); ratio = new MockParam(); attack = new MockParam(); release = new MockParam();
-  type = ''; buffer: unknown; loop = false;
+  type = ''; buffer: unknown; loop = false; curve: Float32Array | null = null; oversample = 'none';
   onended: (() => void) | null = null;
   start = vi.fn(); stop = vi.fn();
 }
@@ -259,6 +259,7 @@ class MockContext {
   node() { const node = new MockNode(); this.nodes.push(node); return node; }
   createGain() { return this.node(); }
   createDynamicsCompressor() { return this.node(); }
+  createWaveShaper() { return this.node(); }
   createStereoPanner() { return this.node(); }
   createBiquadFilter() { return this.node(); }
   createOscillator() { const node = this.node(); this.sources.push(node); return node; }
@@ -328,13 +329,21 @@ describe('battle Web Audio scheduling and cancellation', () => {
           const speed = reduced ? 6 : 1;
           expect(limiter.attack.setValueAtTime).toHaveBeenCalledWith(.001, 10 + .885 / speed);
           expect(lift.gain.setValueAtTime).toHaveBeenCalledWith(1, 10 + .885 / speed);
-          expect(lift.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1.10, 10 + .899 / speed);
+          expect(lift.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1.44, 10 + .899 / speed);
+          expect(lift.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1, 10 + 1.14 / speed);
+          const headroom = context.nodes[before + 3], ceiling = context.nodes[before + 4];
+          expect(lift.connect).toHaveBeenCalledWith(headroom);
+          expect(headroom.connect).toHaveBeenCalledWith(ceiling);
+          expect(ceiling.connect).toHaveBeenCalledWith(context.destination);
+          expect(ceiling.curve!.every(value => Number.isFinite(value) && Math.abs(value) < .98)).toBe(true);
+          expect(ceiling.curve!.every((value, i, curve) => i === 0 || value >= curve[i - 1])).toBe(true);
+          expect(ceiling.curve![2048]).toBe(0);
         } else {
           expect(limiter.attack.setValueAtTime).not.toHaveBeenCalled();
           expect(lift.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
+          expect(lift.connect).toHaveBeenCalledWith(context.destination);
         }
         expect(limiter.connect).toHaveBeenCalledWith(lift);
-        expect(lift.connect).toHaveBeenCalledWith(context.destination);
       }
     }
   });
