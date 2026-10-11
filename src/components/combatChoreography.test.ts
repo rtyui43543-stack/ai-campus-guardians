@@ -1,7 +1,37 @@
 import { describe, expect, it } from 'vitest';
-import { contactReaction, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
+import { contactImpactMotion, contactReaction, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
 
 describe('visible combat contact', () => {
+  it('kicks at the shared 900 ms contact, changes direction for each target and settles within 360 ms', () => {
+    expect(contactImpactMotion(.899).active).toBe(false);
+    const enemy = contactImpactMotion(.9, { target: 'enemy', damage: 25 });
+    const hero = contactImpactMotion(.9, { target: 'hero', damage: 12 });
+    expect(enemy.active).toBe(true); expect(enemy.x).toBe(8);
+    expect(hero.x).toBe(-enemy.x);
+    expect(contactImpactMotion(.97).recoil).toBe(1);
+    expect(contactImpactMotion(1.02).recoil).toBe(1);
+    const recovery = contactImpactMotion(1.27);
+    expect(recovery.active).toBe(false); expect(recovery.x).toBe(0); expect(recovery.scale).toBe(1);
+    expect(recovery.recoil).toBeGreaterThan(0);
+    for (const time of [1.38, 2.05, 3, Infinity, NaN]) {
+      expect(contactImpactMotion(time)).toEqual({ active: false, x: 0, y: 0, scale: 1, recoil: 0, tremor: 0 });
+    }
+  });
+  it('keeps enhanced hits within a short bounded shake and does not move a blocked or missed target', () => {
+    for (let time = .9; time < 1.5; time += .005) {
+      const motion = contactImpactMotion(time, { enhanced: true });
+      expect(Math.abs(motion.x)).toBeLessThanOrEqual(12);
+      expect(Math.abs(motion.y)).toBeLessThanOrEqual(5.76);
+      expect(motion.scale).toBeGreaterThanOrEqual(1); expect(motion.scale).toBeLessThanOrEqual(1.028);
+      expect(motion.recoil).toBeGreaterThanOrEqual(0); expect(motion.recoil).toBeLessThanOrEqual(1);
+      for (const options of [{ reducedMotion: true }, { missed: true, damage: 12 }, { blocked: true }, { blocked: true, damage: 0 }, { damage: 0 }]) {
+        expect(contactImpactMotion(time, options)).toEqual({ active: false, x: 0, y: 0, scale: 1, recoil: 0, tremor: 0 });
+      }
+    }
+    // A partial shield that still lets real damage through remains a visible hit.
+    expect(contactImpactMotion(.97, { blocked: true, damage: 6 }).active).toBe(true);
+    expect(contactImpactMotion(.9, { enhanced: true }).x).toBeGreaterThan(contactImpactMotion(.9).x);
+  });
   it('holds the reaction after contact and recovers before the cast finishes', () => {
     expect(contactReaction(.899)).toBe(0);
     expect(contactReaction(.97)).toBe(1);

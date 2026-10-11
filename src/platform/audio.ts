@@ -227,8 +227,8 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     activeBattleStop = cleanup;
     void resumed.catch(cleanup);
 
-    const mix = current.createGain(), limiter = current.createDynamicsCompressor();
-    nodes.push(mix, limiter);
+    const mix = current.createGain(), limiter = current.createDynamicsCompressor(), contactLift = current.createGain();
+    nodes.push(mix, limiter, contactLift);
     // Normal casts need a clear strike above the quarter-volume music bed.
     // Chapter pursuits retain ordinary contact weight and add their own second
     // material strike. Hero summons and both final bosses retain their old mix.
@@ -236,7 +236,17 @@ export function battleSound(success: boolean, theme: number, reducedMotion = fal
     mix.gain.value = plan.enhanced && !chapterPursuit ? .85 : 1.20;
     limiter.threshold.value = -10; limiter.knee.value = 8; limiter.ratio.value = 8;
     limiter.attack.value = .003; limiter.release.value = .14;
-    mix.connect(limiter); limiter.connect(current.destination);
+    // Leave the charge/call and avoided hits untouched. Catch the stronger
+    // damage transient quickly, then use measured output headroom so even an
+    // already-compressed explosion sample becomes noticeably louder.
+    contactLift.gain.value = 1;
+    if (plan.voices.some(voice => voice.layer === 'hit-slam')) {
+      const speed = reducedMotion ? 6 : 1;
+      limiter.attack.setValueAtTime(.001, start + .885 / speed);
+      contactLift.gain.setValueAtTime(1, start + .885 / speed);
+      contactLift.gain.linearRampToValueAtTime(1.10, start + .899 / speed);
+    }
+    mix.connect(limiter); limiter.connect(contactLift); contactLift.connect(current.destination);
     const trackSource = (source: AudioScheduledSourceNode, end: number) => {
       sources.add(source);
       source.onended = () => {

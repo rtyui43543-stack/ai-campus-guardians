@@ -11,6 +11,53 @@ export interface ActorFramingBounds {
 type FramedActor = { root: THREE.Group; updateVisual?: (state: HeroSpriteState) => void };
 const clamp = (value: number, low: number, high: number) => Math.max(low, Math.min(high, value));
 
+/** Project the current rendered pose, including final-boss head energy. */
+export function projectActorFrame(actor: FramedActor, camera: THREE.Camera): THREE.Box3 {
+  actor.root.updateMatrixWorld(true);
+  const bounds = new THREE.Box3();
+  const sprite = actor.root.getObjectByName('cover-identity-hero-atlas') as THREE.Mesh | undefined;
+  const collect = (object: THREE.Object3D) => {
+    if (!(object instanceof THREE.Mesh) || !object.visible) return;
+    const positions = object.geometry.getAttribute('position');
+    for (let i = 0; i < positions.count; i++) bounds.expandByPoint(new THREE.Vector3()
+      .fromBufferAttribute(positions, i).applyMatrix4(object.matrixWorld).project(camera));
+  };
+  if (sprite) {
+    // The atlas can still be loading; reserve its known silhouette from frame 1.
+    const visible = sprite.visible; sprite.visible = true; collect(sprite); sprite.visible = visible;
+    const headEnergy = actor.root.getObjectByName('final-nine-head-charge');
+    if (headEnergy?.visible) headEnergy.traverseVisible(collect);
+  } else actor.root.traverseVisible(collect);
+  return bounds;
+}
+
+export function impactSurfaceScale(width: number, height: number, motion: { x: number; y: number; scale: number }) {
+  return Math.max(motion.scale, 1 + 2 * Math.max(Math.abs(motion.x) / Math.max(1, width), Math.abs(motion.y) / Math.max(1, height)));
+}
+
+/** Keep an actual struck silhouette in its slot after the camera's CSS kick.
+ * Recoil is clamped only while it happens; idle size, lanes and layout never change. */
+export function containActorImpact(actor: FramedActor, camera: THREE.OrthographicCamera,
+  frame: { width: number; height: number; top: number; bottom: number }, motion: { x: number; y: number; scale: number }) {
+  const bounds = projectActorFrame(actor, camera);
+  if (bounds.isEmpty()) return new THREE.Vector3();
+  const { width, height } = frame, scale = impactSurfaceScale(width, height, motion);
+  const padding = width <= 600 ? 14 : 24;
+  const left = width / 2 + bounds.min.x * width / 2 * scale + motion.x;
+  const right = width / 2 + bounds.max.x * width / 2 * scale + motion.x;
+  const top = height / 2 - bounds.max.y * height / 2 * scale + motion.y;
+  const bottom = height / 2 - bounds.min.y * height / 2 * scale + motion.y;
+  const fitOffset = (low: number, high: number, start: number, end: number) =>
+    high - low > end - start ? (start + end - low - high) / 2 : Math.max(start - low, Math.min(0, end - high));
+  const dx = fitOffset(left, right, padding, width - padding);
+  const dy = fitOffset(top, bottom, frame.top, frame.bottom);
+  const offset = new THREE.Vector3(dx / scale / width * (camera.right - camera.left),
+    -dy / scale / height * (camera.top - camera.bottom), 0)
+    .applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
+  actor.root.position.add(offset); actor.root.updateMatrixWorld(true);
+  return offset;
+}
+
 /** Measure the rendered atlas planes, including every attack pose's cape/tail. */
 export function measureActorFraming(actor: FramedActor, camera: THREE.Camera): ActorFramingBounds {
   const inverseView = camera.getWorldQuaternion(new THREE.Quaternion()).invert();

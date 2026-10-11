@@ -111,6 +111,7 @@ export function Arena({ chapter, spellChapter = chapter, finalBoss = false, mode
     scene.current?.play(cue.startsWith('success') || ultimate, ultimate, attackOutcome?.blocked ?? cue.startsWith('blocked-'), spellChapter, {
       critical: attackOutcome?.critical ?? cue.startsWith('enemy-ultimate-'),
       missed: attackOutcome?.missed ?? cue.startsWith('miss-'),
+      damage: attackOutcome?.damage,
     });
     // The outcome belongs to this cue; changing a timer or clearing feedback must
     // not restart a cast or its one-time HP feedback.

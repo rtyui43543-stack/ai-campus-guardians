@@ -4,11 +4,11 @@ import { createCoverHero } from './coverHero';
 import { createCoverHeroSprite } from './coverHeroSprite';
 import { createMissionEnemy } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
-import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming, reframeLaunchOrigin } from './arenaFraming';
+import { containActorImpact, createBattleFrameTracker, fitBattleActors, fitStoryActors, impactSurfaceScale, measureActorFraming, reframeLaunchOrigin } from './arenaFraming';
 import type { Mode } from '../domain/types';
 import { poseMage, type MageArticulation } from './magePose';
 import { createThemedSpellEffects, heroSpellColors, NORMAL_CAST_SECONDS, ULTIMATE_CAST_SECONDS } from './themedSpellEffects';
-import { contactReaction, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
+import { contactImpactMotion, enemyAttackName, enemyCastMotion, enemyPursuitPhase } from './combatChoreography';
 export type CinemaShot = 'wide' | 'hero' | 'enemy' | 'resolve';
 
 type Surface = THREE.MeshStandardMaterial | THREE.MeshBasicMaterial;
@@ -195,13 +195,16 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   let cinemaShot = initialShot, cinemaPaused = false, cinemaTime = 0, cinemaStarted = 0;
   let shotFromX = 0, shotFromZoom = 1, shotFromY = 1.55, shotLookX = 0, shotLookY = 1.55;
   let framingY = 1.8, framingElevation = 4.7;
+  let impactFrame = { width: 1, height: 1, top: 0, bottom: 1 };
   let raf = 0, lastFrame = 0, heroX = -2.8, enemyX = 2.8, modelScale = 1;
   let enemyHp = 100, playerHp = 100, requestedEnemyHp = 100, requestedPlayerHp = 100;
-  let attack: { started: number; success: boolean; ultimate: boolean; blocked: boolean; critical: boolean; missed: boolean; launchOrigin?: THREE.Vector3 } | null = null;
+  let attack: { started: number; success: boolean; ultimate: boolean; blocked: boolean; critical: boolean; missed: boolean; damage?: number; launchOrigin?: THREE.Vector3 } | null = null;
   let reportedPhase = '';
   const start = new THREE.Vector3(), target = new THREE.Vector3(), moving = new THREE.Vector3();
   const baseHeroRotation = .13, baseEnemyRotation = -.15;
   const stage = host.closest<HTMLElement>('.duel-stage');
+  const arenaSurface = host.closest<HTMLElement>('.arena3d');
+  const motionPreference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   const combatWindow = host.closest<HTMLElement>('.duel-combat-window');
   const bubble = stage?.querySelector<HTMLElement>('.duel-bubble');
   const answers = stage?.querySelector<HTMLElement>('.duel-answer-area');
@@ -214,8 +217,23 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
   const emitPhase = (phase: string) => {
     if (phase !== reportedPhase && alive) { reportedPhase = phase; onPhase(phase); }
   };
+  const applyImpactMotion = (motion: ReturnType<typeof contactImpactMotion>, hitTarget = 'none') => {
+    // This surface owns the courtyard and actors only. The reading panel, HP bars
+    // and answer targets are siblings and must remain completely still.
+    if (motion.active) {
+      const fillScale = impactSurfaceScale(impactFrame.width, impactFrame.height, motion);
+      arenaSurface?.style.setProperty('transform',
+        `translate3d(${motion.x.toFixed(2)}px,${motion.y.toFixed(2)}px,0) scale(${fillScale.toFixed(4)})`);
+    } else if (arenaSurface?.style.transform) arenaSurface.style.removeProperty('transform');
+    const status = { impactShake: motion.active ? 'active' : 'idle', impactTarget: motion.active ? hitTarget : 'none',
+      impactOffset: `${motion.x.toFixed(2)},${motion.y.toFixed(2)}` };
+    for (const [key, value] of Object.entries(status)) {
+      if (renderer.domElement.dataset[key] !== value) renderer.domElement.dataset[key] = value;
+    }
+  };
   const resize = () => {
     const width = Math.max(1, host.clientWidth), height = Math.max(1, host.clientHeight);
+    impactFrame = { width, height, top: 0, bottom: height };
     if (bubble && !bubble.classList.contains('is-resolving')) {
       // Feedback adds children to the hidden question. Keep its visible slot so
       // a tablet grid gives the battle pane the same height throughout the cast.
@@ -246,6 +264,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
         resolving: Boolean(bubble?.classList.contains('is-resolving')),
         viewport: dedicated ? 'dedicated' : undefined });
       const fitted = fitBattleActors(layout, heroFraming, enemyFraming);
+      impactFrame = { width, height, top: fitted.top, bottom: fitted.bottom };
       modelScale = fitted.scale; lookY = fitted.lookY; elevation = fitted.elevation;
       heroX = fitted.heroX; enemyX = fitted.enemyX; camera.zoom = 1;
       if (projectionSurface) {
@@ -319,6 +338,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     lastFrame = now; dirty = false;
     if (!cinemaPaused) cinemaTime += frameDelta;
     const effectClock = attack ? (now - attack.started) / 1000 * (reducedMotion ? 6 : 1) : Infinity;
+    const impactMotion = contactImpactMotion(effectClock, {
+      reducedMotion: reducedMotion || motionPreference?.matches,
+      missed: attack?.missed, blocked: attack?.blocked, damage: attack?.damage,
+      enhanced: attack?.ultimate || attack?.critical, target: attack?.success ? 'enemy' : 'hero',
+    });
+    applyImpactMotion(impactMotion, attack?.success ? 'enemy' : 'hero');
     // Health restoration has no animation delay. A new hit takes effect at contact;
     // a restored save without an active cast shows its health on this first frame.
     if (!attack || effectClock >= .9) {
@@ -417,9 +442,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       const windup = Math.sin(clamp(t / .34) * Math.PI / 2);
       const recovery = 1 - ease((t - 1.2) / .45);
       const cast = ease((t - .25) / .28) * recovery;
-      const recoil = attack.ultimate
-        ? Math.sin(clamp((t - .9) / .45) * Math.PI) * (1 - clamp((t - .9) / .55))
-        : contactReaction(t, reducedMotion, attack.missed);
+      const recoil = impactMotion.recoil;
       if (!reducedMotion) {
         if (success) {
           hero.root.position.y -= Math.sin(clamp(t / .44) * Math.PI) * .09;
@@ -431,9 +454,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           hero.leftLeg.rotation.z = .16 * cast;
           hero.rightLeg.rotation.z = -.18 * cast;
           hero.glow.emissiveIntensity = .65 + 1.2 * (1 - clamp((t - .48) / .6));
-          enemy.root.position.x += recoil * .48 * modelScale;
-          enemy.root.rotation.z += recoil * -.23;
-          if (!attack.ultimate) enemy.root.scale.y *= 1 - recoil * .045;
+          enemy.root.position.x += (recoil * (attack.ultimate ? .68 : .58) + impactMotion.tremor * .065) * modelScale;
+          enemy.root.position.y += recoil * .07 * modelScale;
+          enemy.root.rotation.z += recoil * -.27;
+          enemy.root.scale.y *= 1 - recoil * .075;
           enemy.head.rotation.z -= recoil * .19;
           enemy.leftArm.rotation.z -= recoil * .55;
           enemy.rightArm.rotation.z += recoil * .55;
@@ -456,9 +480,10 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
           // A mirror dodge visibly steps aside, without a false hit reaction.
           if (attack.missed) hero.root.position.x -= ease((t - .35) / .4) * (1 - ease((t - 1.2) / .55)) * .30 * modelScale;
           else {
-            hero.root.position.x -= recoil * (attack.blocked ? .035 : attack.critical ? .29 : .19) * modelScale;
-            hero.root.rotation.z += recoil * (attack.blocked ? .025 : attack.critical ? .15 : .10);
-            hero.root.scale.y *= 1 - recoil * (attack.blocked ? .008 : .035);
+            hero.root.position.x -= (recoil * (attack.critical ? .62 : .52) + impactMotion.tremor * .065) * modelScale;
+            hero.root.position.y += recoil * .065 * modelScale;
+            hero.root.rotation.z += recoil * (attack.critical ? .24 : .20);
+            hero.root.scale.y *= 1 - recoil * .07;
           }
           poseMage(hero, { defense: cast });
         }
@@ -467,6 +492,16 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       hero.updateVisual({ camera, attackTime: t, success, reducedMotion,
         pose: !success && (attack.missed || attack.blocked) ? 'idle' : undefined });
       enemy.updateVisual?.({ camera, attackTime: t, success, reducedMotion });
+      if (impactMotion.active || impactMotion.recoil > 0) {
+        // Hurt poses are wider than idle poses. Constrain the real projected
+        // silhouettes after recoil AND the CSS camera kick, without shrinking
+        // the whole battle's actors to reserve space for one short impact.
+        containActorImpact(hero, camera, impactFrame, impactMotion);
+        containActorImpact(enemy, camera, impactFrame, impactMotion);
+        hero.updateVisual({ camera, attackTime: t, success, reducedMotion,
+          pose: !success && (attack.missed || attack.blocked) ? 'idle' : undefined });
+        enemy.updateVisual?.({ camera, attackTime: t, success, reducedMotion });
+      }
       scene.updateMatrixWorld(true);
       if (success) {
         hero.tip.getWorldPosition(start);
@@ -511,12 +546,12 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
       cinemaShot = next; cinemaStarted = cinemaTime - (cinemaPaused ? 1.3 : 0); resize();
     },
     pauseCinema(paused: boolean) { if (cinemaPaused !== paused) lastFrame = performance.now(); cinemaPaused = paused; dirty = true; },
-    play(success: boolean, ultimate = false, blocked = false, spellChapter = theme, outcome: { critical?: boolean; missed?: boolean } = {}) {
+    play(success: boolean, ultimate = false, blocked = false, spellChapter = theme, outcome: { critical?: boolean; missed?: boolean; damage?: number } = {}) {
       if (!alive) return;
       const nextTheme = clamp(spellChapter, 1, 6);
       if (nextTheme !== effectTheme) { scene.remove(effects.root); effects.dispose(); effectTheme = nextTheme; effects = createThemedSpellEffects(scene, effectTheme, mode, finalBoss); }
       attack = { started: performance.now(), success, ultimate: success && ultimate, blocked: !success && blocked,
-        critical: !success && !!outcome.critical, missed: !success && !!outcome.missed }; dirty = true;
+        critical: !success && !!outcome.critical, missed: !success && !!outcome.missed, damage: outcome.damage }; dirty = true;
     },
     health(enemy: number, player: number) {
       requestedEnemyHp = enemy; requestedPlayerHp = player;
@@ -527,6 +562,7 @@ export function createArenaScene(host: HTMLDivElement, chapter: number, reducedM
     dispose() {
       if (!alive) return;
       alive = false; cancelAnimationFrame(raf); observer.disconnect();
+      arenaSurface?.style.removeProperty('transform');
       document.removeEventListener('visibilitychange', visibility);
       renderer.domElement.removeEventListener('webglcontextlost', contextLost);
       renderer.domElement.removeEventListener('webglcontextrestored', contextRestored);

@@ -119,7 +119,7 @@ describe('short spell material identity and headroom', () => {
     }
   });
 
-  it('bounds the louder floating-point input mix before the unchanged compressor', () => {
+  it('bounds the floating-point contact mix before limiting the stronger transients', () => {
     // Unity-source sums conservatively assume every waveform is in phase. Web
     // Audio mixes in floating point before compression; actual output clipping
     // is checked separately by OfflineAudioContext rendering of the real PCM.
@@ -135,7 +135,7 @@ describe('short spell material identity and headroom', () => {
         const finalCritical = plan.enhanced && ['chaos-grimoire', 'spectral-dragon'].includes(plan.profile);
         peak = Math.max(peak, gain * (finalCritical ? .85 : 1.20));
       }
-      expect(peak, `${plan.profile} ${plan.enhanced ? 'critical' : 'normal'} ${ready ? 'samples' : 'fallback'}`).toBeLessThan(1.4);
+      expect(peak, `${plan.profile} ${plan.enhanced ? 'critical' : 'normal'} ${ready ? 'samples' : 'fallback'}`).toBeLessThan(3);
     }
   });
 
@@ -144,13 +144,13 @@ describe('short spell material identity and headroom', () => {
       for (const reduced of [false, true]) {
         const plan = buildBattleSound(success, theme, reduced, { mode });
         const amplitude = reduced ? .8 : 1, speed = reduced ? 6 : 1;
-        expect(plan.voices.find(v => v.layer === 'impact-body')!.gain).toBeCloseTo(.18 * 1.3 * amplitude);
-        expect(plan.voices.find(v => v.layer === 'contact-snap')!.gain).toBeCloseTo(.075 * 1.3 * amplitude);
+        expect(plan.voices.find(v => v.layer === 'impact-body')!.gain).toBeCloseTo(.18 * 1.85 * amplitude);
+        expect(plan.voices.find(v => v.layer === 'contact-snap')!.gain).toBeCloseTo(.075 * 1.85 * amplitude);
         expect(plan.voices.find(v => v.phase === 'charge')!.gain).toBeCloseTo(.035 * amplitude);
         const knock = plan.voices.find(v => v.layer === 'contact-knock')!;
         expect(knock).toMatchObject({ phase: 'impact', kind: 'triangle', at: .9 / speed, duration: .16 / speed, envelope: 'punch' });
         expect(knock.from).toBeCloseTo(520); expect(knock.to).toBeCloseTo(175);
-        expect(knock.gain).toBeCloseTo(.06 * 1.3 * amplitude);
+        expect(knock.gain).toBeCloseTo(.06 * 1.85 * amplitude);
         expect(plan.voices.filter(v => v.phase === 'launch').every(v => v.gain <= .105 * amplitude + 1e-9)).toBe(true);
       }
     }
@@ -161,14 +161,32 @@ describe('short spell material identity and headroom', () => {
       const amplitude = reduced ? .8 : 1;
       const fire = buildBattleSound(true, 5, reduced, { mode, ultimate: true });
       const cues = buildBattleSampleCues(fire, reduced);
-      expect(cues.find(cue => cue.id === 'explosion')!.gain).toBeCloseTo(.52 * 1.3 * amplitude);
+      expect(cues.find(cue => cue.id === 'explosion')!.gain).toBeCloseTo(.52 * 1.85 * amplitude);
       expect(cues.find(cue => cue.id === 'phoenix-call')!.gain).toBeCloseTo(.46 * amplitude);
       expect(cues.find(cue => cue.id === 'fire-feather')!.gain).toBeCloseTo(.36 * amplitude);
       const knock = fire.voices.find(v => v.layer === 'contact-knock')!;
       expect(knock.at).toBe(fire.impact); expect(cues.some(cue => cue.replaces(knock))).toBe(false);
       const enemy = buildBattleSound(false, 1, reduced, { mode });
       const impact = buildBattleSampleCues(enemy, reduced).find(cue => cue.id === 'heavy-impact')!;
-      expect(impact.gain).toBeCloseTo((mode === 'starter' ? .35 : .31) * 1.3 * amplitude);
+      expect(impact.gain).toBeCloseTo((mode === 'starter' ? .35 : .31) * 1.85 * amplitude);
+    }
+  });
+
+  it('keeps one compact slam, crack and aftershock audible with samples, while dodge and shield never play damage accents', () => {
+    for (const mode of modes) for (const reduced of [false, true]) for (const success of [false, true]) {
+      for (const enhanced of [false, true]) for (let theme = 1; theme <= 6; theme++) {
+        const plan = buildBattleSound(success, theme, reduced, { mode, ultimate: enhanced, enemyCritical: enhanced });
+        const cues = buildBattleSampleCues(plan, reduced);
+        const accents = plan.voices.filter(voice => voice.layer?.startsWith('hit-'));
+        expect(accents.map(voice => voice.layer)).toEqual(['hit-slam', 'hit-crack', 'hit-aftershock']);
+        expect(accents.every(voice => voice.at >= plan.impact && voice.at + voice.duration < plan.duration)).toBe(true);
+        expect(accents.every(voice => !cues.some(cue => cue.replaces(voice)))).toBe(true);
+        expect(accents.every(voice => Math.sign(voice.pan) === (success ? 1 : -1))).toBe(true);
+        for (const outcome of [{ missed: true }, { blocked: true }]) {
+          const avoided = buildBattleSound(false, theme, reduced, { mode, enemyCritical: enhanced, ...outcome });
+          expect(avoided.voices.some(voice => voice.layer?.startsWith('hit-'))).toBe(false);
+        }
+      }
     }
   });
 });

@@ -10,11 +10,12 @@ import { persistLearningReset, resetLearningProgress } from './domain/progressRe
 import { describeAttempt, latestRun, scoreSession } from './domain/scoring';
 import { battleSound, getNarrationState, loadAudio, playAudio, preloadBattleSamples, stopAllAudio, stopAudio, stopBattleSound, subscribeNarration } from './platform/audio';
 import { MUSIC_EVENT, startMusic, stopMusic, type MusicTrack } from './platform/music';
+import { scheduleBattleHaptics } from './platform/battleHaptics';
 import { useOffline } from './platform/offline';
 import { appAssetUrl } from './platform/urls';
 import { screenFromHash, type Screen } from './platform/navigation';
 import { forgetOpening, hasSeenOpening, rememberOpening } from './platform/openingStory';
-import { Arena, GuardianPortrait } from './components/Arena';
+import { Arena, ATTACK_IMPACT_MS, GuardianPortrait } from './components/Arena';
 import { battleExplanation, battleVisibility } from './components/battleVisibility';
 import { MusicCredits } from './components/MusicCredits';
 import { downloadFile, GrowthPanel, OfflinePanel } from './components/Panels';
@@ -90,6 +91,16 @@ export function App() {
     return () => { document.removeEventListener('visibilitychange', updateVisibility); window.removeEventListener('pagehide', saveOnExit); stopAudio(); };
   }, []);
   useEffect(() => () => { if (attackTimer.current) clearTimeout(attackTimer.current); }, []);
+  useEffect(() => {
+    if (screen !== 'battle' || !animating || !cue) return;
+    return scheduleBattleHaptics({
+      damage: Number(cue.split('-').at(-1)),
+      target: cue.startsWith('success-') || cue.startsWith('ultimate-') ? 'enemy' : 'hero',
+      enhanced: cue.startsWith('ultimate-') || cue.startsWith('enemy-ultimate-'),
+      reducedMotion: Boolean(progress?.settings.reducedMotion),
+      impactMs: ATTACK_IMPACT_MS,
+    });
+  }, [screen, animating, cue, progress?.settings.reducedMotion]);
   useEffect(() => {
     if (screen !== 'battle' || !progress?.settings.sound) { stopBattleSound(); return; }
     const stopHidden = () => { if (document.hidden) stopBattleSound(); };
@@ -426,7 +437,7 @@ export function App() {
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (battleLevel.finalBoss ? 'final-duel-stage ' : '') + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <div className="duel-combat-window">
           <Arena chapter={battleLevel.chapterId} spellChapter={spellChapter} finalBoss={battleLevel.finalBoss} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion}
-            combatStatus={active} attackOutcome={{damage:active.lastEnemyDamage,critical:active.lastEnemyCritical,blocked:!active.success && !!active.preventedDamage && active.lastEnemyDamage === 0 && !active.lastEnemyMissed,missed:active.lastEnemyMissed,burnDamage:visibleBurnDamage,healing:active.lastTurnHealing}} />
+            combatStatus={active} attackOutcome={{damage:Number(cue.split('-').at(-1)),critical:active.lastEnemyCritical,blocked:!active.success && !!active.preventedDamage && active.lastEnemyDamage === 0 && !active.lastEnemyMissed,missed:active.lastEnemyMissed,burnDamage:visibleBurnDamage,healing:active.lastTurnHealing}} />
           {animating && active.ultimateUsed && <UltimateCinematic key={'cinematic-' + cue} chapter={spellChapter} mode={battleLevel.mode} cue={cue} reducedMotion={progress.settings.reducedMotion} />}
           {animating && !active.success && active.lastEnemyCritical && <EnemyCinematic key={'enemy-cinematic-' + cue} mode={battleLevel.mode} chapter={battleLevel.chapterId} finalBoss={!!battleLevel.finalBoss} cue={cue} reducedMotion={progress.settings.reducedMotion} blocked={!!active.preventedDamage && active.lastEnemyDamage === 0 && !active.lastEnemyMissed} missed={!!active.lastEnemyMissed} />}
           <div className="duel-character-label hero-label"><span>校園魔法師</span><b>小羽</b></div><div className="duel-character-label enemy-label"><span>{battleChapter.shortTitle}</span><b>{battleBoss.name}</b></div>

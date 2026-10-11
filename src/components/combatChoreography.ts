@@ -13,6 +13,34 @@ export function contactReaction(time: number, reducedMotion = false, missed = fa
   return 1 - smooth((age - .13) / .34);
 }
 
+export interface ContactImpactOptions {
+  reducedMotion?: boolean;
+  missed?: boolean;
+  blocked?: boolean;
+  damage?: number;
+  enhanced?: boolean;
+  target?: 'hero' | 'enemy';
+}
+
+/** A contact-only camera kick. Values are pixels, independent of device pixel ratio. */
+export function contactImpactMotion(time: number, options: ContactImpactOptions = {}) {
+  const still = { active: false, x: 0, y: 0, scale: 1, recoil: 0, tremor: 0 };
+  const prevented = options.missed || (options.damage === undefined ? options.blocked : options.damage <= 0);
+  const age = time - SPELL_IMPACT_SECONDS;
+  if (options.reducedMotion || prevented || !Number.isFinite(time) || age < 0 || age >= .47) return still;
+  const recoil = contactReaction(time);
+  // Hold the struck pose for 75 ms, then settle back; the game/audio clock keeps running.
+  // The camera settles earlier than the actor and never accumulates an offset.
+  const envelope = age < .36 ? (1 - age / .36) ** 2 : 0;
+  const direction = options.target === 'hero' ? -1 : 1;
+  const amplitude = options.enhanced ? 12 : 8;
+  const wave = .72 * Math.cos(age * Math.PI * 2 * 27) + .28 * Math.cos(age * Math.PI * 2 * 43);
+  return { active: envelope > 0, x: direction * amplitude * wave * envelope,
+    y: amplitude * .48 * Math.sin(age * Math.PI * 2 * 33) * envelope,
+    scale: 1 + .028 * envelope, recoil,
+    tremor: Math.sin(age * Math.PI * 2 * 29) * envelope };
+}
+
 /** In-place anticipation and a small forward commitment fit the existing envelope. */
 export function enemyCastMotion(time: number, reducedMotion = false) {
   if (reducedMotion || !Number.isFinite(time) || time < 0 || time >= NORMAL_CAST_SECONDS) return { anticipation: 0, release: 0 };

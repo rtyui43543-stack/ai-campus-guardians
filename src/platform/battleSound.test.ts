@@ -30,7 +30,7 @@ describe('battle sound choreography', () => {
           expect(Math.min(...sound.voices.filter(v => v.phase === 'launch').map(v => v.at))).toBeCloseTo(.48 / speed);
           expect(Math.min(...sound.voices.filter(v => v.phase === 'impact').map(v => v.at))).toBeCloseTo(.9 / speed);
           expect(sound.voices.every(v => v.at + v.duration + .006 < sound.duration)).toBe(true);
-          expect(sound.voices.every(v => v.gain > 0 && v.gain < .4 && v.from > 0 && v.to > 0)).toBe(true);
+          expect(sound.voices.every(v => v.gain > 0 && v.gain < .6 && v.from > 0 && v.to > 0)).toBe(true);
         }
       }
     }
@@ -312,6 +312,30 @@ describe('battle Web Audio scheduling and cancellation', () => {
       const finalStart = context.nodes.length;
       battleSound(success, 4, false, { ultimate: true, enemyCritical: true, finalBoss: true });
       expect(context.nodes[finalStart].gain.value).toBe(.85);
+    }
+  });
+
+  it('adds output lift only at damaging contact and leaves misses, blocks and anticipation unchanged', async () => {
+    const { battleSound } = await import('./audio');
+    for (const reduced of [false, true]) for (const success of [false, true]) {
+      for (const outcome of [{}, { missed: true }, { blocked: true }]) {
+        const before = MockContext.instances[0]?.nodes.length ?? 0;
+        battleSound(success, 5, reduced, { ultimate: success, enemyCritical: !success, ...outcome });
+        const context = MockContext.instances[0], limiter = context.nodes[before + 1], lift = context.nodes[before + 2];
+        expect(lift.gain.value).toBe(1);
+        expect(limiter.attack.value).toBe(.003);
+        if (success || !('missed' in outcome || 'blocked' in outcome)) {
+          const speed = reduced ? 6 : 1;
+          expect(limiter.attack.setValueAtTime).toHaveBeenCalledWith(.001, 10 + .885 / speed);
+          expect(lift.gain.setValueAtTime).toHaveBeenCalledWith(1, 10 + .885 / speed);
+          expect(lift.gain.linearRampToValueAtTime).toHaveBeenCalledWith(1.10, 10 + .899 / speed);
+        } else {
+          expect(limiter.attack.setValueAtTime).not.toHaveBeenCalled();
+          expect(lift.gain.linearRampToValueAtTime).not.toHaveBeenCalled();
+        }
+        expect(limiter.connect).toHaveBeenCalledWith(lift);
+        expect(lift.connect).toHaveBeenCalledWith(context.destination);
+      }
     }
   });
 

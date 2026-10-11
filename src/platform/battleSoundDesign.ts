@@ -1,5 +1,5 @@
 import type { Mode } from '../domain/types';
-import { buildMaterialAttack, DAMAGE_IMPACT_GAIN } from './combatMaterialSound';
+import { buildMaterialAttack, buildDamageContact, DAMAGE_IMPACT_GAIN } from './combatMaterialSound';
 
 export interface BattleSoundOptions {
   mode?: Mode;
@@ -154,6 +154,7 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
       510 * ratio, 490 * ratio, .07 / (1 + i * .5), targetPan, 'sine'));
     air('impact', .9, .1, 1600, 650, .1, targetPan);
   } else {
+    voices.push(...buildDamageContact(targetPan, enhanced, reducedMotion));
     const force = enhanced ? 1.22 : 1;
     note('impact', .9, enhanced ? .42 : .27, fundamental * 1.6, 45, .23 * force, targetPan, 'triangle');
     air('impact', .9, profile.texture === 'flame' ? .47 : .19, profile.air, profile.air * .28,

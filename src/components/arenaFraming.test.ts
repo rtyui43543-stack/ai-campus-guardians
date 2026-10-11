@@ -3,8 +3,8 @@ import * as THREE from 'three';
 import { createCoverHeroSprite, type HeroSpritePose } from './coverHeroSprite';
 import { createMissionEnemy, type MissionEnemyRig } from './advancedBossSprite';
 import { createFinalBossSprite } from './finalBossSprite';
-import { contactReaction, enemyCastMotion } from './combatChoreography';
-import { createBattleFrameTracker, fitBattleActors, fitStoryActors, measureActorFraming, reframeLaunchOrigin,
+import { contactImpactMotion, enemyCastMotion } from './combatChoreography';
+import { containActorImpact, createBattleFrameTracker, fitBattleActors, fitStoryActors, impactSurfaceScale, measureActorFraming, reframeLaunchOrigin,
   type BattleFrameLayout } from './arenaFraming';
 
 function view(width = 8, height = 8.8, y = 1.8, elevation = 4.7, x = 0, zoom = 1) {
@@ -29,6 +29,16 @@ function projectedBounds(actor: { root: THREE.Group }, camera: THREE.Camera) {
     const headEnergy = actor.root.getObjectByName('final-nine-head-charge');
     if (headEnergy?.visible) headEnergy.traverse(collect);
   } else actor.root.traverse(collect);
+  return bounds;
+}
+
+function projectedImpactBounds(actor: { root: THREE.Group }, camera: THREE.Camera, width: number, height: number,
+  motion: ReturnType<typeof contactImpactMotion>) {
+  const bounds = projectedBounds(actor, camera), scale = impactSurfaceScale(width, height, motion);
+  bounds.min.x = bounds.min.x * scale + motion.x * 2 / width;
+  bounds.max.x = bounds.max.x * scale + motion.x * 2 / width;
+  bounds.min.y = bounds.min.y * scale - motion.y * 2 / height;
+  bounds.max.y = bounds.max.y * scale - motion.y * 2 / height;
   return bounds;
 }
 
@@ -62,6 +72,62 @@ const desktop6040Cases = [
 const dedicated6040Cases = [...landscape6040Cases, ...desktop6040Cases];
 
 describe('battle framing', () => {
+  it.each([{ width: 328, height: 320 }, { width: 589, height: 683 }, { width: 1114, height: 958 }])(
+    'contains the stronger struck poses plus CSS camera shake at $width × $height without shrinking idle actors', ({ width, height }) => {
+    const hero = createCoverHeroSprite({ loadTexture: () => undefined });
+    for (const mode of ['starter', 'advanced'] as const) for (let chapter = 1; chapter <= 6; chapter++) {
+      const enemy = createMissionEnemy(chapter, mode, false, { loadTexture: () => undefined });
+      hero.root.scale.setScalar(1); hero.root.position.set(0, 0, 0); hero.root.rotation.set(0, .13, 0);
+      enemy.root.rotation.set(0, -.15, 0);
+      const layout = { width, height, viewport: 'dedicated' as const, questionBottom: 0, answersTop: height, resolving: false };
+      const heroFrame = measureActorFraming(hero, view()), enemyFrame = measureActorFraming(enemy, view());
+      const fit = fitBattleActors(layout, heroFrame, enemyFrame);
+      const camera = view(fit.viewWidth, fit.viewHeight, fit.lookY, fit.elevation);
+      for (const success of [true, false]) for (const enhanced of [true, false]) for (const time of [.9, .916, .97, 1.02, 1.2, 1.27]) {
+        const impact = contactImpactMotion(time, { damage: 25, enhanced, target: success ? 'enemy' : 'hero' });
+        hero.root.position.set(fit.heroX, 0, 0); enemy.root.position.set(fit.enemyX, 0, 0);
+        hero.root.scale.setScalar(fit.scale); enemy.root.scale.setScalar(fit.scale);
+        hero.root.rotation.set(0, .13, 0); enemy.root.rotation.set(0, -.15, 0);
+        enemy.head.rotation.set(0, 0, 0);
+        enemy.leftArm.rotation.set(0, 0, -.26); enemy.rightArm.rotation.set(0, 0, .26);
+        const recoil = impact.recoil;
+        if (success) {
+          enemy.root.position.x += (recoil * (enhanced ? .68 : .58) + impact.tremor * .065) * fit.scale;
+          enemy.root.position.y += recoil * .07 * fit.scale;
+          enemy.root.rotation.z -= recoil * .27; enemy.root.scale.y *= 1 - recoil * .075;
+          enemy.head.rotation.z = -recoil * .19;
+          enemy.leftArm.rotation.z = -.26 - recoil * .55; enemy.rightArm.rotation.z = .26 + recoil * .55;
+        } else {
+          hero.root.position.x -= (recoil * (enhanced ? .62 : .52) + impact.tremor * .065) * fit.scale;
+          hero.root.position.y += recoil * .065 * fit.scale;
+          hero.root.rotation.z += recoil * (enhanced ? .24 : .20); hero.root.scale.y *= 1 - recoil * .07;
+        }
+        hero.updateVisual({ camera, attackTime: time, success, reducedMotion: false });
+        enemy.updateVisual?.({ camera, attackTime: time, success, reducedMotion: false });
+        // These three formerly passing layouts actually cropped the hurt hero.
+        if (mode === 'starter' && chapter === 1 && !success && enhanced && time === .97) {
+          expect((projectedImpactBounds(hero, camera, width, height, impact).min.x + 1) * width / 2).toBeLessThan(0);
+        }
+        containActorImpact(hero, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+        containActorImpact(enemy, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+        hero.updateVisual({ camera, attackTime: time, success, reducedMotion: false });
+        enemy.updateVisual?.({ camera, attackTime: time, success, reducedMotion: false });
+        for (const [name, actor] of [['hero', hero], ['enemy', enemy]] as const) {
+          const bounds = projectedImpactBounds(actor, camera, width, height, impact);
+          const label = `${mode}/${chapter}/${success}/${enhanced}/${time}/${name}`;
+          expect((bounds.min.x + 1) * width / 2, label).toBeGreaterThanOrEqual((width <= 600 ? 14 : 24) - .01);
+          expect((bounds.max.x + 1) * width / 2, label).toBeLessThanOrEqual(width - (width <= 600 ? 14 : 24) + .01);
+          expect((1 - bounds.max.y) * height / 2, label).toBeGreaterThanOrEqual(fit.top - .01);
+          expect((1 - bounds.min.y) * height / 2, label).toBeLessThanOrEqual(fit.bottom + .01);
+        }
+        expect(hero.root.scale.x).toBe(fit.scale); expect(enemy.root.scale.x).toBe(fit.scale);
+      }
+      expect(fitBattleActors(layout, heroFrame, enemyFrame)).toEqual(fit);
+      enemy.disposeVisual?.();
+    }
+    hero.disposeVisual();
+  });
+
   it.each(dedicated6040Cases)('keeps both actors readable and apart in a 60/40 landscape pane at $width × $height',
     ({ width, height, minHeroHeight, minEnemyHeight }) => {
     const hero = createCoverHeroSprite({ loadTexture: () => undefined });
@@ -165,19 +231,22 @@ describe('battle framing', () => {
       const cameraPosition = camera.position.clone(), cameraRotation = camera.quaternion.clone(), projection = camera.projectionMatrix.clone();
       const smooth = (value: number) => { const p = Math.max(0, Math.min(1, value)); return p * p * (3 - 2 * p); };
       const clamp = (value: number) => Math.max(0, Math.min(1, value));
-      const outcomes = ['hero-hit', 'enemy-hit', 'enemy-critical', 'enemy-missed', 'enemy-blocked'] as const;
+      const outcomes = ['hero-hit', 'hero-ultimate', 'enemy-hit', 'enemy-critical', 'enemy-missed', 'enemy-blocked'] as const;
       // Sample release, maximum anticipation, contact hold and recovery instead of
       // forcing reduced-motion poses, which bypasses the visible atlas deformation.
       const times = [0, .2, .34, .42, .48, .52, .64, .8, .9, .97, 1.03, 1.2, 1.45, 1.7, 2.05];
       let sawCompression = false, sawForwardLean = false;
       for (const reducedMotion of [false, true]) for (const outcome of outcomes) for (const time of times) {
-        const success = outcome === 'hero-hit', critical = outcome === 'enemy-critical';
+        const success = outcome === 'hero-hit' || outcome === 'hero-ultimate', critical = outcome === 'enemy-critical';
+        const ultimate = outcome === 'hero-ultimate';
         const missed = outcome === 'enemy-missed', blocked = outcome === 'enemy-blocked';
         hero.root.position.set(fit.heroX, 0, 0); enemy.root.position.set(fit.enemyX, 0, 0);
         hero.root.scale.setScalar(fit.scale); enemy.root.scale.setScalar(fit.scale);
         hero.root.rotation.set(0, .13, 0); enemy.root.rotation.set(0, -.15, 0);
         const cast = smooth((time - .25) / .28) * (1 - smooth((time - 1.2) / .45));
-        const recoil = contactReaction(time, reducedMotion, missed);
+        const impact = contactImpactMotion(time, { reducedMotion, missed, blocked,
+          enhanced: ultimate || critical, damage: missed || blocked ? 0 : 25, target: success ? 'enemy' : 'hero' });
+        const recoil = impact.recoil;
         // Match the existing bounded arena root movement while exercising the
         // actual sprite updater below; the bounds assertion remains independent.
         if (!reducedMotion) {
@@ -186,9 +255,10 @@ describe('battle framing', () => {
             hero.root.position.y -= Math.sin(clamp(time / .44) * Math.PI) * .09;
             hero.root.rotation.z = -.055 * Math.sin(clamp(time / .34) * Math.PI / 2) * (1 - cast);
             hero.root.rotation.y += .30 * cast;
-            enemy.root.position.x += recoil * .48 * fit.scale;
-            enemy.root.rotation.z -= recoil * .23;
-            enemy.root.scale.y *= 1 - recoil * .045;
+            enemy.root.position.x += (recoil * (ultimate ? .68 : .58) + impact.tremor * .065) * fit.scale;
+            enemy.root.position.y += recoil * .07 * fit.scale;
+            enemy.root.rotation.z -= recoil * .27;
+            enemy.root.scale.y *= 1 - recoil * .075;
           } else {
             const motion = enemyCastMotion(time);
             enemy.root.position.x += (.10 * motion.anticipation - .10 * motion.release) * fit.scale;
@@ -200,19 +270,26 @@ describe('battle framing', () => {
             }
             if (missed) hero.root.position.x -= smooth((time - .35) / .4) * (1 - smooth((time - 1.2) / .55)) * .30 * fit.scale;
             else {
-              hero.root.position.x -= recoil * (blocked ? .035 : critical ? .29 : .19) * fit.scale;
-              hero.root.rotation.z += recoil * (blocked ? .025 : critical ? .15 : .10);
-              hero.root.scale.y *= 1 - recoil * (blocked ? .008 : .035);
+              hero.root.position.x -= (recoil * (critical ? .62 : .52) + impact.tremor * .065) * fit.scale;
+              hero.root.position.y += recoil * .065 * fit.scale;
+              hero.root.rotation.z += recoil * (critical ? .24 : .20);
+              hero.root.scale.y *= 1 - recoil * .07;
             }
           }
         }
         hero.updateVisual({ camera, attackTime: time, success, reducedMotion, pose: missed || blocked ? 'idle' : undefined });
         enemy.updateVisual({ camera, attackTime: time, success, reducedMotion });
+        if (impact.active || impact.recoil > 0) {
+          containActorImpact(hero, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+          containActorImpact(enemy, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+          hero.updateVisual({ camera, attackTime: time, success, reducedMotion, pose: missed || blocked ? 'idle' : undefined });
+          enemy.updateVisual({ camera, attackTime: time, success, reducedMotion });
+        }
         const shape = enemy.root.userData.castShape as { compression: number; lean: number; headEnergy: number };
         if (reducedMotion || success) expect(shape).toEqual({ compression: 0, lean: 0, headEnergy: 0 });
         else { sawCompression ||= shape.compression > .04; sawForwardLean ||= shape.lean < -.06; }
         for (const [name, actor] of [['hero', hero], ['enemy', enemy]] as const) {
-          const bounds = projectedBounds(actor, camera), label = `${mode}/${outcome}/${time}/${reducedMotion}/${name}`;
+          const bounds = projectedImpactBounds(actor, camera, width, height, impact), label = `${mode}/${outcome}/${time}/${reducedMotion}/${name}`;
           expect((bounds.min.x + 1) * width / 2, label).toBeGreaterThanOrEqual(width <= 600 ? 13 : 23);
           expect((bounds.max.x + 1) * width / 2, label).toBeLessThanOrEqual(width - (width <= 600 ? 13 : 23));
           expect((1 - bounds.max.y) * height / 2, label).toBeGreaterThanOrEqual(fit.top - 3);
@@ -293,16 +370,23 @@ describe('battle framing', () => {
         expect((visibleHero.max.y - visibleHero.min.y) * height / 2).toBeGreaterThanOrEqual(width === 450 ? 160 : 110);
       }
       for (const pose of poses) for (const reaction of [false, true]) {
+        const impact = contactImpactMotion(reaction ? .97 : 0, { enhanced: true, damage: 25 });
         hero.root.scale.setScalar(fit.scale); enemy.root.scale.setScalar(fit.scale * (reaction ? 1.09 : 1));
-        hero.root.position.set(fit.heroX - (reaction ? .30 * fit.scale : 0), -.09, 0);
-        enemy.root.position.set(fit.enemyX + (reaction ? .48 * fit.scale : 0), reaction ? .16 * fit.scale : 0, 0);
+        hero.root.position.set(fit.heroX - (impact.recoil * .62 + impact.tremor * .065) * fit.scale, -.09, 0);
+        enemy.root.position.set(fit.enemyX + (impact.recoil * .68 + impact.tremor * .065) * fit.scale, reaction ? .16 * fit.scale : 0, 0);
         enemy.leftArm.rotation.z = reaction ? -2.36 : -.26;
         enemy.rightArm.rotation.z = reaction ? .96 : .26;
         enemy.head.rotation.z = reaction ? -.21 : 0;
         hero.updateVisual({ camera, pose, reducedMotion: true });
         enemy.updateVisual?.({ camera, pose, reducedMotion: true });
+        if (reaction) {
+          containActorImpact(hero, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+          containActorImpact(enemy, camera, { width, height, top: fit.top, bottom: fit.bottom }, impact);
+          hero.updateVisual({ camera, pose, reducedMotion: true });
+          enemy.updateVisual?.({ camera, pose, reducedMotion: true });
+        }
         for (const actor of [hero, enemy]) {
-          const bounds = projectedBounds(actor, camera);
+          const bounds = projectedImpactBounds(actor, camera, width, height, impact);
           expect((bounds.min.x + 1) * width / 2).toBeGreaterThanOrEqual(width <= 600 ? 13 : 23);
           expect((bounds.max.x + 1) * width / 2).toBeLessThanOrEqual(width - (width <= 600 ? 13 : 23));
           expect((1 - bounds.max.y) * height / 2).toBeGreaterThanOrEqual(fit.top - 3);

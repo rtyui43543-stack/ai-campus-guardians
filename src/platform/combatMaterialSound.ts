@@ -1,7 +1,24 @@
 import type { BattleSoundVoice } from './battleSoundDesign';
 
-/** Contact alone is 30% louder; anticipation, travel and ambience keep their mix. */
-export const DAMAGE_IMPACT_GAIN = 1.3;
+/** Damage contact gets the extra headroom; anticipation and travel stay quieter. */
+export const DAMAGE_IMPACT_GAIN = 1.85;
+
+/** A compact slam/crack/aftershock survives sample replacement on small speakers.
+ * All three parts describe one contact, rather than adding another damage event. */
+export function buildDamageContact(pan: number, enhanced: boolean, reducedMotion: boolean): BattleSoundVoice[] {
+  const speed = reducedMotion ? 6 : 1;
+  const strength = DAMAGE_IMPACT_GAIN * (reducedMotion ? .8 : 1) * (enhanced ? 1.12 : 1);
+  const voices: BattleSoundVoice[] = [
+    { phase: 'impact', kind: 'triangle', layer: 'hit-slam', at: .9, duration: .21,
+      from: 285, to: 105, gain: .075, pan, envelope: 'punch' },
+    { phase: 'impact', kind: 'noise', layer: 'hit-crack', at: .912, duration: .095,
+      from: 2300, to: 780, gain: .075, pan, filter: 'bandpass', resonance: .75, envelope: 'punch' },
+    { phase: 'impact', kind: 'sine', layer: 'hit-aftershock', at: .985, duration: .32,
+      from: 145, to: 55, gain: .085, pan: pan * .55, envelope: 'punch' },
+  ];
+  return voices.map(voice => ({ ...voice, at: voice.at / speed, duration: voice.duration / speed,
+    gain: voice.gain * strength }));
+}
 
 interface MaterialAttack {
   id: string;
@@ -99,6 +116,8 @@ export function buildMaterialAttack(settings: MaterialAttack): BattleSoundVoice[
     noise('impact', 'shield-scrape', .9, .10, 1600, 650, .08, target);
     return voices;
   }
+
+  voices.push(...buildDamageContact(target, enhanced, reducedMotion));
 
   // The body has useful midrange before its bass decay, so a small speaker does
   // not have to reproduce a 40 Hz thump to communicate the weight of the hit.
