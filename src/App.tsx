@@ -21,7 +21,7 @@ import { downloadFile, GrowthPanel, OfflinePanel } from './components/Panels';
 import { ResetProgress } from './components/ResetProgress';
 import { LevelScore, ScoreSummary } from './components/Scoring';
 import { StoryCinematic } from './components/StoryCinematic';
-import { getOpeningStory, getLevelStory } from './content/stories';
+import { getOpeningStory } from './content/stories';
 import { GameCover } from './components/GameCover';
 import { AssociationBrand } from './components/AssociationBrand';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
@@ -49,7 +49,6 @@ export function App() {
   const [progress, setProgress] = useState<Progress | null>(null);
   const [loadError, setLoadError] = useState('');
   const [screen, setScreen] = useState<Screen>('cover');
-  const [intro, setIntro] = useState<Level | null>(null);
   const [opening, setOpening] = useState(false);
   const [result, setResult] = useState<CompletedRun | null>(null);
   const [notice, setNotice] = useState('');
@@ -140,7 +139,7 @@ export function App() {
       stopAudio(); stopMusic();
       if (attackTimer.current) clearTimeout(attackTimer.current);
       attackTimer.current = null; attackLock.current = false;
-      setAnimating(false); setCue(''); setIntro(null); setOpening(false); setMobileMenu(false); setRulesOpen(false); setExplanationOpen(false);
+      setAnimating(false); setCue(''); setOpening(false); setMobileMenu(false); setRulesOpen(false); setExplanationOpen(false);
       if (next === 'results') setResult(previous);
       setScreen(next);
     };
@@ -154,16 +153,16 @@ export function App() {
     }
   }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step]);
   useEffect(() => {
-    const level = screen === 'battle' && progress?.active ? getLevel(progress.active.levelId) : intro;
+    const level = screen === 'battle' && progress?.active ? getLevel(progress.active.levelId) : null;
     if (level) void preloadUltimateSummons(level);
-  }, [screen, progress?.active?.levelId, intro]);
+  }, [screen, progress?.active?.levelId]);
   useEffect(() => {
     const updateMusic = (event: Event) => setMusicPlaying((event as CustomEvent<{ playing: boolean }>).detail.playing);
     window.addEventListener(MUSIC_EVENT, updateMusic);
     return () => { window.removeEventListener(MUSIC_EVENT, updateMusic); stopMusic(); stopAudio(); };
   }, []);
   useEffect(() => {
-    if (progress?.settings.music && screen !== 'cover' && !opening && !intro && !resetting) {
+    if (progress?.settings.music && screen !== 'cover' && !opening && !resetting) {
       const track = screen === 'battle' ? finalBattleTrack(progress.active ? getLevel(progress.active.levelId) : null) : 'adventure';
       if (track === 'adventure' || (progress.active && (!isDefeated(progress.active) || animating))) {
         // Restored pages can require a gesture; the visible music control can retry playback.
@@ -172,7 +171,7 @@ export function App() {
       }
     }
     stopMusic(); setMusicPlaying(false);
-  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating, opening, intro, resetting]);
+  }, [screen, progress?.settings.music, progress?.active?.step, Boolean(progress?.active), animating, opening, resetting]);
   useEffect(() => {
     if (!notice) return;
     const timeout = setTimeout(() => setNotice(''), 6500);
@@ -191,7 +190,7 @@ export function App() {
     if (attackTimer.current) clearTimeout(attackTimer.current);
     attackTimer.current = null; attackLock.current = false;
     setAnimating(false); setCue(''); setVisibleBurnDamage(0); setMusicPlaying(false);
-    setOpening(false); setIntro(null); setRulesOpen(false); setExplanationOpen(false); setChooseSpellOpen(false);
+    setOpening(false); setRulesOpen(false); setExplanationOpen(false); setChooseSpellOpen(false);
     setHintOpen(false); setMobileMenu(false); setResult(null); setNotice('');
     const fresh = resetLearningProgress(previous);
     // Replace the live ref before awaiting storage so pagehide or a queued timer cannot save the old battle again.
@@ -215,7 +214,7 @@ export function App() {
     flushClockRef.current(); clockRef.current.pause(performance.now()); setRulesOpen(false); setExplanationOpen(false); setChooseSpellOpen(false);
     if (progressRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。'));
     stopAudio();
-    setIntro(null); setOpening(false);
+    setOpening(false);
     if (next === 'battle') { setCue(''); if (progress?.settings.music && progress.active && !isDefeated(progress.active)) playMusicFromGesture(); }
     else {
       if (allowMusic && next !== 'cover' && progress?.settings.music) playMusicFromGesture('adventure');
@@ -240,10 +239,9 @@ export function App() {
     }
     void playAudio(key).catch(error => setNotice(error instanceof Error ? error.message : '朗讀播放失敗，請重試。'));
   };
-  const openLevelStory = (level: Level) => { if (level.finalBoss && progress && !finalBossUnlocked(progress, level.mode)) { setNotice('先解鎖這個組別的六張必殺收藏卡，就能挑戰最終魔王！'); return; } stopAudio(); stopMusic(); setOpening(false); setIntro(level); };
-  const openOpening = () => { stopAudio(); stopMusic(); setIntro(null); setOpening(true); };
+  const openOpening = () => { stopAudio(); stopMusic(); setOpening(true); };
   const enterAdventure = () => { const showOpening = !hasSeenOpening(); navigate('map', !showOpening); if (showOpening) setOpening(true); };
-  const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); setIntro(null); if (progress?.settings.music && screen !== 'cover') playMusicFromGesture(screen === 'battle' ? finalBattleTrack(progress.active ? getLevel(progress.active.levelId) : null) : 'adventure'); };
+  const closeStory = () => { stopAudio(); if (opening) rememberOpening(); setOpening(false); if (progress?.settings.music && screen !== 'cover') playMusicFromGesture(screen === 'battle' ? finalBattleTrack(progress.active ? getLevel(progress.active.levelId) : null) : 'adventure'); };
   const changeSession = (next: Session, persist = true) => {
     const snapshot = progressRef.current;
     if (!snapshot) return;
@@ -264,7 +262,7 @@ export function App() {
       setCue(kind + '-' + Date.now() + '-' + Math.round(damage));
       attackLock.current = true; setAnimating(true);
       if (attackTimer.current) clearTimeout(attackTimer.current);
-      attackTimer.current = setTimeout(() => { attackLock.current = false; setAnimating(false); }, snapshot.settings.reducedMotion ? next.ultimateUsed ? 550 : 450 : next.ultimateUsed ? 3000 : 2050);
+      attackTimer.current = setTimeout(() => { attackTimer.current = null; attackLock.current = false; setAnimating(false); }, snapshot.settings.reducedMotion ? next.ultimateUsed ? 550 : 450 : next.ultimateUsed ? 3000 : 2050);
       if (snapshot.settings.sound && !document.hidden) battleSound(next.success, next.ultimateUsed ? next.ultimateId ?? getLevel(next.levelId).chapterId : questionById.get(next.questionIds[next.index])?.themeId ?? getLevel(next.levelId).chapterId, snapshot.settings.reducedMotion, {
         mode: next.mode, ultimate: next.ultimateUsed, finalBoss: getLevel(next.levelId).finalBoss,
         enemyCritical: next.lastEnemyCritical, missed: next.lastEnemyMissed, blocked: !next.success && !next.lastEnemyMissed && next.preventedDamage && damage === 0,
@@ -272,15 +270,18 @@ export function App() {
     }
   };
   const start = (level: Level) => {
-    if (!progress) return;
+    const snapshot = progressRef.current;
+    if (!snapshot || resettingRef.current) return;
+    if (level.finalBoss && !finalBossUnlocked(snapshot, level.mode)) { setNotice('先解鎖這個組別的六張必殺收藏卡，就能挑戰最終魔王！'); return; }
     clockRef.current.pause(performance.now()); setRulesOpen(false); setExplanationOpen(false);
-    const session = level.finalBoss ? startFinalBossSession(progress, level.mode) : startSession(level.id, level.mode);
+    const session = level.finalBoss ? startFinalBossSession(snapshot, level.mode) : startSession(level.id, level.mode);
     stopAudio(); stopBattleSound();
     attackLock.current = false; setAnimating(false);
     if (attackTimer.current) clearTimeout(attackTimer.current);
+    attackTimer.current = null;
     setCue('');
-    if (progress.settings.music) playMusicFromGesture(finalBattleTrack(level));
-    commit(applySession({ ...progress, settings: { ...progress.settings, mode: level.mode } }, session)); setResult(null); setIntro(null); setOpening(false);
+    if (snapshot.settings.music) playMusicFromGesture(finalBattleTrack(level));
+    commit(applySession({ ...snapshot, settings: { ...snapshot.settings, mode: level.mode } }, session)); setResult(null); setOpening(false);
     setHintOpen(false); setChooseSpellOpen(false); setScreen('battle');
   };
   const restart = () => {
@@ -295,7 +296,7 @@ export function App() {
   };
   const nextQuestion = () => {
     const snapshot = progressRef.current;
-    if (!snapshot?.active || attackLock.current) return;
+    if (!snapshot?.active || attackLock.current || snapshot.active.step !== 'feedback' || (!snapshot.active.success && !snapshot.active.timedOut)) return;
     const active = snapshot.active;
     const next = advanceSession(active);
     stopAudio(); stopBattleSound(); setHintOpen(false); setExplanationOpen(false);
@@ -327,7 +328,7 @@ export function App() {
   useEffect(() => {
     const session = progressRef.current?.active;
     const selecting = session && getLevel(session.levelId).finalBoss && session.energy === 3 && (!session.preparedUltimateId || chooseSpellOpen);
-    const eligible = screen === 'battle' && session?.timed && session.step === 'action' && !rulesOpen && !explanationOpen && !narrationActive && !selecting && !intro && !opening;
+    const eligible = screen === 'battle' && session?.timed && session.step === 'action' && !rulesOpen && !explanationOpen && !narrationActive && !selecting && !opening;
     if (!eligible) { clockRef.current.pause(performance.now()); return; }
     const updateVisibility = () => {
       if (document.hidden) { flushClockRef.current(); clockRef.current.pause(performance.now()); if (progressRef.current && !resettingRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); }
@@ -341,13 +342,16 @@ export function App() {
     const saveOnExit = () => { flushClockRef.current(); if (progressRef.current && !resettingRef.current) void saveProgress(progressRef.current).catch(() => setNotice('存檔尚未成功，請先匯出備份。')); };
     window.addEventListener('pagehide', saveOnExit);
     return () => { clearInterval(timer); clockRef.current.pause(performance.now()); document.removeEventListener('visibilitychange', updateVisibility); window.removeEventListener('pagehide', saveOnExit); };
-  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timed, progress?.active?.energy, progress?.active?.preparedUltimateId, chooseSpellOpen, rulesOpen, explanationOpen, narrationActive, narration.requestId, Boolean(intro), opening]);
+  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timed, progress?.active?.energy, progress?.active?.preparedUltimateId, chooseSpellOpen, rulesOpen, explanationOpen, narrationActive, narration.requestId, opening]);
   useEffect(() => {
     const session = progressRef.current?.active;
-    if (screen !== 'battle' || animating || !session?.timedOut || session.step !== 'feedback') return;
-    const timer = setTimeout(() => advanceRef.current(), 350);
+    if (screen !== 'battle' || animating || clockPaused || document.hidden || session?.step !== 'feedback') return;
+    // A real answer advances as soon as its cast ends. Demonstrations retain their reading pause.
+    if (session.success && !session.demoUsed) { advanceRef.current(); return; }
+    if (!session.timedOut) return;
+    const timer = setTimeout(() => { if (!document.hidden) advanceRef.current(); }, 350);
     return () => clearTimeout(timer);
-  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.timedOut, animating]);
+  }, [screen, progress?.active?.id, progress?.active?.index, progress?.active?.step, progress?.active?.success, progress?.active?.demoUsed, progress?.active?.timedOut, animating, clockPaused]);
   if (!progress) return <main className="loading-shell">
     <img src={appAssetUrl('/icon-192.png')} alt="" width="80" height="80" />
     <h1>AI 校園守護隊</h1>
@@ -357,7 +361,7 @@ export function App() {
   const nextLevel = selectedLevels.find(l => !progress.completed.includes(l.id)) ?? selectedLevels[0];
   const active = progress.active;
   const battleText = battleVisibility(active, animating);
-  const explanation = battleExplanation(active, animating);
+  const explanation = active?.success && !active.demoUsed ? null : battleExplanation(active, animating);
   const closeExplanation = () => { stopAudio(); setExplanationOpen(false); };
   const openExplanation = (read = false, opener: HTMLButtonElement) => {
     if (!explanation) return;
@@ -418,7 +422,7 @@ export function App() {
       <main id="main-content" className={'main-content ' + (screen === 'battle' ? 'battle-main' : '')} ref={topRef} tabIndex={-1}>
         {screen !== 'battle' && <AssociationBrand placement="main" />}
         {screen === 'map' && <MapScreen progress={progress} nextLevel={nextLevel} mastery={mastery}
-          onLevel={openLevelStory} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} />}
+          onLevel={start} onResume={() => active && isDefeated(active) ? restart() : navigate('battle')} onStory={openOpening} />}
         {screen === 'battle' && active && battleLevel && battleChapter && battleBoss && question && presented && <section className={'duel-stage ' + (battleLevel.finalBoss ? 'final-duel-stage ' : '') + (progress.settings.reducedMotion ? 'duel-static' : '')} aria-label="3D 答題對戰" data-testid="duel-stage">
           <div className="duel-combat-window">
           <Arena chapter={battleLevel.chapterId} spellChapter={spellChapter} finalBoss={battleLevel.finalBoss} mode={battleLevel.mode} guardian={battleBoss.name} enemyHp={health.enemyHp} playerHp={health.playerHp} cue={cue} reducedMotion={progress.settings.reducedMotion}
@@ -450,7 +454,7 @@ export function App() {
             }}><span className="duel-letter">{String.fromCharCode(65 + i)}</span><span>{choice.text}</span>{active.lightningHintChoices?.includes(i) && <Zap className="lightning-clue-icon" size={23} aria-label="雷霆線索" />}{active.selected === i && active.success && <Check size={19} />}</button>)}</div>
             <div className="duel-controls"><button className="duel-hint-button" disabled={animating || active.step !== 'action'} onClick={() => { flushClock(); const current = progressRef.current?.active; if (current?.step !== 'action') return; setHintOpen(!hintOpen); if (!hintOpen) changeSession(useHint(current)); }}><Lightbulb size={17} />{hintOpen ? '收起提示' : '給我提示'}</button>
               <span className="duel-score" aria-label="目前闖關得分"><span className="duel-answer-score"><span>答題</span><b>{scoreSession(active).score}</b><span>／100</span></span>{scoreSession(active).bonusScore > 0 && <small className="duel-bonus-score"><span>必殺＋{scoreSession(active).bonusScore}</span><span className="duel-total-score"><span>總分</span><b>{scoreSession(active).totalScore}</b></span></small>}</span>
-              {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.timedOut ? <span className="duel-select-note" role="status">攻擊後，自動進下一題</span> : active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 || battleLevel.finalBoss && health.enemyHp === 0 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(retryQuestion(current)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(demonstrate(current)); }}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
+              {isDefeated(active) ? <span className="duel-select-note">{animating ? '血量歸零…' : '重新挑戰，再試一次'}</span> : active.step === 'feedback' ? active.timedOut || active.success && !active.demoUsed ? <span className="duel-select-note" role="status">{active.index === active.questionIds.length - 1 || battleLevel.finalBoss && health.enemyHp === 0 ? '攻擊後，自動完成挑戰' : '攻擊後，自動進下一題'}</span> : active.success ? <button className="duel-next" disabled={animating} onClick={nextQuestion}>{animating ? '出招中…' : active.index === active.questionIds.length - 1 || battleLevel.finalBoss && health.enemyHp === 0 ? '完成挑戰' : '下一題'}<ArrowRight size={18} /></button> : <div className="duel-retry-actions"><button className="duel-next" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(retryQuestion(current)); }}>再試一次<RotateCcw size={17} /></button>{active.retries >= 2 && <button className="duel-hint-button" disabled={animating} onClick={() => { const current = progressRef.current?.active; if (current) changeSession(demonstrate(current)); }}>伙伴示範</button>}</div> : <span className="duel-select-note">點答案，立即出招</span>}
             </div>
             {explanation && <div className="duel-explanation-actions" aria-label="本題即時解說">
               <button type="button" className="duel-explanation-open" onClick={event => openExplanation(false, event.currentTarget)}><Lightbulb size={17} />{active.demoUsed ? '看示範解說' : active.success ? '為什麼答對？' : '為什麼不對？'}</button>
@@ -461,9 +465,9 @@ export function App() {
           {isDefeated(active) && !animating && <DefeatDialog level={battleLevel} hint={question.hint} onRestart={restart} onHome={() => navigate('cover')} />}
         </section>}
         {screen === 'battle' && !active && <div className="empty-state"><ShieldCheck size={40} /><h1>你的冒險，從這裡開始</h1><button className="button primary" onClick={() => navigate('map')}>前往冒險地圖<ArrowRight size={18} /></button></div>}
-        {screen === 'results' && result && <Results session={result} onLevel={openLevelStory} onMap={() => navigate('map')} />}
-        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
-        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={openLevelStory} onRun={run => { setResult(run); navigate('results'); }} />}
+        {screen === 'results' && result && <Results session={result} onLevel={start} onMap={() => navigate('map')} />}
+        {screen === 'results' && !result && <GrowthPanel progress={progress} onLevel={start} onRun={run => { setResult(run); navigate('results'); }} />}
+        {screen === 'growth' && <GrowthPanel progress={progress} onLevel={start} onRun={run => { setResult(run); navigate('results'); }} />}
         {screen === 'settings' && <><OfflinePanel progress={progress} offline={offline} onUpdate={next => { if (next.settings.music !== progress.settings.music) { if (next.settings.music) playMusicFromGesture('adventure'); else stopMusic(); } commit(next); }} onNotice={setNotice} onMap={() => navigate('map')} />
           <ResetProgress progress={progress} onReset={resetAllProgress} onExportBackup={() => {
             downloadFile('AI校園守護隊-重置前備份-' + new Date().toISOString().slice(0, 10) + '.json', exportBackup(progressRef.current ?? progress), 'application/json');
@@ -476,10 +480,9 @@ export function App() {
     {rulesOpen && <Dialog title="必殺技與計分規則" onClose={() => setRulesOpen(false)}><BattleRules timed={active?.timed === true} finalBoss={battleLevel?.finalBoss === true} questionCount={active?.questionIds.length} /></Dialog>}
     {explanationOpen && explanation && screen === 'battle' && <BattleExplanationDialog title={explanation.title} text={explanation.text}
       opener={explanationOpener.current} reading={narrationActive && narration.key === explanation.audioKey} onRead={() => narrate(explanation.audioKey)} onClose={closeExplanation} />}
-    {pickingSpell && active && !rulesOpen && !intro && <UltimatePicker session={active} onHome={() => navigate('map')} onSelect={id => { const current = progressRef.current?.active; if (current) changeSession(selectUltimate(current, id)); setChooseSpellOpen(false); }} />}
-    {(opening || intro) && <StoryCinematic key={intro?.id ?? 'opening'} level={intro ?? undefined} beats={intro ? getLevelStory(intro.id) : getOpeningStory()} reducedMotion={progress.settings.reducedMotion}
-      onClose={closeStory} onStart={() => { if (intro) start(intro); else { closeStory(); navigate('map'); } }} onNarrate={narrate} onStopNarration={stopAudio}
-      savedLevelTitle={intro && active ? getLevel(active.levelId).title : undefined} onResume={intro && active ? () => { closeStory(); if (isDefeated(active)) restart(); else navigate('battle'); } : undefined} />}
+    {pickingSpell && active && !rulesOpen && <UltimatePicker session={active} onHome={() => navigate('map')} onSelect={id => { const current = progressRef.current?.active; if (current) changeSession(selectUltimate(current, id)); setChooseSpellOpen(false); }} />}
+    {opening && <StoryCinematic beats={getOpeningStory()} reducedMotion={progress.settings.reducedMotion}
+      onClose={closeStory} onStart={() => { closeStory(); navigate('map'); }} onNarrate={narrate} onStopNarration={stopAudio} />}
   </div>;
 }
 

@@ -1,5 +1,8 @@
 import type { BattleSoundVoice } from './battleSoundDesign';
 
+/** Contact alone is 30% louder; anticipation, travel and ambience keep their mix. */
+export const DAMAGE_IMPACT_GAIN = 1.3;
+
 interface MaterialAttack {
   id: string;
   fundamental: number;
@@ -26,7 +29,8 @@ export function buildMaterialAttack(settings: MaterialAttack): BattleSoundVoice[
     detail: Partial<Pick<BattleSoundVoice, 'envelope' | 'filter' | 'resonance' | 'panTo' | 'creature'>> = {}) => {
     voices.push({ phase, kind, layer, at: at / speed, duration: duration / speed,
       from: Math.max(38, from * pitch), to: Math.max(38, to * pitch),
-      gain: gain * (reducedMotion ? .8 : 1), pan, ...detail });
+      gain: gain * (reducedMotion ? .8 : 1)
+        * (phase === 'impact' && !missed && !blocked ? DAMAGE_IMPACT_GAIN : 1), pan, ...detail });
   };
   const tone = (phase: BattleSoundVoice['phase'], layer: string, at: number, duration: number,
     from: number, to: number, gain: number, pan: number, kind: OscillatorType = 'sine',
@@ -102,6 +106,9 @@ export function buildMaterialAttack(settings: MaterialAttack): BattleSoundVoice[
     Math.max(190, fundamental * 1.65) / pitch, 78 / pitch, .18 * hitLevel, target, 'triangle');
   noise('impact', 'impact-air', .9, .15, Math.max(1400, air), 650, .115 * hitLevel, target);
   noise('impact', 'contact-snap', .9, .07, Math.max(2300, air), 1050, .075, target, 'highpass');
+  // Keep a dry midrange knock even when a filtered sample replaces the bass
+  // body. Phone/tablet speakers can reproduce this contact without deep bass.
+  tone('impact', 'contact-knock', .9, .16, 520 / pitch, 175 / pitch, .06, target, 'triangle');
   const tail = (layer: string, at: number, duration: number, from: number, to: number, gain: number,
     filter: BiquadFilterType = 'bandpass', envelope: BattleSoundVoice['envelope'] = 'punch') =>
     noise('tail', layer, at, duration, from, to, gain, target, filter, envelope, 0);

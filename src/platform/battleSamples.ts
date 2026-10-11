@@ -1,4 +1,5 @@
 import type { BattleSoundVoice, buildBattleSound } from './battleSoundDesign';
+import { DAMAGE_IMPACT_GAIN } from './combatMaterialSound';
 
 /** Short, locally bundled excerpts supplied for the visible combat materials. */
 export const battleSampleAssets = {
@@ -41,7 +42,9 @@ export function buildBattleSampleCues(plan: BattlePlan, reducedMotion = false): 
     // The last fade finishes before the arena becomes ready for the next question.
     const length = Math.min(duration / speed, plan.duration - begins - .015);
     if (length > .01) cues.push({ id, at: begins, duration: length, offset,
-      gain: gain * (reducedMotion ? .8 : 1), pan, panTo, replaces, ...(filter ? { filter } : {}) });
+      gain: gain * (reducedMotion ? .8 : 1)
+        * (id === 'heavy-impact' || id === 'explosion' ? DAMAGE_IMPACT_GAIN : 1),
+      pan, panTo, replaces, ...(filter ? { filter } : {}) });
   };
   const launch = (voice: BattleSoundVoice) => voice.phase === 'launch';
   const hasDamage = plan.voices.some(voice => voice.phase === 'impact' && voice.kind === 'triangle');

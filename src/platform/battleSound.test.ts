@@ -30,7 +30,7 @@ describe('battle sound choreography', () => {
           expect(Math.min(...sound.voices.filter(v => v.phase === 'launch').map(v => v.at))).toBeCloseTo(.48 / speed);
           expect(Math.min(...sound.voices.filter(v => v.phase === 'impact').map(v => v.at))).toBeCloseTo(.9 / speed);
           expect(sound.voices.every(v => v.at + v.duration + .006 < sound.duration)).toBe(true);
-          expect(sound.voices.every(v => v.gain > 0 && v.gain < .3 && v.from > 0 && v.to > 0)).toBe(true);
+          expect(sound.voices.every(v => v.gain > 0 && v.gain < .4 && v.from > 0 && v.to > 0)).toBe(true);
         }
       }
     }

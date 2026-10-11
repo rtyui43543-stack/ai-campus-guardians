@@ -1,5 +1,5 @@
 import type { Mode } from '../domain/types';
-import { buildMaterialAttack } from './combatMaterialSound';
+import { buildMaterialAttack, DAMAGE_IMPACT_GAIN } from './combatMaterialSound';
 
 export interface BattleSoundOptions {
   mode?: Mode;
@@ -94,7 +94,8 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
     detail: Pick<BattleSoundVoice, 'creature' | 'envelope' | 'panTo' | 'layer'> = {}) => {
     const speed = reducedMotion ? 6 : 1;
     voices.push({ phase, kind, at: at / speed, duration: length / speed,
-      from: Math.max(32, from * pitch), to: Math.max(32, to * pitch), gain: gain * (reducedMotion ? .8 : 1),
+      from: Math.max(32, from * pitch), to: Math.max(32, to * pitch),
+      gain: gain * (reducedMotion ? .8 : 1) * (phase === 'impact' && !options.missed && !options.blocked ? DAMAGE_IMPACT_GAIN : 1),
       pan, ...(filter ? { filter, resonance } : {}), ...detail });
   };
   const note = (phase: BattleSoundVoice['phase'], at: number, length: number, from: number,
@@ -157,6 +158,8 @@ export function buildBattleSound(success: boolean, theme: number, reducedMotion 
     note('impact', .9, enhanced ? .42 : .27, fundamental * 1.6, 45, .23 * force, targetPan, 'triangle');
     air('impact', .9, profile.texture === 'flame' ? .47 : .19, profile.air, profile.air * .28,
       .17 * force, targetPan, profile.texture === 'flame' ? 'lowpass' : 'bandpass');
+    add('impact', 'triangle', .9, .16, 520 / pitch, 175 / pitch, .06, targetPan,
+      undefined, .8, { layer: 'contact-knock', envelope: 'punch' });
     if (!enhanced) {
       // A crisp contact transient and a short low follow-through give an
       // ordinary strike weight without borrowing a summon's long explosion.
