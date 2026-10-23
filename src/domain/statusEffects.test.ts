@@ -139,7 +139,7 @@ describe('elemental and support ultimate effects', () => {
     } else expect(following.lightningHintChoices).toEqual([]);
   });
 
-  it.each(['starter', 'advanced'] as const)('ice halves one starter or two advanced landed attacks in %s', mode => {
+  it.each(['advanced'] as const)('ice halves one starter or two advanced landed attacks in %s', mode => {
     const cast = saved(solve(reach(mode, 3), 6));
     expect(cast.frostGuard).toBe(true);
     const next = advanceSession(cast).session!;

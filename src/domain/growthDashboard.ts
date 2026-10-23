@@ -1,4 +1,4 @@
-import { chapters, levels } from '../content/levels';
+import { chapters, isPlayableLevel, levels, playableLevels } from '../content/levels';
 import { reconstructRuns, scoreSession, type SessionScore } from './scoring';
 import type { AttemptRecord, Chapter, CompletedRun, Level, Progress } from './types';
 
@@ -86,7 +86,7 @@ function bestOf(runs: readonly ScoredDashboardRun[]): ScoredDashboardRun | null 
 
 /** Read-only dashboard projection; scoring and saved progress are never changed. */
 export function buildGrowthDashboard(progress: Progress, scope: DashboardScope = 'all'): GrowthDashboardData {
-  const scopedLevels = levels.filter(level => scope === 'review' ? !level.finalBoss : scope === 'starter' || scope === 'advanced' ? level.mode === scope : true);
+  const scopedLevels = (scope === 'review' ? levels : playableLevels).filter(level => scope === 'review' ? !level.finalBoss : scope === 'starter' || scope === 'advanced' ? level.mode === scope : true);
   const availableLevels = new Map(scopedLevels.map(level => [level.id, level]));
   const availableChapters = new Map(chapters.map(chapter => [chapter.id, chapter]));
   const source = progress.runs ?? reconstructRuns(progress.attempts);
@@ -95,7 +95,7 @@ export function buildGrowthDashboard(progress: Progress, scope: DashboardScope =
     .filter(({ run, timestamp }) => {
       const level = availableLevels.get(run.levelId);
       return !!level && level.mode === run.mode && Number.isFinite(timestamp)
-        && run.review === (scope === 'review');
+        && (scope === 'review' ? run.review || !isPlayableLevel(run.levelId) : !run.review);
     })
     .sort((a, b) => a.timestamp - b.timestamp || a.index - b.index)
     .map(({ run }): ScoredDashboardRun => {

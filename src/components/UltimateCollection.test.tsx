@@ -12,7 +12,7 @@ describe('ultimate collection visibility', () => {
   it('does not expose locked artwork or download controls before a spell is actually cast', () => {
     const html = renderToStaticMarkup(createElement(UltimateCollection, { cards: [] }));
     expect(html).toContain('我的必殺技收藏卡');
-    expect(html.match(/尚未解鎖/g)).toHaveLength(12);
+    expect(html.match(/尚未解鎖/g)).toHaveLength(10);
     expect(html).not.toContain('ultimate-1-v1.webp');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('download=');
@@ -45,7 +45,7 @@ describe('ultimate collection visibility', () => {
     expect([...unlockedUltimateIds(cards)]).toEqual([]);
     expect([...unlockedUltimateIds(cards, 'advanced')]).toEqual([2]);
     const html = renderToStaticMarkup(createElement(UltimateCollection, { cards, initialMode: 'advanced' }));
-    expect(html).toContain('／12 張');
+    expect(html).toContain('／11 張');
     expect(html).toContain('查看收藏卡：萬卷雷霆陣');
     expect(html).toContain('升級自：雷霆索引');
     expect(html).toContain('ultimate-advanced-2-v1.webp');
@@ -59,6 +59,21 @@ describe('ultimate collection visibility', () => {
     expect(html).toContain(`font-size="${layout.titleSize}"`);
     expect(html).toContain('dominant-baseline="alphabetic"');
     expect(html).toContain('text-anchor="middle"');
+  });
+  it('excludes retired starter ice from all visible counts while retaining advanced ice as a standalone collectible', () => {
+    const cards = allUltimateSpells.map(spell => ({ ultimateId: spell.id, mode: spell.mode, unlockedAt: '2026-10-23T04:00:00Z' }));
+    expect([...unlockedUltimateIds(cards, 'starter')]).toEqual([1, 2, 3, 4, 5]);
+    expect([...unlockedUltimateIds(cards, 'advanced')]).toEqual([1, 2, 3, 4, 5, 6]);
+    const starter = renderToStaticMarkup(<UltimateCollection cards={cards} />);
+    expect(starter).toContain('11<span>／11 張');
+    expect(starter).toContain('5／5 張');
+    expect(starter.match(/aria-label="查看收藏卡：/g)).toHaveLength(5);
+    expect(starter).not.toContain('寒晶冰矛');
+    const advanced = renderToStaticMarkup(<UltimateCollection cards={cards} initialMode="advanced" />);
+    expect(advanced.match(/aria-label="查看收藏卡：/g)).toHaveLength(6);
+    expect(advanced).toContain('進階專屬魔法');
+    expect(advanced).toContain('極寒冰龍');
+    expect(advanced).not.toContain('寒晶冰矛');
   });
 });
 

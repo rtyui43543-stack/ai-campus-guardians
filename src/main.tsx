@@ -19,6 +19,11 @@ import './styles/cover-world.css';
 import './styles/battle-mechanics.css';
 import './styles/growth-dashboard.css';
 import './styles/battle-layout.css';
+import './styles/battle-readability.css';
+import { installLegacyViewportHeight } from './platform/legacyViewport';
+
+const stopLegacyViewport = installLegacyViewportHeight();
+if (import.meta.hot) import.meta.hot.dispose(stopLegacyViewport);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><App /></React.StrictMode>

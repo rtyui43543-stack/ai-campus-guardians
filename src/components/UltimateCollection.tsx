@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Download, Flame, HeartHandshake, LockKeyhole, ShieldCheck, Snowflake, Sparkles, X } from 'lucide-react';
-import { allUltimateSpells, getUltimateCardKey, getUltimateCardMode, type UltimateSpell, type UltimateSpellCategory } from '../content/ultimateSpells';
+import { availableUltimateSpells, getAvailableUltimateSpells, getUltimateCardKey, getUltimateCardMode, type UltimateSpell, type UltimateSpellCategory } from '../content/ultimateSpells';
 import { appAssetUrl } from '../platform/urls';
 import { getChapter } from '../content/levels';
 import type { Mode } from '../domain/types';
@@ -24,9 +24,9 @@ const categoryNames: Readonly<Record<UltimateSpellCategory, string>> = {
 };
 const categoryIcons = { attack: Flame, defense: ShieldCheck, support: HeartHandshake };
 
-/** Every theme has a separate first-tier and upgraded collectible. */
+/** Only cards in the current route count; retired records remain in saved progress. */
 export function unlockedUltimateIds(cards: readonly UltimateCollectionRecord[], mode: Mode = 'starter'): ReadonlySet<number> {
-  const known = new Set(allUltimateSpells.map(spell => spell.id));
+  const known = new Set(getAvailableUltimateSpells(mode).map(spell => spell.id));
   return new Set(cards.filter(card => getUltimateCardMode(card) === mode).map(card => card.ultimateId).filter(id => known.has(id)));
 }
 
@@ -121,9 +121,9 @@ function CardModal({ spell, unlockedAt, onClose }: {
       <button ref={closeRef} className="ultimate-card-modal-close" type="button" onClick={onClose} aria-label="關閉收藏卡"><X size={24} /></button>
       <div className="ultimate-card-large-art"><img src={appAssetUrl(spell.artPath)} alt={`小羽施放${spell.name}的專屬收藏卡`} /><UltimateCardTitle name={spell.name} /></div>
       <div className="ultimate-card-modal-info"><div className="ultimate-card-badges"><span className={`ultimate-category ${spell.category}`}><Icon size={20} />{categoryNames[spell.category]}</span>
-        <span className={'ultimate-tier ' + spell.mode}>{spell.mode === 'advanced' ? 'Lv.2 進階升級' : 'Lv.1 初階技能'}</span></div>
+        <span className={'ultimate-tier ' + spell.mode}>{spell.mode === 'advanced' ? spell.id === 6 ? 'Lv.2 進階專屬' : 'Lv.2 進階升級' : 'Lv.1 初階技能'}</span></div>
         <h2 id={titleId}>{spell.name}</h2>
-        {spell.mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>{spell.baseName} → {spell.name}</strong><p>{spell.upgradeDescription}</p></div>}
+        {spell.mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>{spell.id === 6 ? `進階專屬：${spell.name}` : `${spell.baseName} → ${spell.name}`}</strong><p>{spell.upgradeDescription}</p></div>}
         <p>{spell.description}</p>
         <p className="ultimate-collected-at">{Number.isNaN(date.getTime()) ? '已加入收藏' : `收藏日期：${date.toLocaleDateString('zh-TW')}`}</p>
         <button type="button" className="ultimate-card-download" onClick={downloadCard} disabled={downloadState === 'loading'} aria-busy={downloadState === 'loading'}><Download size={21} />{downloadState === 'loading' ? '準備圖片中…' : '下載收藏卡圖片'}</button>
@@ -143,15 +143,15 @@ export function UltimateCollection({ cards, initialMode = 'starter' }: UltimateC
   const headingId = useId();
   const unlocked = unlockedUltimateIds(cards, mode);
   const total = unlockedUltimateIds(cards, 'starter').size + unlockedUltimateIds(cards, 'advanced').size;
-  const visibleSpells = allUltimateSpells.filter(spell => spell.mode === mode);
-  const selected = allUltimateSpells.find(spell => `${spell.mode}:${spell.id}` === selectedKey && cards.some(card => getUltimateCardKey(card) === selectedKey));
+  const visibleSpells = getAvailableUltimateSpells(mode);
+  const selected = availableUltimateSpells.find(spell => `${spell.mode}:${spell.id}` === selectedKey && cards.some(card => getUltimateCardKey(card) === selectedKey));
   const selectedRecord = selected ? cards.find(card => getUltimateCardKey(card) === selectedKey) : undefined;
   return <section className="ultimate-collection" aria-labelledby={headingId}>
-    <div className="ultimate-collection-heading"><div><span className="ultimate-collection-eyebrow"><Sparkles size={20} />小羽的專屬魔法收藏</span><h2 id={headingId}>我的必殺技收藏卡</h2></div><strong>{total}<span>／12 張</span></strong></div>
+    <div className="ultimate-collection-heading"><div><span className="ultimate-collection-eyebrow"><Sparkles size={20} />小羽的專屬魔法收藏</span><h2 id={headingId}>我的必殺技收藏卡</h2></div><strong>{total}<span>／{availableUltimateSpells.length} 張</span></strong></div>
     <p className="ultimate-collection-rule">主要挑戰答對一題集 1 點能量，答錯保留能量，進階超時扣 1 點。集滿 3 點後，下一題答對就會自動施放必殺技，另外加 10 分，解鎖這個主題的收藏卡！</p>
     <p className="ultimate-collection-note">每關能量從 0 開始；同一張卡只收藏一次，重新挑戰仍能獲得施放獎勵。初階與進階分別收藏，進階不用先集齊初階卡。</p>
-    <div className="ultimate-tier-tabs" role="group" aria-label="選擇必殺技等級">{(['starter', 'advanced'] as Mode[]).map(tier => <button type="button" key={tier} aria-pressed={mode === tier} onClick={() => setMode(tier)}><span>{tier === 'starter' ? 'Lv.1 初階魔法' : 'Lv.2 進階升級'}</span><b>{unlockedUltimateIds(cards, tier).size}／6 張</b></button>)}</div>
-    <p className="ultimate-tier-summary">{mode === 'advanced' ? '六種魔法升級！進階必殺技展開半屏或全屏演出，完成施放就能收藏升級卡。' : '從六種生活主題學會魔法，在初階挑戰施放必殺技，收集你的第一套魔法卡。'}</p>
+    <div className="ultimate-tier-tabs" role="group" aria-label="選擇必殺技等級">{(['starter', 'advanced'] as Mode[]).map(tier => <button type="button" key={tier} aria-pressed={mode === tier} onClick={() => setMode(tier)}><span>{tier === 'starter' ? 'Lv.1 初階魔法' : 'Lv.2 進階升級'}</span><b>{unlockedUltimateIds(cards, tier).size}／{getAvailableUltimateSpells(tier).length} 張</b></button>)}</div>
+    <p className="ultimate-tier-summary">{mode === 'advanced' ? '六種進階魔法，包含專屬極寒冰龍！完成施放就能收藏，不必先取得初階卡。' : '從五種生活主題學會魔法，在初階挑戰施放必殺技，收集你的第一套魔法卡。'}</p>
     <div className="ultimate-collection-grid">{visibleSpells.map(spell => {
       const isUnlocked = unlocked.has(spell.id);
       const Icon = spell.id === 6 ? Snowflake : categoryIcons[spell.category];
@@ -159,8 +159,8 @@ export function UltimateCollection({ cards, initialMode = 'starter' }: UltimateC
         {isUnlocked ? <button type="button" className="ultimate-card-art-button" onClick={() => setSelectedKey(`${mode}:${spell.id}`)} aria-label={`查看收藏卡：${spell.name}`}>
           <img src={appAssetUrl(spell.artPath)} alt={`小羽施放${spell.name}`} loading="lazy" /><UltimateCardTitle name={spell.name} /><span className="ultimate-card-open-hint">查看收藏卡</span>
         </button> : <div className="ultimate-card-locked-art" aria-label={`${spell.name}尚未解鎖`}><LockKeyhole size={44} aria-hidden="true" /><strong>{mode === 'advanced' ? '等待升級魔法' : '等待你的魔法'}</strong><span>挑戰{mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關<br />施放必殺技後解鎖</span></div>}
-        <div className="ultimate-card-details"><div className="ultimate-card-badges"><span className={`ultimate-category ${spell.category}`}><Icon size={18} />{categoryNames[spell.category]}</span><span className={'ultimate-tier ' + mode}>{mode === 'advanced' ? 'Lv.2 升級' : 'Lv.1 初階'}</span></div><h3>{spell.name}</h3><p className="ultimate-card-chapter">{getChapter(spell.id).title} · {mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關</p>
-          {mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>升級自：{spell.baseName}</strong><p>{spell.upgradeDescription}</p></div>}<p className="ultimate-card-description">{spell.description}</p>
+        <div className="ultimate-card-details"><div className="ultimate-card-badges"><span className={`ultimate-category ${spell.category}`}><Icon size={18} />{categoryNames[spell.category]}</span><span className={'ultimate-tier ' + mode}>{mode === 'advanced' ? spell.id === 6 ? 'Lv.2 專屬' : 'Lv.2 升級' : 'Lv.1 初階'}</span></div><h3>{spell.name}</h3><p className="ultimate-card-chapter">{getChapter(spell.id).title} · {mode === 'advanced' ? '進階' : '初階'}第 {spell.id} 關</p>
+          {mode === 'advanced' && <div className="ultimate-upgrade-explanation"><strong>{spell.id === 6 ? '進階專屬魔法' : `升級自：${spell.baseName}`}</strong><p>{spell.upgradeDescription}</p></div>}<p className="ultimate-card-description">{spell.description}</p>
           <span className={`ultimate-card-status ${isUnlocked ? 'collected' : ''}`}>{isUnlocked ? '已收藏 · 點卡片查看' : '尚未解鎖'}</span></div>
       </article>;
     })}</div>

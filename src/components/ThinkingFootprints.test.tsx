@@ -21,7 +21,7 @@ it('gives the visual answer bar a textual alternative without changing completio
   progress.attempts = [{ questionId: getQuestions(1)[0].id, mode: 'starter', action: null, reason: null,
     status: 'timeout', retries: 0, hintUsed: false, at: '2026-10-09T12:00:00.000Z' }];
   const html = renderToStaticMarkup(<ThinkingFootprints progress={progress} onLevel={() => {}} />);
-  expect(html).toContain('初階已完成 1 / 7 關');
+  expect(html).toContain('初階已完成 1 / 6 關');
   expect(html).toContain('已完成，待練習 1 題，查看紀錄');
   expect(html).toContain('首次答對 0 題，提示／重試後答對 0 題，看示範後完成 0 題，超時未作答 1 題');
 });

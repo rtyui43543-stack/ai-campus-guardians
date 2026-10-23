@@ -27,7 +27,7 @@ describe('four-question starter missions and original editions', () => {
     expect(digest(questionBank.questions.filter(q => q.levelId >= 13))).toBe('a3b392af6b47f31648460025aa8c4ad4cc892a9eb6f236d8ddfaa8226315e2b7');
   });
 
-  it.each([1, 2, 3, 4, 5, 6])('finishes starter mission %i in four hits, including the final ultimate, without a fifth record', level => {
+  it.each([1, 2, 3, 4, 5])('finishes starter mission %i in four hits, including the final ultimate, without a fifth record', level => {
     let s = startSession(level, 'starter');
     for (let index = 0; index < 4; index++) {
       expect(battleHealth(s).enemyHp).toBe(100 - index * 25);
@@ -50,7 +50,7 @@ describe('four-question starter missions and original editions', () => {
     }
   });
 
-  it.each([1, 2, 3, 4, 5, 6])('does not invent a fifth chance or free ultimate after a demonstration in starter mission %i', level => {
+  it.each([1, 2, 3, 4, 5])('does not invent a fifth chance or free ultimate after a demonstration in starter mission %i', level => {
     let s = advanceSession(demonstrate(startSession(level, 'starter'))).session!;
     while (s.index < 3) s = advanceSession(solve(s)).session!;
     const answered = restore(solve(s));
@@ -62,7 +62,7 @@ describe('four-question starter missions and original editions', () => {
     expect(finished.ultimateCards).toEqual([]);
   });
 
-  it.each([1, 2, 3, 4, 5, 6])('preserves an original five-question mission %i at every restored checkpoint', level => {
+  it.each([1, 2, 3, 4, 5])('preserves an original five-question mission %i at every restored checkpoint', level => {
     let s = { ...startSession(level, 'starter'), questionIds: getQuestionsForHistory(level, false, `V4L${String(level).padStart(2, '0')}Q01`).map(q => q.id) };
     for (let index = 0; index < 5; index++) {
       s = restore(s);

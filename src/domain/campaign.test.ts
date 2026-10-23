@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { getQuestions, questions } from '../content';
-import { levels } from '../content/levels';
+import { isPlayableLevel, levels, playableLevels } from '../content/levels';
 import {
   advanceSession, applySession, battleHealth, chooseAction, createProgress, currentQuestion,
   finishSession, retryQuestion, startSession, submitAction,
 } from './engine';
 import { exportBackup, parseBackup } from './storage';
 import type { AttemptRecord, Progress, Session } from './types';
-const ordinaryLevels = levels.filter(level => !level.finalBoss);
+const ordinaryLevels = playableLevels.filter(level => !level.finalBoss);
 
 function roundTrip(progress: Progress, session: Session): Session {
   const restored = parseBackup(exportBackup(applySession(progress, session)));
@@ -35,7 +35,7 @@ function completeLevel(progress: Progress, levelId: number, review = false) {
   }
 }
 
-describe('complete twelve-level campaign', () => {
+describe('complete eleven-level campaign', () => {
   it.each(ordinaryLevels.map(level => [level.id, level.title] as const))('completes level %i (%s), accepts each permitted option and restores every checkpoint', (levelId) => {
     let session = startSession(levelId, 'starter');
     const progress = createProgress();
@@ -64,14 +64,14 @@ describe('complete twelve-level campaign', () => {
     }
   });
 
-  it('finishes six beginner and six advanced missions as fifty-four distinct learning records', () => {
-    expect(ordinaryLevels).toHaveLength(12);
+  it('finishes five beginner and six advanced missions as fifty distinct learning records', () => {
+    expect(ordinaryLevels).toHaveLength(11);
     let progress = createProgress();
     for (const level of ordinaryLevels) progress = completeLevel(progress, level.id).progress;
     expect(progress.completed).toEqual(ordinaryLevels.map(level => level.id));
-    expect(progress.attempts).toHaveLength(54);
-    expect(new Set(progress.attempts.map(record => record.questionId)).size).toBe(54);
-    expect(progress.attempts.filter(record => record.mode === 'starter')).toHaveLength(24);
+    expect(progress.attempts).toHaveLength(50);
+    expect(new Set(progress.attempts.map(record => record.questionId)).size).toBe(50);
+    expect(progress.attempts.filter(record => record.mode === 'starter')).toHaveLength(20);
     expect(progress.attempts.filter(record => record.mode === 'advanced')).toHaveLength(30);
     expect(progress.attempts.every(record => record.status === 'first' && record.reason === null)).toBe(true);
     expect(parseBackup(exportBackup(progress))).toEqual(progress);
@@ -79,7 +79,7 @@ describe('complete twelve-level campaign', () => {
 
   it('rejects every distractor, preserves its explanation and permits supported correction', () => {
     let rejected = 0;
-    for (const question of questions.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss)) {
+    for (const question of questions.filter(q => isPlayableLevel(q.levelId) && !levels.find(level => level.id === q.levelId)?.finalBoss)) {
       let checkpoint = startSession(question.levelId, 'starter');
       while (currentQuestion(checkpoint).slot < question.slot) checkpoint = advanceSession(solve(checkpoint)).session!;
       for (let action = 0; action < question.choices.length; action++) {
@@ -98,12 +98,12 @@ describe('complete twelve-level campaign', () => {
         expect(advanceSession(solve(retry)).record.status).toBe('supported');
       }
     }
-    expect(rejected).toBeGreaterThan(150);
+    expect(rejected).toBe(149);
   });
 
   it('reads all twenty-four historical review variants without creating new play entries', () => {
     let progress = completeLevel(createProgress(), 1).progress;
-    for (const level of ordinaryLevels) {
+    for (const level of levels.filter(level => !level.finalBoss)) {
       const records: AttemptRecord[] = getQuestions(level.id, true).map(q => ({ questionId: q.id, mode: level.mode,
         action: Number(Object.keys(q.valid)[0]), reason: null, status: 'first', retries: 0, hintUsed: false, at: progress.updatedAt }));
       progress = { ...progress, attempts: [...progress.attempts, ...records], runs: [...progress.runs!, {

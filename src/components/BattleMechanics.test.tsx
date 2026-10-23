@@ -58,7 +58,10 @@ describe('battle shield and ultimate status', () => {
     for (const timed of [false, true]) {
       const html = renderToStaticMarkup(<BattleRules timed={timed} finalBoss />);
       for (const text of ['第一次答錯扣 20 HP', '合計最多 30 HP', '答對後連錯計數歸零', '雷光提示不扣分',
-        `後續每題完成扣 ${timed ? 6 : 4} HP`, '後續每題完成自動再回復 4 HP', '50% 機率落空', 'HP 傷害減半']) expect(html).toContain(text);
+        `後續每題完成扣 ${timed ? 6 : 4} HP`, '後續每題完成自動再回復 4 HP', '50% 機率落空']) expect(html).toContain(text);
+      expect(html).toContain(`本組 ${timed ? 6 : 5} 種必殺技之一`);
+      if (timed) expect(html).toContain('HP 傷害減半');
+      else expect(html).not.toContain('寒冰：');
       if (timed) expect(html).toContain('超時不累計連錯');
       expect(html).toContain(`最終魔王 ${timed ? 300 : 200} HP`);
     }
@@ -84,7 +87,7 @@ describe('battle shield and ultimate status', () => {
     const html = renderToStaticMarkup(<BattleRules timed={timed} />);
     expect(html).toContain('連續第二次答錯起施放追擊必殺，額外加 10 HP，合計最多 22 HP');
     expect(html).toContain(`完整抵擋下${timed ? '兩次' : '一次'}魔王命中攻擊`);
-    expect(html).toContain('再計算城堡護盾的抵擋');
+    if (timed) expect(html).toContain('再計算城堡護盾的抵擋');
     expect(html).not.toContain('抵擋 12 HP');
     if (timed) {
       expect(html).toContain('下兩題各有兩個選項');

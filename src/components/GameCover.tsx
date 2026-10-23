@@ -1,6 +1,7 @@
 import { ArrowRight, Clock3, Play, ShieldCheck, Sparkles, UserRound, WifiOff } from 'lucide-react';
 import type { OfflineController } from '../platform/offline';
 import { appAssetUrl } from '../platform/urls';
+import { playableLevels } from '../content/levels';
 import { OfflineDownloadCard } from './OfflineDownloadCard';
 import { AssociationBrand } from './AssociationBrand';
 import { MusicCredits } from './MusicCredits';
@@ -34,7 +35,7 @@ export function GameCover({ offline, onStart, onResume, completed, reducedMotion
           <button type="button" className="game-cover-start" onClick={onStart}><Play size={27} fill="currentColor" />開始冒險<ArrowRight size={27} /></button>
           {onResume && <button type="button" className="game-cover-resume" onClick={onResume}><Play size={20} />繼續上次挑戰</button>}
         </div>
-        {completed > 0 && <p className="game-cover-saved"><ShieldCheck size={19} />這台裝置已完成 <strong>{Math.min(14, completed)} / 14</strong> 關</p>}
+        {completed > 0 && <p className="game-cover-saved"><ShieldCheck size={19} />這台裝置已完成 <strong>{Math.min(playableLevels.length, completed)} / {playableLevels.length}</strong> 關</p>}
       </div>
       <div className="game-cover-promise" aria-label="遊戲使用方式">
         <span><WifiOff size={21} />下載後離線玩</span><i aria-hidden="true">·</i><span><UserRound size={21} />不用登入</span><i aria-hidden="true">·</i><span><Clock3 size={21} />初階不限時</span>

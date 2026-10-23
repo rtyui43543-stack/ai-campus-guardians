@@ -200,7 +200,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 80, bonusScore: 10, timeouts: 1 });
   });
 
-  it.each([[1, 5], [7, 10], [2, 10], [4, 10], [5, 10], [6, 10], [8, 15], [10, 15], [11, 15], [12, 15]])('uses mission %i to add %i damage without skipping a question', (levelId, extraDamage) => {
+  it.each([[1, 5], [7, 10], [2, 10], [4, 10], [5, 10], [8, 15], [10, 15], [11, 15], [12, 15]])('uses mission %i to add %i damage without skipping a question', (levelId, extraDamage) => {
     const questionCount = levelId <= 6 ? 4 : 5;
     const fourth = solve(reachQuestion(levelId, 4));
     expect(fourth).toMatchObject({ enemyBonusDamage: extraDamage, bonusPoints: 10 });
@@ -223,7 +223,7 @@ describe('per-run energy and ultimate rewards', () => {
     expect(scoreSession(finished.runs![0])).toMatchObject({ score: 100, bonusScore: 10, totalScore: 110 });
   });
 
-  it.each([6, 12])('preserves ice mission %i damage and guard on the following saved five-question turn', levelId => {
+  it.each([12])('preserves ice mission %i damage and guard on the following saved five-question turn', levelId => {
     const released = solve(reachQuestion(levelId, 4, levelId === 6));
     expect(released).toMatchObject({ ultimateId: 6, bonusPoints: 10, enemyBonusDamage: levelId === 6 ? 10 : 15, barrier: false, barrierCharges: 0 });
     expect(remainingBarrierCharges(released)).toBe(0);
@@ -314,7 +314,7 @@ describe('per-run energy and ultimate rewards', () => {
 
 describe('advanced time challenge boundaries and timeout transitions', () => {
   it('times only new advanced main challenges; removed review sessions cannot start', () => {
-    for (let levelId = 1; levelId <= 12; levelId++) {
+    for (const levelId of [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12]) {
       const main = startSession(levelId, 'advanced');
       expect(main.timed).toBe(levelId > 6);
       expect(() => startSession(levelId, 'advanced', true)).toThrow('練習已移除');

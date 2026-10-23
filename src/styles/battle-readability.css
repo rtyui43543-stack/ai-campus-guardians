@@ -1,0 +1,100 @@
+/* Keep the HP number and unit together at every width. The name owns the
+   flexible space; a three-digit HP value must never force HP onto a new row. */
+.duel-stage .duel-meter>div>span{min-width:0;flex:1}
+.duel-stage .duel-meter b{display:inline-flex;align-items:baseline;flex:0 0 auto;white-space:nowrap;gap:3px}
+.duel-stage .duel-meter small{display:inline;white-space:nowrap}
+
+/* These are minimum reading sizes, including short viewports. Supporting
+   controls stay compact; long questions/choices scroll instead of shrinking. */
+.duel-stage .duel-bubble h1{font-size:clamp(26px,1.8vw,32px);line-height:1.5;letter-spacing:0;overflow-wrap:break-word}
+.duel-stage .duel-choice{font-size:clamp(22px,1.55vw,28px);line-height:1.5;font-weight:650;overflow-wrap:break-word;min-width:0}
+.duel-stage .duel-choice>span:nth-child(2){min-width:0}
+.duel-stage .duel-evidence,.duel-stage .duel-hint,.duel-stage .duel-feedback{font-size:18px;line-height:1.55}
+
+@media(max-width:1366px){
+  .duel-stage .duel-bubble h1{font-size:24px}
+  .duel-stage .duel-choice{font-size:20px}
+}
+
+@media(orientation:portrait){
+  .duel-stage{min-height:0}
+  .duel-stage .duel-bubble{max-height:34%;overflow:auto;overscroll-behavior:contain}
+  .duel-stage .duel-answer-area{max-height:43%;display:flex;flex-direction:column;gap:8px;min-height:0}
+  .duel-stage .duel-choices{min-height:0;overflow-y:auto;overflow-x:hidden;grid-template-columns:repeat(2,minmax(0,1fr));flex:1 1 auto;overscroll-behavior:contain}
+  .duel-stage .duel-controls{flex:0 0 auto;flex-wrap:wrap;margin-top:0;min-height:44px}
+  .duel-stage .duel-explanation-actions{flex:0 0 auto;margin-top:0}
+  .duel-stage .duel-choice{padding:11px 12px;gap:8px;min-height:80px}
+}
+
+/* A separate round line frees both name/HP cards on portrait tablets. */
+@media(orientation:portrait) and (max-width:1050px){
+  .duel-stage .duel-round{justify-self:center;width:max-content;max-width:100%;height:30px;padding:3px 12px;border:1px solid #d4b971b3;border-radius:99px;background:#143f37;line-height:1.2}
+  .duel-stage .duel-round b{line-height:1.2}
+}
+@media(orientation:portrait) and (min-width:601px) and (max-width:1050px){
+  .duel-stage .duel-hud{top:12px;left:16px;right:16px;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);gap:7px 12px}
+  .duel-stage .duel-back{min-height:48px;padding:8px}
+  .duel-stage .duel-meter{padding:9px 12px}
+  .duel-stage .duel-meter span{font-size:17px}
+  .duel-stage .duel-meter b{font-size:29px}
+  .duel-stage .duel-meter small{font-size:11px}
+  .duel-stage .duel-round{grid-column:1/-1;grid-row:2;display:flex;align-items:center;justify-content:center;gap:14px;font-size:14px}
+  .duel-stage .duel-round b{font-size:17px;margin:0}
+  .duel-stage .duel-bubble{top:132px;width:calc(100% - 32px);padding:14px 18px}
+  .duel-stage .duel-answer-area{left:16px;right:16px;bottom:max(14px,env(safe-area-inset-bottom))}
+}
+
+@media(orientation:portrait) and (max-width:600px){
+  .duel-stage .duel-bubble h1{font-size:20px}
+  .duel-stage .duel-choice{font-size:18px;padding:9px 10px;line-height:1.45}
+  .duel-stage .duel-evidence,.duel-stage .duel-hint,.duel-stage .duel-feedback{font-size:16px}
+  .duel-stage .duel-bubble{top:122px;padding:10px 12px;max-height:32%}
+  .duel-stage .duel-answer-area{max-height:42%;bottom:max(10px,env(safe-area-inset-bottom))}
+  .duel-stage .duel-controls{gap:6px}
+  .duel-stage .duel-select-note{max-width:118px;text-align:right;font-size:12px;line-height:1.45}
+}
+@media(orientation:portrait) and (max-width:600px) and (max-height:740px){
+  .duel-stage .duel-bubble{top:108px}
+}
+
+@media(orientation:landscape){
+  .duel-stage .duel-bubble{max-height:min(42vh,320px);max-height:min(48cqh,320px)}
+  .duel-stage .duel-choice{padding:12px 14px}
+  .duel-stage .duel-damage b{font-size:36px;font-size:clamp(28px,5cqh,42px)}
+}
+
+/* A 40% tablet column reads better as full-width answers than as two narrow
+   columns. All four choices remain available in this one scrollable list. */
+@media(orientation:landscape) and (max-width:1366px){
+  .duel-stage .duel-choices{grid-template-columns:minmax(0,1fr);grid-auto-rows:minmax(min-content,1fr)}
+  .duel-stage .duel-choice{display:flex;align-items:flex-start;min-height:64px;padding:10px 12px}
+  .duel-stage .duel-letter{display:inline-flex;margin:2px 0 0;flex:0 0 auto}
+  .duel-stage .duel-choice>span:nth-child(2){display:block;flex:1}
+}
+
+/* Browser bars on a sideways phone can leave less than 300 px. Give the
+   reading pane one continuous scroll rather than cutting off either the
+   question, an answer, or the retry/explanation controls. */
+@media(orientation:landscape) and (max-height:650px){
+  .duel-stage .duel-bubble h1{font-size:20px}
+  .duel-stage .duel-choice{font-size:18px;line-height:1.45}
+  .duel-stage .duel-evidence,.duel-stage .duel-hint,.duel-stage .duel-feedback{font-size:16px}
+}
+@media(orientation:landscape) and (max-height:450px){
+  .duel-stage .duel-reading-panel{display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}
+  .duel-stage .duel-bubble{flex:0 0 auto;max-height:none}
+  .duel-stage .duel-answer-area{display:flex;flex:0 0 auto;flex-direction:column;overflow:visible}
+  .duel-stage .duel-choices{flex:0 0 auto;overflow:visible;grid-auto-rows:auto}
+  .duel-stage .duel-controls,.duel-stage .duel-explanation-actions{flex:0 0 auto}
+}
+
+/* Chrome 94 does not understand :has(). These essential layers and footer
+   rows work without it; decorative modern enhancements can remain optional. */
+@supports not selector(:has(*)){
+  .duel-stage .duel-hud,.duel-stage .duel-answer-area,.duel-stage .duel-damage{z-index:7}
+  .duel-stage .duel-score{display:grid;justify-items:center;gap:2px}
+  .dialog,.defeat-dialog,.duel-explanation-dialog,.final-ultimate-picker{max-height:calc(var(--legacy-viewport-height,100vh) - 32px);overflow:auto}
+  @media(orientation:landscape) and (max-width:1366px){
+    .duel-stage .duel-controls .duel-retry-actions{grid-column:1/-1;justify-self:stretch;display:flex;justify-content:flex-end;flex-wrap:wrap}
+  }
+}

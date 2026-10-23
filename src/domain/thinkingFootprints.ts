@@ -1,5 +1,5 @@
 import { questionById } from '../content';
-import { levels } from '../content/levels';
+import { getPlayableLevels } from '../content/levels';
 import type { AttemptRecord, LearningStatus, Mode, Progress } from './types';
 
 export const footprintStatuses: LearningStatus[] = ['first', 'supported', 'practice', 'timeout'];
@@ -21,7 +21,7 @@ export function latestThinkingRecords(attempts: readonly AttemptRecord[]) {
 
 export function buildThinkingFootprints(progress: Progress, mode: Mode, practiceOnly = false) {
   const latest = latestThinkingRecords(progress.attempts).filter(record => record.mode === mode);
-  const items = levels.filter(level => level.mode === mode).map(level => {
+  const items = getPlayableLevels(mode).map(level => {
     const records = latest.filter(record => questionById.get(record.questionId)?.levelId === level.id);
     const counts = Object.fromEntries(footprintStatuses.map(status => [status, records.filter(record => record.status === status).length])) as Record<LearningStatus, number>;
     return { level, records, counts, completed: progress.completed.includes(level.id), practice: counts.practice + counts.timeout };

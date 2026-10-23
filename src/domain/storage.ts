@@ -1,6 +1,6 @@
 import { getQuestionsForHistory, presentQuestion, questionById } from '../content';
-import { levels } from '../content/levels';
-import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
+import { isPlayableLevel, levels } from '../content/levels';
+import { getUltimateCardKey, getUltimateSpell, isAvailableUltimateSpell } from '../content/ultimateSpells';
 import { advanceSession, createProgress, finalBossUnlocked } from './engine';
 import { finalBossDamage, reconstructRuns } from './scoring';
 import type { AttemptRecord, CompletedRun, Mode, Progress, Proposal, Session, UltimateCardUnlock } from './types';
@@ -422,9 +422,24 @@ function migrateStarterBossHealth(progress: Progress): Progress {
   return migrated;
 }
 
+/** Retire an entry point without discarding an unfinished run or rewriting any earned results. */
+function migrateRetiredStarterMission(progress: Progress): Progress {
+  const active = progress.active;
+  if (!active) return progress;
+  if (!isPlayableLevel(active.levelId)) {
+    return { ...progress, active: null, archivedSessions: [...(progress.archivedSessions ?? []), active] };
+  }
+  if (active.preparedUltimateId !== undefined && !isAvailableUltimateSpell(active.preparedUltimateId, active.mode)) {
+    const resumed = { ...active };
+    delete resumed.preparedUltimateId;
+    return { ...progress, active: resumed };
+  }
+  return progress;
+}
+
 export function validateProgress(value: unknown): Progress {
   const raw = object(value, '進度');
-  if (raw.schemaVersion === 1) reject('這是舊版十八關備份，無法套用新版十四關；舊進度仍保留在原儲存區');
+  if (raw.schemaVersion === 1) reject('這是舊版十八關備份，無法套用目前版本；舊進度仍保留在原儲存區');
   if (raw.schemaVersion !== 2) reject('不支援這個備份版本');
   const completed = list(raw.completed, 'completed', 14).map((id, i) => integer(id, `completed[${i}]`, 1, 14));
   if (new Set(completed).size !== completed.length) reject('completed包含重複關卡');
@@ -438,23 +453,32 @@ export function validateProgress(value: unknown): Progress {
   if (new Set(runs.map(run => run.sessionId)).size !== runs.length) reject('runs包含重複挑戰');
   validateRunHistory(runs, attempts);
   const active = activeSession(raw.active);
+  const archivedSessions = raw.archivedSessions === undefined ? undefined : list(raw.archivedSessions, 'archivedSessions', 25000).map((value, index) => {
+    const archived = activeSession(value);
+    if (!archived || isPlayableLevel(archived.levelId)) reject(`archivedSessions[${index}]不是已移除關卡的中途存檔`);
+    return archived;
+  });
+  if (archivedSessions && new Set(archivedSessions.map(session => session.id)).size !== archivedSessions.length) reject('archivedSessions包含重複挑戰');
+  if (archivedSessions?.some(session => session.id === active?.id || finishedSessionIds.includes(session.id) || runs.some(run => run.sessionId === session.id))) reject('封存挑戰與進行中或完成紀錄重複');
   const savedUltimateCards = raw.ultimateCards === undefined ? undefined : list(raw.ultimateCards, 'ultimateCards', 12).map((value, i) => ultimateCard(value, `ultimateCards[${i}]`));
   if (savedUltimateCards && new Set(savedUltimateCards.map(getUltimateCardKey)).size !== savedUltimateCards.length) reject('ultimateCards包含重複收藏');
   if (active && (finishedSessionIds.includes(active.id) || runs.some(run => run.sessionId === active.id))) reject('active挑戰已經完成');
   const updatedAt = timestamp(raw.updatedAt, 'updatedAt');
-  const ultimateCards = recoverEarnedUltimateCards(savedUltimateCards, runs, attempts, active, updatedAt);
-  if (active && levels.find(level => level.id === active.levelId)?.finalBoss && !finalBossUnlocked({ ultimateCards }, active.mode)) reject('active最終關尚未解鎖本等級的六張收藏卡');
-  return migrateStarterBossHealth({
+  let ultimateCards = recoverEarnedUltimateCards(savedUltimateCards, runs, attempts, active, updatedAt);
+  for (const archived of archivedSessions ?? []) ultimateCards = recoverEarnedUltimateCards(ultimateCards, [], [], archived, updatedAt);
+  if (active && levels.find(level => level.id === active.levelId)?.finalBoss && !finalBossUnlocked({ ultimateCards }, active.mode)) reject('active最終關尚未解鎖本等級的必殺技收藏卡');
+  return migrateStarterBossHealth(migrateRetiredStarterMission({
     schemaVersion: 2, completed,
     attempts, runs, ...(ultimateCards === undefined ? {} : { ultimateCards }),
     active,
+    ...(archivedSessions === undefined ? {} : { archivedSessions }),
     proposals: list(raw.proposals, 'proposals', 10000).map((value, i) => proposal(value, `proposals[${i}]`)),
     settings: {
       mode: mode(settings.mode, 'settings.mode'), sound: boolean(settings.sound, 'settings.sound'),
       music: settings.music === undefined ? true : boolean(settings.music, 'settings.music'),
       narration: false, reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
     }, finishedSessionIds, updatedAt,
-  });
+  }));
 }
 
 export function parseBackup(input: string): Progress {

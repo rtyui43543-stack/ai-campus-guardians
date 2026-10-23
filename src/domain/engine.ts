@@ -1,6 +1,6 @@
 import { getQuestions, presentQuestion, questionById } from '../content';
-import { levels } from '../content/levels';
-import { getUltimateCardKey, getUltimateSpell } from '../content/ultimateSpells';
+import { isPlayableLevel, levels } from '../content/levels';
+import { getAvailableUltimateSpells, getUltimateCardKey, getUltimateSpell, isAvailableUltimateSpell } from '../content/ultimateSpells';
 import { reconstructRuns } from './scoring';
 import { battleEnemyMaxHp, initialEnemyHp } from './battleHealth';
 import type { AttemptRecord, LearningStatus, Mode, Progress, Session } from './types';
@@ -22,7 +22,7 @@ export function createProgress(): Progress {
 export function finalBossUnlocked(progress: Pick<Progress, 'ultimateCards'>, mode: Mode): boolean {
   if (mode !== 'starter' && mode !== 'advanced') return false;
   const keys = new Set((progress.ultimateCards ?? []).map(getUltimateCardKey));
-  return Array.from({ length: 6 }, (_, index) => `${mode}:${index + 1}`).every(key => keys.has(key));
+  return getAvailableUltimateSpells(mode).every(spell => keys.has(`${mode}:${spell.id}`));
 }
 
 export function startFinalBossSession(progress: Progress, mode: Mode): Session {
@@ -34,8 +34,9 @@ export function startSession(levelId: number, mode: Mode, review = false, progre
   if (review) throw new Error('兩題新情境練習已移除，請選擇正式關卡。');
   const level = levels.find(item => item.id === levelId);
   if (!level) throw new Error('找不到這個挑戰關卡。');
+  if (!isPlayableLevel(levelId)) throw new Error('這個關卡已移至過往練習紀錄，請選擇目前的闖關任務。');
   const curriculumMode = level.mode;
-  if (level.finalBoss && (!progress || !finalBossUnlocked(progress, curriculumMode))) throw new Error('先解鎖這個等級的六張必殺技收藏卡，才能挑戰最終魔王。');
+  if (level.finalBoss && (!progress || !finalBossUnlocked(progress, curriculumMode))) throw new Error(`先解鎖這個等級的${curriculumMode === 'starter' ? '五' : '六'}張必殺技收藏卡，才能挑戰最終魔王。`);
   const questionIds = getQuestions(levelId, review).map(question => question.id);
   if (!questionIds.length) throw new Error('找不到這個挑戰關卡。');
   return {
@@ -151,7 +152,7 @@ export function restartBattle(progress: Progress): Progress {
 /** Choosing does not spend energy; the next independently correct answer casts it. */
 export function selectUltimate(session: Session, id: number): Session {
   if (!levels.find(level => level.id === session.levelId)?.finalBoss || session.step !== 'action' || isDefeated(session)
-    || session.energy !== 3 || !Number.isInteger(id) || !getUltimateSpell(id, session.mode)) return session;
+    || session.energy !== 3 || !Number.isInteger(id) || !isAvailableUltimateSpell(id, session.mode)) return session;
   return { ...session, preparedUltimateId: id };
 }
 
@@ -233,7 +234,7 @@ function successful(session: Session, feedback: string): Session {
 export function submitAction(session: Session): Session {
   if (isDefeated(session) || session.step !== 'action') return session;
   if (session.timed && (session.remainingMs ?? QUESTION_TIME_MS) <= 0) return expireQuestion(session);
-  if (levels.find(level => level.id === session.levelId)?.finalBoss && session.energy === 3 && !getUltimateSpell(session.preparedUltimateId ?? 0, session.mode)) {
+  if (levels.find(level => level.id === session.levelId)?.finalBoss && session.energy === 3 && !isAvailableUltimateSpell(session.preparedUltimateId ?? 0, session.mode)) {
     return { ...session, feedback: '能量已滿！請先選擇一種必殺技，再回答下一題。' };
   }
   const question = currentQuestion(session);

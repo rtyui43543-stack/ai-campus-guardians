@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { auditAudio, auditContent, auditLegacyReview, auditLegacyFinal, auditLegacyReasoning, auditLegacyFiveQuestion, expectedAudio } from '../../scripts/check-content';
 import { buildQuestionCSV, buildQuestionHTML, buildQuestionMarkdown } from '../../scripts/export-questions';
 import { buildTeacherGuide } from '../../scripts/export-teacher-guide';
-import { questionBank, questionById, questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, legacyFiveQuestionQuestions, getQuestions, getQuestionsForHistory } from './index';
+import { questionBank, playableQuestionBank, playableQuestions, retiredQuestions, questionById, questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, legacyFiveQuestionQuestions, getQuestions, getQuestionsForHistory } from './index';
 import { levels } from './levels';
-import { allUltimateSpells } from './ultimateSpells';
+import { availableUltimateSpells } from './ultimateSpells';
 import { getOpeningStory, getLevelStory } from './stories';
 import { chooseAction, requiresReason, startSession, submitAction } from '../domain/engine';
 
@@ -22,10 +22,10 @@ function csvRows(text: string) {
   return rows;
 }
 
-describe('12 everyday ethics missions, two final missions and teacher answer exports', () => {
-  it('provides 24 starter, 30 advanced and 30 final questions with separate historical editions', () => {
+describe('11 everyday ethics missions, two final missions and teacher answer exports', () => {
+  it('provides 20 starter, 30 advanced and 30 final questions with separate historical editions', () => {
     expect(auditContent().errors).toEqual([]);
-    expect(auditContent().summary).toMatchObject({ questions: 84, uniqueIds: 84, main: 54, final: 30, variations: 0, legacyVariations: 24, legacyFinals: 30, legacyFiveQuestion: 30, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, tradeoffs: 1 });
+    expect(auditContent().summary).toMatchObject({ questions: 80, uniqueIds: 80, main: 50, final: 30, variations: 0, legacyVariations: 24, legacyFinals: 30, legacyFiveQuestion: 30, beginnerLevels: 5, advancedLevels: 6, finalLevels: 2, tradeoffs: 1 });
     for (let theme = 1; theme <= 6; theme++) {
       const pair = levels.filter(level => level.chapterId === theme && !level.finalBoss);
       expect(pair.map(level => level.mode)).toEqual(['starter', 'advanced']);
@@ -84,7 +84,7 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
   });
 
   it('keeps each choice directly answerable within the child reading budget', () => {
-    for (const q of questions) {
+    for (const q of playableQuestions) {
       const level = levels.find(level => level.id === q.levelId)!;
       expect(q.prompt.length, q.id).toBeLessThanOrEqual(70);
       expect(q.choices).toHaveLength(4);
@@ -124,14 +124,14 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
     const csv = buildQuestionCSV();
     expect(csv.charCodeAt(0)).toBe(0xFEFF);
     const rows = csvRows(csv); const header = rows.shift()!;
-    expect(rows).toHaveLength(84);
+    expect(rows).toHaveLength(80);
     for (const row of rows) {
       const q = questionBank.questions.find(q => q.id === row[header.indexOf('題目ID')])!;
       expect(row[header.indexOf('題目')]).toBe(q.prompt);
       q.choices.forEach((choice, i) => expect(row[header.indexOf('選項' + 'ABCD'[i])]).toBe(choice.text));
       expect(row[header.indexOf('正確選項')]).toBe(q.correct.map(i => 'ABCD'[i]).join('、'));
     }
-    for (const legacy of [...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions, ...legacyFiveQuestionQuestions]) expect(rows.some(row => row[header.indexOf('題目ID')] === legacy.id)).toBe(false);
+    for (const legacy of [...legacyReviewQuestions, ...legacyFinalQuestions, ...legacyReasoningQuestions, ...legacyFiveQuestionQuestions, ...retiredQuestions]) expect(rows.some(row => row[header.indexOf('題目ID')] === legacy.id)).toBe(false);
     expect(buildQuestionHTML()).toContain('綜合第15題');
     expect(buildQuestionHTML()).not.toContain('複習第');
   });
@@ -152,13 +152,13 @@ describe('12 everyday ethics missions, two final missions and teacher answer exp
       expect(readFileSync(folder + '/question-list.csv', 'utf8')).toBe(buildQuestionCSV());
       expect(readFileSync(folder + '/question-list.md', 'utf8')).toBe(buildQuestionMarkdown());
       expect(readFileSync(folder + '/question-list.html', 'utf8')).toBe(buildQuestionHTML());
-      expect(JSON.parse(readFileSync(folder + '/question-bank.json', 'utf8'))).toEqual(questionBank);
+      expect(JSON.parse(readFileSync(folder + '/question-bank.json', 'utf8'))).toEqual(playableQuestionBank);
     }
   });
 
   it('derives teacher spell effects from both current spell tiers and explains final boss damage separately', () => {
     const guide = buildTeacherGuide();
-    for (const spell of allUltimateSpells) {
+    for (const spell of availableUltimateSpells) {
       expect(guide).toContain(spell.name);
       expect(guide).toContain(spell.description);
       expect(guide).toContain(spell.effectDescription);

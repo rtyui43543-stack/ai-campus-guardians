@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getQuestions, getQuestionsForHistory } from '../content';
-import { levels } from '../content/levels';
+import { playableLevels } from '../content/levels';
 import {
   advanceSession, applySession, chooseAction, createProgress, currentQuestion,
   demonstrate, finishSession, restartBattle, retryQuestion, startFinalBossSession, startSession, submitAction, tickQuestion,
@@ -102,7 +102,7 @@ describe('battle text across actual answer and combat transitions', () => {
     expect(battleVisibility(retry, false)).toEqual(allVisible);
   });
 
-  it.each(levels.filter(level => !level.finalBoss))('hides both panels for the $mode chapter $chapterId ultimate and enables navigation after the cast', level => {
+  it.each(playableLevels.filter(level => !level.finalBoss))('hides both panels for the $mode chapter $chapterId ultimate and enables navigation after the cast', level => {
     const ready = charge(startSession(level.id, level.mode));
     // Full energy alone must not hide a question the player still needs to answer.
     expect(battleVisibility(ready, false)).toEqual(allVisible);

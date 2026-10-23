@@ -12,7 +12,7 @@ import type { Mode, Progress, Session } from './types';
 
 function unlocked(mode: Mode): Progress {
   const progress = createProgress();
-  progress.ultimateCards = Array.from({ length: 6 }, (_, index) => ({ ultimateId: index + 1, unlockedAt: progress.updatedAt,
+  progress.ultimateCards = Array.from({ length: mode === 'starter' ? 5 : 6 }, (_, index) => ({ ultimateId: index + 1, unlockedAt: progress.updatedAt,
     sessionId: `earned-${mode}-${index + 1}`, questionId: getQuestions(index + 1 + (mode === 'advanced' ? 6 : 0))[3].id }));
   return progress;
 }
@@ -42,17 +42,17 @@ function reach(mode: Mode, index: number, ultimateId = 2): { progress: Progress;
 }
 
 describe('final mission entry and selected ultimate state', () => {
-  it('requires all six earned cards of the requested tier and cannot bypass the gate through startSession', () => {
+  it('requires five starter or six advanced earned cards and cannot bypass the gate through startSession', () => {
     const empty = createProgress();
     expect(finalBossUnlocked(empty, 'starter')).toBe(false);
-    expect(() => startFinalBossSession(empty, 'starter')).toThrow('六張');
-    expect(() => startSession(13, 'starter')).toThrow('六張');
+    expect(() => startFinalBossSession(empty, 'starter')).toThrow('五張');
+    expect(() => startSession(13, 'starter')).toThrow('五張');
     expect(() => startSession(14, 'advanced', false, unlocked('starter'))).toThrow('六張');
     const partial = unlocked('starter');
     partial.ultimateCards!.pop();
     expect(finalBossUnlocked(partial, 'starter')).toBe(false);
     const mixed = unlocked('starter');
-    mixed.ultimateCards![5] = unlocked('advanced').ultimateCards![5];
+    mixed.ultimateCards![4] = unlocked('advanced').ultimateCards![4];
     expect(finalBossUnlocked(mixed, 'starter')).toBe(false);
     for (const mode of ['starter', 'advanced'] as const) {
       const progress = unlocked(mode);
@@ -73,7 +73,7 @@ describe('final mission entry and selected ultimate state', () => {
     const blocked = submitAction(chooseAction(ready, correctIndex));
     expect(blocked).toMatchObject({ step: 'action', energy: 3, success: false, selected: correctIndex });
     expect(blocked.feedback).toContain('先選擇');
-    for (const id of [0, 7, 1.5]) expect(selectUltimate(ready, id)).toBe(ready);
+    for (const id of [0, 6, 7, 1.5]) expect(selectUltimate(ready, id)).toBe(ready);
     expect(selectUltimate(startSession(1, 'starter'), 1).preparedUltimateId).toBeUndefined();
     expect(selectUltimate(startFinalBossSession(progress, 'starter'), 1).preparedUltimateId).toBeUndefined();
     const selected = checkpoint(progress, selectUltimate(ready, 5));

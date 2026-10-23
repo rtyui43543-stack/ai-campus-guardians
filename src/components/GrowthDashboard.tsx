@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import { ArrowRight, BookOpenCheck, ChevronLeft, ChevronRight, Flag, History, Medal, ShieldCheck, Sparkles, Target, TrendingUp } from 'lucide-react';
 import { buildGrowthDashboard, type DashboardScope, type ScoredDashboardRun } from '../domain/growthDashboard';
 import type { CompletedRun, Level, Progress } from '../domain/types';
+import { isPlayableLevel } from '../content/levels';
 import '../styles/growth-dashboard.css';
 
 const scopes: { value: DashboardScope; label: string }[] = [
@@ -43,7 +44,7 @@ export function GrowthDashboard({ progress, onRun, onLevel }: {
   return <section className="growth-dashboard" aria-labelledby={titleId}>
     <header className="gd-heading">
       <div><span className="gd-kicker"><TrendingUp size={22} />看見我的進步</span><h2 id={titleId}>我的闖關成績</h2></div>
-      <div className="gd-scope" role="group" aria-label="選擇成績範圍">{scopes.filter(option => option.value !== 'review' || progress.runs?.some(run => run.review)).map(option => <button key={option.value} type="button" aria-pressed={scope === option.value} onClick={() => selectScope(option.value)}>{option.label}</button>)}</div>
+      <div className="gd-scope" role="group" aria-label="選擇成績範圍">{scopes.filter(option => option.value !== 'review' || progress.runs?.some(run => run.review || !isPlayableLevel(run.levelId))).map(option => <button key={option.value} type="button" aria-pressed={scope === option.value} onClick={() => selectScope(option.value)}>{option.label}</button>)}</div>
     </header>
 
     <div className="gd-summary">
@@ -64,7 +65,7 @@ export function GrowthDashboard({ progress, onRun, onLevel }: {
     </div>
 
     <section className="gd-themes" aria-labelledby={titleId + '-themes'}>
-      <div className="gd-section-heading"><h3 id={titleId + '-themes'}>六大主題 · 我的最佳成績</h3><span>答題滿分 100，必殺獎勵另計</span></div>
+      <div className="gd-section-heading"><h3 id={titleId + '-themes'}>{scope === 'starter' ? '五大主題' : '六大主題'} · 我的最佳成績</h3><span>答題滿分 100，必殺獎勵另計</span></div>
       <div className="gd-theme-grid">{themes.map(items => {
         const chapter = items[0].chapter;
         const Icon = themeIcons[chapter.id - 1] ?? Sparkles;
@@ -72,10 +73,10 @@ export function GrowthDashboard({ progress, onRun, onLevel }: {
           <h4><span className="gd-theme-icon"><Icon size={25} /></span>{items[0].level.finalBoss ? '最終魔王決戰' : chapter.shortTitle}</h4>
           <div className="gd-level-bars">{items.map(item => {
             const best = item.best;
-            return <button className={'gd-level-bar' + (!best ? ' unplayed' : '')} key={item.level.id} type="button" onClick={() => best ? onRun(best.run) : onLevel(item.level)} aria-label={best ? `${modeName(item.level.mode)}${levelNumber(item.level)}，${item.level.title}，最高答題 ${best.score.score} 分${best.score.bonusScore ? `，必殺加 ${best.score.bonusScore} 分` : ''}，${item.passed ? '本關已過關' : '尚未過關'}，查看最佳成績` : `${modeName(item.level.mode)}${levelNumber(item.level)}，${item.level.title}，尚無${scope === 'review' ? '重玩' : '闖關'}紀錄，前往闖關`}>
+            return <button className={'gd-level-bar' + (!best ? ' unplayed' : '')} key={item.level.id} type="button" disabled={!best && !isPlayableLevel(item.level.id)} onClick={() => best ? onRun(best.run) : onLevel(item.level)} aria-label={best ? `${modeName(item.level.mode)}${levelNumber(item.level)}，${item.level.title}，最高答題 ${best.score.score} 分${best.score.bonusScore ? `，必殺加 ${best.score.bonusScore} 分` : ''}，${item.passed ? '本關已過關' : '尚未過關'}，查看最佳成績` : !isPlayableLevel(item.level.id) ? `${item.level.title}，過往關卡尚無紀錄` : `${modeName(item.level.mode)}${levelNumber(item.level)}，${item.level.title}，尚無${scope === 'review' ? '重玩' : '闖關'}紀錄，前往闖關`}>
               <span className="gd-bar-top"><b>{modeName(item.level.mode)}{scope === 'review' ? '重玩' : ''}</b><strong>{best ? best.score.score : '—'}<small>{best ? '分' : '未挑戰'}</small></strong></span>
               <span className="gd-bar-track" aria-hidden="true"><span style={{ width: `${best?.score.score ?? 0}%` }} /></span>
-              <span className="gd-bar-bottom"><span>{best ? <>{best.score.bonusScore > 0 ? <em className="gd-bonus">必殺 ＋{best.score.bonusScore}</em> : null}{item.passed ? <span className="gd-pass">本關已過關</span> : <span className="gd-not-passed">尚未過關</span>}</> : scope === 'review' ? '還沒有重玩成績' : '開始你的挑戰'}</span><span className="gd-bar-cta">{best ? '看成績' : scope === 'review' ? '先去闖關' : '去闖關'}<ArrowRight size={18} /></span></span>
+              <span className="gd-bar-bottom"><span>{best ? <>{best.score.bonusScore > 0 ? <em className="gd-bonus">必殺 ＋{best.score.bonusScore}</em> : null}{item.passed ? <span className="gd-pass">本關已過關</span> : <span className="gd-not-passed">尚未過關</span>}</> : scope === 'review' ? '還沒有重玩成績' : '開始你的挑戰'}</span><span className="gd-bar-cta">{best ? '看成績' : !isPlayableLevel(item.level.id) ? '過往關卡' : scope === 'review' ? '先去闖關' : '去闖關'}{(best || isPlayableLevel(item.level.id)) && <ArrowRight size={18} />}</span></span>
             </button>;
           })}</div>
         </article>;

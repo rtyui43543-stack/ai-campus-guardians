@@ -1,7 +1,7 @@
 import { Clock3, Flame, Gem, HeartPulse, HelpCircle, ShieldCheck, Snowflake, Sparkles, Zap } from 'lucide-react';
 import type { Session } from '../domain/types';
 import { getLevel } from '../content/levels';
-import { getUltimateSpell } from '../content/ultimateSpells';
+import { getAvailableUltimateSpells, getUltimateSpell } from '../content/ultimateSpells';
 import { enemyBurnDamagePerTurn, remainingBarrierCharges, remainingFrostGuardCharges, remainingLightningHintQuestions, remainingMirrorGuardCharges } from '../domain/engine';
 
 export function BattleMechanics({ session, paused, narrationPaused = false, onRules, onChooseSpell }: { session: Session; paused: boolean; narrationPaused?: boolean; onRules: () => void; onChooseSpell?: () => void }) {
@@ -46,7 +46,7 @@ export function BattleRules({ timed, finalBoss = false, questionCount = finalBos
     <ul><li>自己答對一題，能量＋1；答錯保留能量。進階超時才扣 1 點，最低為 0。</li>
       <li>集滿 3 點後，下一題答對自動施放。施放後能量歸零，另外獲得 10 分獎勵和專屬收藏卡。</li>
       <li>使用提示後答對仍可充能；伙伴示範不充能、不施放必殺技。</li>
-      {finalBoss && <li>最終關能量滿三點後，自選本組六種必殺技之一，下一次答對自動施放。選招時倒數暫停；答錯保留選招，超時扣一點並清除選招。</li>}
+      {finalBoss && <li>最終關能量滿三點後，自選本組 {getAvailableUltimateSpells(timed ? 'advanced' : 'starter').length} 種必殺技之一，下一次答對自動施放。選招時倒數暫停；答錯保留選招，超時扣一點並清除選招。</li>}
       <li>同一場中途離開可續玩；開始新關或重新挑戰，能量、護盾和魔法附加效果都歸零。收藏卡會保留。</li>
     </ul>
     <h3>{timed ? '進階：每題 30 秒' : '初階：不限時'}</h3>
@@ -64,7 +64,7 @@ export function BattleRules({ timed, finalBoss = false, questionCount = finalBos
       <li>火焰：命中後魔王持續燃燒，後續每題完成扣 {timed && finalBoss ? 6 : 4} HP{timed && finalBoss ? '；進階主題關仍為 4 HP' : ''}。</li>
       <li>{timed ? '萬卷雷霆陣：下兩題各' : '雷霆索引：下一題'}有兩個選項外框閃出雷光，其中至少一個是正確答案。雷光提示不扣分，同題重試不消耗額外題數。</li>
       <li>{timed ? '千鏡破偽陣：魔王下兩次攻擊各' : '鏡界破偽：魔王下次攻擊'}有 50% 機率落空，每次攻擊只判定一次；落空不扣血。</li>
-      <li>寒冰：魔王下{timed ? '兩次' : '次'}命中攻擊的 HP 傷害減半，再計算城堡護盾的抵擋；落空不消耗減傷次數。</li>
+      {timed && <li>寒冰：魔王下兩次命中攻擊的 HP 傷害減半，再計算城堡護盾的抵擋；落空不消耗減傷次數。</li>}
       <li>補血：施放時回復血量，後續每題完成自動再回復 4 HP，最多 100 HP，直到本關結束。</li>
       <li>城堡護盾：完整抵擋下{timed ? '兩次' : '一次'}魔王命中攻擊，不限傷害數值，主角不扣血；落空不消耗護盾。所有附加效果只在這一關生效。</li>
     </ul>

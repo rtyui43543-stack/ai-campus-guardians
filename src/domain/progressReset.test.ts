@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { advanceSession, applySession, chooseAction, createProgress, currentQuestion, finalBossUnlocked, finishSession, selectUltimate, startFinalBossSession, startSession, submitAction } from './engine';
+import { getQuestions } from '../content';
 import type { Progress } from './types';
 import { forgetOpening, hasSeenOpening, rememberOpening } from '../platform/openingStory';
 import { screenFromHash } from '../platform/navigation';
@@ -46,7 +47,7 @@ function populated(): Progress {
   let progress = createProgress();
   for (let level = 1; level <= 14; level++) {
     const mode = level >= 7 && level <= 12 || level === 14 ? 'advanced' : 'starter';
-    let session = level > 12 ? startFinalBossSession(progress, mode) : startSession(level, mode);
+    let session = level > 12 ? startFinalBossSession(progress, mode) : level === 6 ? { ...startSession(5, 'starter'), levelId: 6, questionIds: getQuestions(6).map(question => question.id) } : startSession(level, mode);
     while (true) {
       if (level > 12 && session.energy === 3) session = selectUltimate(session, 1);
       session = submitAction(chooseAction(session, Number(Object.keys(currentQuestion(session).valid)[0])));

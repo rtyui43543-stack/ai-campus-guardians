@@ -3,12 +3,18 @@ import legacyBank from './legacy-review-bank.json';
 import legacyFinalBank from './legacy-final-bank.json';
 import legacyReasoningBank from './legacy-reasoning-bank.json';
 import legacyFiveQuestionBank from './legacy-five-question-bank.json';
-import { getLevel } from './levels';
+import { getLevel, isPlayableLevel } from './levels';
 import type { Mode, Question } from '../domain/types';
 
 export type EditableQuestion = Omit<Question, 'advancedPrompt' | 'reasons' | 'valid' | 'animation'> & { correct: number[] };
 /** Canonical editable source; game answers and teacher exports are derived from it. */
 export const questionBank = bank;
+/** Current teaching exports omit retired missions while the canonical bank keeps historical IDs. */
+export const playableQuestionBank = {
+  ...bank,
+  levels: bank.levels.filter(level => isPlayableLevel(level.id)),
+  questions: bank.questions.filter(question => isPlayableLevel(question.levelId)),
+};
 const adaptQuestion = (q: EditableQuestion): Question => ({
   ...q,
   advancedPrompt: q.prompt,
@@ -18,6 +24,8 @@ const adaptQuestion = (q: EditableQuestion): Question => ({
 });
 export const questions: Question[] = (bank.questions as EditableQuestion[]).map(adaptQuestion)
   .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);
+export const playableQuestions = questions.filter(question => isPlayableLevel(question.levelId));
+export const retiredQuestions = questions.filter(question => !isPlayableLevel(question.levelId));
 /** Historical lookups only: these questions have no new-play or teacher-export entry. */
 export const legacyReviewQuestions: Question[] = (legacyBank.questions as EditableQuestion[]).map(adaptQuestion)
   .sort((a, b) => a.levelId - b.levelId || a.slot - b.slot);

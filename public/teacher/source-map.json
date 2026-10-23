@@ -296,66 +296,6 @@
     "themeId": 5
   },
   {
-    "id": "V5L06Q01",
-    "level": 6,
-    "slot": 1,
-    "objective": "使用 AI 前想需求，使用後自己檢查。",
-    "units": [
-      13,
-      17,
-      18
-    ],
-    "printedPages": "135–141、172–177、181–185",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 6
-  },
-  {
-    "id": "V5L06Q02",
-    "level": 6,
-    "slot": 2,
-    "objective": "使用 AI 前想需求，使用後自己檢查。",
-    "units": [
-      13,
-      17,
-      18
-    ],
-    "printedPages": "135–141、172–177、181–185",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 6
-  },
-  {
-    "id": "V5L06Q03",
-    "level": 6,
-    "slot": 3,
-    "objective": "使用 AI 前想需求，使用後自己檢查。",
-    "units": [
-      13,
-      17,
-      18
-    ],
-    "printedPages": "135–141、172–177、181–185",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 6
-  },
-  {
-    "id": "V5L06Q04",
-    "level": 6,
-    "slot": 4,
-    "objective": "使用 AI 前想需求，使用後自己檢查。",
-    "units": [
-      13,
-      17,
-      18
-    ],
-    "printedPages": "135–141、172–177、181–185",
-    "label": "教材改編＋倫理延伸",
-    "independentFinal": false,
-    "themeId": 6
-  },
-  {
     "id": "V4L07Q01",
     "level": 7,
     "slot": 1,

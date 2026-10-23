@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Download, Flag, Lightbulb, RotateCcw, Settings, ShieldCheck, Upload, WifiOff } from 'lucide-react';
-import { chapters, levels } from '../content/levels';
+import { chapters, isPlayableLevel, playableLevels } from '../content/levels';
+import { questionById } from '../content';
 import type { CompletedRun, Level, Progress } from '../domain/types';
 import { exportBackup, parseBackup } from '../domain/storage';
 import { useOffline } from '../platform/offline';
@@ -24,22 +25,26 @@ function Heading({ eyebrow, title, children }: { eyebrow: string; title: string;
 }
 
 export function GrowthPanel({ progress, onLevel, onRun }: { progress: Progress; onLevel: (level: Level) => void; onRun: (run: CompletedRun) => void }) {
-  const latest = latestThinkingRecords(progress.attempts);
+  const latest = latestThinkingRecords(progress.attempts).filter(record => {
+    const question = questionById.get(record.questionId);
+    return question !== undefined && isPlayableLevel(question.levelId);
+  });
   const needsPractice = latest.filter(a => a.status === 'practice' || a.status === 'timeout');
   return <>
     <Heading eyebrow="EVERY STEP COUNTS" title="每次練習，都會慢慢變強。">看看自己的進步，再挑戰一次！</Heading>
-    <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{progress.completed.length}<small> / {levels.length}</small></strong><span>已完成關卡</span></div>
+    <div className="growth-panel-milestones"><div className="surface"><Flag size={27} /><strong>{playableLevels.filter(level => progress.completed.includes(level.id)).length}<small> / {playableLevels.length}</small></strong><span>已完成關卡</span></div>
       <div className="surface"><Lightbulb size={27} /><strong>{latest.length}</strong><span>已練習情境</span></div>
       <div className="surface"><RotateCcw size={27} /><strong>{needsPractice.length}</strong><span>待練習情境</span></div></div>
     <ThinkingFootprints progress={progress} onLevel={onLevel} />
     <GrowthDashboard progress={progress} onLevel={onLevel} onRun={onRun} />
     <UltimateCollection cards={progress.ultimateCards ?? []} initialMode={progress.settings.mode} />
-    <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成同主題的初階與進階，點亮徽章</span></div>
+    <div className="section-heading"><h2>六種守護能力</h2><span className="section-note">完成主題關點亮徽章；生活合作只需完成進階</span></div>
     <div className="skill-grid">{chapters.map(chapter => {
       const Icon = chapterIcons[chapter.icon];
-      const completed = levels.filter(l => !l.finalBoss && l.chapterId === chapter.id && progress.completed.includes(l.id)).length;
-      return <div key={chapter.id} className={'skill-card ' + (completed === 2 ? 'unlocked' : '')} style={{ '--chapter-color': chapter.color } as React.CSSProperties}>
-        <Icon size={29} /><h3>{chapter.skill}</h3><p>{chapter.shortTitle}</p><span>{completed === 2 ? '已點亮' : completed + ' / 2 關'}</span>
+      const missions = playableLevels.filter(l => !l.finalBoss && l.chapterId === chapter.id);
+      const completed = missions.filter(l => progress.completed.includes(l.id)).length;
+      return <div key={chapter.id} className={'skill-card ' + (completed === missions.length ? 'unlocked' : '')} style={{ '--chapter-color': chapter.color } as React.CSSProperties}>
+        <Icon size={29} /><h3>{chapter.skill}</h3><p>{chapter.shortTitle}</p><span>{completed === missions.length ? '已點亮' : `${completed} / ${missions.length} 關`}</span>
       </div>;
     })}</div>
   </>;
@@ -73,15 +78,15 @@ export function OfflinePanel({ progress, offline, onUpdate, onNotice, onMap }: {
         }}><Download size={17} />匯出進度</button><button className="button secondary" onClick={() => input.current?.click()}><Upload size={17} />匯入備份</button></div>
         <input ref={input} type="file" accept=".json,application/json" className="visually-hidden" aria-label="選擇進度備份" onChange={e => { void transfer(e.target.files?.[0]); }} />
         {importError && <p className="error-text" role="alert">{importError}</p>}
-        {pending && <div className="import-confirm"><b>備份已檢查：完成 {pending.completed.length} 關、{pending.attempts.length} 筆思考紀錄。</b><p>還原會取代這台裝置目前的進度。建議先匯出目前紀錄。</p><div><button className="button primary" onClick={() => { onUpdate(pending); setPending(null); onNotice('備份已還原。途中任務可以從地圖繼續。'); onMap(); }}>還原這份備份</button><button className="text-button" onClick={() => setPending(null)}>取消</button></div></div>}
-        <small>目前完成 {progress.completed.length} 關 · 最後更新 {new Date(progress.updatedAt).toLocaleString('zh-TW')}</small>
+        {pending && <div className="import-confirm"><b>備份已檢查：現行完成 {playableLevels.filter(level => pending.completed.includes(level.id)).length} 關、{pending.attempts.length} 筆思考紀錄。</b><p>還原會取代這台裝置目前的進度，包含過往紀錄。建議先匯出目前紀錄。</p><div><button className="button primary" onClick={() => { onUpdate(pending); setPending(null); onNotice('備份已還原。途中任務可以從地圖繼續。'); onMap(); }}>還原這份備份</button><button className="text-button" onClick={() => setPending(null)}>取消</button></div></div>}
+        <small>現行完成 {playableLevels.filter(level => progress.completed.includes(level.id)).length} 關 · 最後更新 {new Date(progress.updatedAt).toLocaleString('zh-TW')}</small>
       </section></div>
     <section className="surface settings-section preferences"><div className="panel-title"><Settings size={21} /><h2>我的冒險偏好</h2></div>
       <div className="preference-row"><div><b>音效回饋</b><p>確認答案時，播放出招與提示音效。</p></div><Toggle label="音效回饋" checked={progress.settings.sound} onChange={sound => onUpdate({ ...progress, settings: { ...progress.settings, sound } })} /></div>
       <div className="preference-row"><div><b>冒險與戰鬥背景音樂</b><p>主頁播放輕快的探索配樂，對戰時換成緊湊配樂。可用頁面上的音樂按鈕隨時關閉；關閉設定會保留。</p></div><Toggle label="冒險與戰鬥背景音樂" checked={progress.settings.music} onChange={music => onUpdate({ ...progress, settings: { ...progress.settings, music } })} /></div>
       <div className="preference-row"><div><b>點擊朗讀</b><p>需要時按題目、提示或解說旁的喇叭，再按一次可停止。新題目不會自動朗讀。</p></div><span className="tag">手動播放</span></div>
       <div className="preference-row"><div><b>減少動態效果</b><p>保留角色與血量，減少漂浮和攻擊動畫。</p></div><Toggle label="減少動態效果" checked={progress.settings.reducedMotion} onChange={reducedMotion => onUpdate({ ...progress, settings: { ...progress.settings, reducedMotion } })} /></div>
-      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。兩種路線各六個主題關；集齊本組六張必殺收藏卡，還能開啟最終魔王關（初階200HP、進階300HP）。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階</option><option value="advanced">進階</option></select></div>
+      <div className="preference-row"><div><b>挑戰模式</b><p>初階不限時；進階每題 30 秒，答得越快，該題得分上限越高。初階五個主題關、進階六個主題關；集齊本組必殺收藏卡（初階五張、進階六張），還能開啟最終魔王關（初階200HP、進階300HP）。</p></div><select aria-label="挑戰模式" value={progress.settings.mode} onChange={e => onUpdate({ ...progress, settings: { ...progress.settings, mode: e.target.value as Progress['settings']['mode'] } })}><option value="starter">初階</option><option value="advanced">進階</option></select></div>
     </section>
   </>;
 }

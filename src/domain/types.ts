@@ -142,6 +142,8 @@ export interface Progress {
   completed: number[];
   attempts: AttemptRecord[];
   active: Session | null;
+  /** Removed missions retain their exact unfinished checkpoint in backups, without a resume entry. */
+  archivedSessions?: Session[];
   proposals: Proposal[];
   settings: { mode: Mode; sound: boolean; music: boolean; narration: boolean; reducedMotion: boolean };
   updatedAt: string;

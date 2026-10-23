@@ -1,9 +1,13 @@
 import bank from './question-bank.json';
-import type { Chapter, Level } from '../domain/types';
+import type { Chapter, Level, Mode } from '../domain/types';
 
-/** Theme IDs stay the same across the six beginner and six advanced missions. */
+/** Historical IDs stay stable, including the retired starter cooperation mission. */
 export const chapters = bank.chapters as Chapter[];
 export const levels = bank.levels as Level[];
+/** Current routes: five starter missions, six advanced missions and their final bosses. */
+export const playableLevels = levels.filter(level => level.id !== 6);
+export const getPlayableLevels = (mode?: Mode) => playableLevels.filter(level => mode === undefined || level.mode === mode);
+export const isPlayableLevel = (id: number) => playableLevels.some(level => level.id === id);
 export const getLevel = (id: number) => {
   const level = levels.find(item => item.id === id);
   if (!level) throw new Error(`找不到第 ${id} 關。`);

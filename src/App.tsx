@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Check, ChevronRight, Compass, Download, Flag, HandHeart, Home, Lightbulb, Map, Medal, Menu, Music2, Pause, Play, RotateCcw, ScanLine, Search, Settings, ShieldCheck, Sparkles, Star, Volume2, VolumeX, Wifi, WifiOff, X, Zap } from 'lucide-react';
 import type { Chapter, CompletedRun, Level, Mode, Progress, Session } from './domain/types';
-import { chapters, levels, getChapter, getLevel } from './content/levels';
+import { chapters, playableLevels, getPlayableLevels, isPlayableLevel, getChapter, getLevel } from './content/levels';
 import { getBossForTheme, getMissionBoss } from './content/missionBosses';
 import { questionById, presentQuestion } from './content';
 import { advanceSession, applySession, battleHealth, chooseAction, demonstrate, finalBossUnlocked, finishSession, isDefeated, restartBattle, retryQuestion, selectUltimate, sessionSummary, startFinalBossSession, startSession, submitAction, tickQuestion, useHint } from './domain/engine';
@@ -27,7 +27,7 @@ import { GameCover } from './components/GameCover';
 import { AssociationBrand } from './components/AssociationBrand';
 import { BattleMechanics, BattleRules } from './components/BattleMechanics';
 import { battleEnemyMaxHp } from './domain/battleHealth';
-import { getUltimateSpell } from './content/ultimateSpells';
+import { getUltimateSpell, getAvailableUltimateSpells } from './content/ultimateSpells';
 import { UltimateCinematic } from './components/UltimateCinematic';
 import { EnemyCinematic } from './components/EnemyCinematic';
 import { CombatAttackLabel } from './components/CombatAttackLabel';
@@ -283,7 +283,8 @@ export function App() {
   const start = (level: Level) => {
     const snapshot = progressRef.current;
     if (!snapshot || resettingRef.current) return;
-    if (level.finalBoss && !finalBossUnlocked(snapshot, level.mode)) { setNotice('先解鎖這個組別的六張必殺收藏卡，就能挑戰最終魔王！'); return; }
+    if (!isPlayableLevel(level.id)) { setNotice('這一關已收錄至過往練習紀錄，請從地圖選擇目前的任務。'); return; }
+    if (level.finalBoss && !finalBossUnlocked(snapshot, level.mode)) { setNotice(`先解鎖這個組別的 ${getAvailableUltimateSpells(level.mode).length} 張必殺收藏卡，就能挑戰最終魔王！`); return; }
     clockRef.current.pause(performance.now()); setRulesOpen(false); setExplanationOpen(false);
     const session = level.finalBoss ? startFinalBossSession(snapshot, level.mode) : startSession(level.id, level.mode);
     stopAudio(); stopBattleSound();
@@ -368,7 +369,8 @@ export function App() {
     <h1>AI 校園守護隊</h1>
     {loadError ? <><p role="alert">存檔讀取失敗：{loadError}</p><p>已保留原存檔，請重新讀取。</p><button className="button primary" onClick={read}><RotateCcw size={18} />重新讀取</button></> : <p>正在整理冒險裝備…</p>}
   </main>;
-  const selectedLevels = levels.filter(l => l.mode === progress.settings.mode && (!l.finalBoss || finalBossUnlocked(progress, l.mode)));
+  const selectedLevels = getPlayableLevels(progress.settings.mode).filter(l => !l.finalBoss || finalBossUnlocked(progress, l.mode));
+  const completedCount = playableLevels.filter(level => progress.completed.includes(level.id)).length;
   const nextLevel = selectedLevels.find(l => !progress.completed.includes(l.id)) ?? selectedLevels[0];
   const active = progress.active;
   const battleText = battleVisibility(active, animating);
@@ -389,10 +391,10 @@ export function App() {
   const audioKey = question && active ? question.id + '.' + active.mode : '';
   const spellChapter = active?.ultimateUsed ? active.ultimateId ?? battleLevel?.chapterId ?? 1 : question?.themeId ?? battleLevel?.chapterId ?? 1;
   const pickingSpell = screen === 'battle' && active && battleLevel?.finalBoss && active.step === 'action' && active.energy === 3 && (!active.preparedUltimateId || chooseSpellOpen);
-  const mastery = new Set(progress.completed.filter(id => !getLevel(id).finalBoss).map(id => getLevel(id).chapterId).filter(id => levels.filter(l => !l.finalBoss && l.chapterId === id).every(l => progress.completed.includes(l.id))));
+  const mastery = new Set(chapters.filter(chapter => playableLevels.filter(l => !l.finalBoss && l.chapterId === chapter.id).every(l => progress.completed.includes(l.id))).map(chapter => chapter.id));
   const title = screen === 'map' ? '冒險地圖' : navItems.find(n => n.id === screen)?.label ?? '守護挑戰';
   if (screen === 'cover') return <>
-    <GameCover offline={offline} completed={progress.completed.length} reducedMotion={progress.settings.reducedMotion}
+    <GameCover offline={offline} completed={completedCount} reducedMotion={progress.settings.reducedMotion}
       onStart={enterAdventure} onResume={active ? () => isDefeated(active) ? restart() : navigate('battle') : undefined} />
     {notice && <div className="toast" role="status"><span>{notice}</span><button aria-label="關閉通知" onClick={() => setNotice('')}><X size={18} /></button></div>}
   </>;
@@ -406,8 +408,8 @@ export function App() {
       <nav aria-label="主要導覽">{navItems.map(n => <button key={n.id} className={'nav-item ' + (screen === n.id ? 'active' : '')} onClick={() => navigate(n.id)}>
         <n.icon size={20} /><span>{n.label}</span>{screen === n.id && <span className="nav-dot" />}
       </button>)}</nav>
-      <div className="sidebar-progress"><div><span>冒險過關進度</span><b>{progress.completed.length}<small> / {levels.length}</small></b></div>
-        <progress value={progress.completed.length} max={levels.length} aria-label="已完成關卡" />
+      <div className="sidebar-progress"><div><span>冒險過關進度</span><b>{completedCount}<small> / {playableLevels.length}</small></b></div>
+        <progress value={completedCount} max={playableLevels.length} aria-label="已完成關卡" />
         <p>每一個好問題，<br />都讓校園更好一點。</p>
       </div>
       <div className="sidebar-bottom"><button className={'offline-chip ' + (offline.state.ready ? 'ready' : '')} onClick={() => navigate('settings')}>
@@ -548,11 +550,14 @@ function DuelMeter({ label, hp, maxHp = 100, side, cue, reducedMotion }: { label
   return <div className={'duel-meter ' + side}><div><span>{label}</span><b>{Math.round(displayHp)}<small> HP</small></b></div><progress value={displayHp} max={maxHp} aria-label={side === 'hero' ? '我方血量' : '敵方血量'} /></div>;
 }
 
-function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory }: {
+export function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory }: {
   progress: Progress; nextLevel: Level; mastery: Set<number>; onLevel: (level: Level) => void; onResume: () => void; onStory: () => void;
 }) {
-  const mainRuns = (progress.runs ?? []).filter(run => !run.review);
+  const mainRuns = (progress.runs ?? []).filter(run => !run.review && isPlayableLevel(run.levelId));
   const highestScore = mainRuns.length ? Math.max(...mainRuns.map(run => scoreSession(run).score)) : null;
+  const routeLevels = getPlayableLevels(progress.settings.mode).filter(level => !level.finalBoss);
+  const visibleChapters = chapters.filter(chapter => routeLevels.some(level => level.chapterId === chapter.id));
+  const completedCount = playableLevels.filter(level => progress.completed.includes(level.id)).length;
   return <>
     <section className="welcome-banner">
       <div className="welcome-art" /><div className="welcome-shade" />
@@ -565,14 +570,14 @@ function MapScreen({ progress, nextLevel, mastery, onLevel, onResume, onStory }:
       <div className="floating-label"><Sparkles size={18} /><span>思考，就是你的魔法力量。</span></div>
     </section>
     <section className="adventure-metrics" aria-label="我的冒險總覽">
-      <div><span className="metric-icon"><Flag size={25} /></span><span><small>已完成任務</small><strong>{progress.completed.length}<b>／{levels.length} 關</b></strong></span></div>
+      <div><span className="metric-icon"><Flag size={25} /></span><span><small>已完成任務</small><strong>{completedCount}<b>／{playableLevels.length} 關</b></strong></span></div>
       <div><span className="metric-icon"><Sparkles size={25} /></span><span><small>六種守護魔法</small><strong>{mastery.size}<b>／6 已掌握</b></strong></span></div>
       <div><span className="metric-icon"><Medal size={25} /></span><span><small>最高闖關紀錄</small><strong>{highestScore === null ? '待挑戰' : highestScore}<b>{highestScore === null ? '' : '／100 分'}</b></strong></span></div>
     </section>
-    <div className="journey-strip"><div><span className="journey-icon"><Compass size={21} /></span><span><b>初階六關＋最終關，進階六關＋最終關</b><small>從生活小事，練習怎麼安心使用 AI</small></span></div>
+    <div className="journey-strip"><div><span className="journey-icon"><Compass size={21} /></span><span><b>初階五關＋最終關，進階六關＋最終關</b><small>從生活小事，練習怎麼安心使用 AI</small></span></div>
       <span className="journey-offline-note"><WifiOff size={16} />下載後，斷網也能玩</span></div>
-    <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">六個生活主題，自由選關挑戰</span></div>
-    <div className="chapter-grid">{chapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
+    <div className="section-heading map-trail-heading"><div><span className="eyebrow">✦ {modeNames[progress.settings.mode]}魔法路線</span><h2>選一個任務，準備出招！</h2></div><span className="section-note">{visibleChapters.length} 個生活主題，自由選關挑戰</span></div>
+    <div className="chapter-grid">{visibleChapters.map(chapter => <ChapterCard key={chapter.id} chapter={chapter} progress={progress} mastered={mastery.has(chapter.id)} onLevel={onLevel} nextLevel={nextLevel.id} />)}</div>
     <FinalBossChallenge progress={progress} onLevel={onLevel} />
     <section className="learning-promise"><span className="promise-icon"><HandHeart size={29} /></span><div><h3>答對集能量，解鎖你的必殺技！</h3><p>初階主題關每關四題，進階每關五題，最終決戰最多十五題。點選答案就能出招；能量滿三點，下一題答對釋放必殺。初階不限時；進階每題 30 秒，挑戰速度加分。也能請伙伴提示。</p></div><span className="tag">3–6 年級 · 單人對戰</span></section>
   </>;
@@ -582,7 +587,7 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
   chapter: Chapter; progress: Progress; mastered: boolean; onLevel: (level: Level) => void; nextLevel: number;
 }) {
   const Icon = chapterIcons[chapter.icon];
-  const missions = levels.filter(l => !l.finalBoss && l.chapterId === chapter.id && l.mode === progress.settings.mode);
+  const missions = getPlayableLevels(progress.settings.mode).filter(l => !l.finalBoss && l.chapterId === chapter.id);
   const boss = getBossForTheme(chapter.id, progress.settings.mode);
   return <article className="chapter-card" style={{ '--chapter-color': chapter.color } as React.CSSProperties}>
     <div className="chapter-card-header"><div className="chapter-icon"><Icon size={23} /></div><span className="chapter-number">{modeNames[progress.settings.mode]} 0{chapter.id}</span>
@@ -596,13 +601,14 @@ function ChapterCard({ chapter, progress, mastered, onLevel, nextLevel }: {
   </article>;
 }
 
-function Results({ session, onLevel, onMap }: {
+export function Results({ session, onLevel, onMap }: {
   session: CompletedRun; onLevel: (level: Level) => void; onMap: () => void;
 }) {
   const level = getLevel(session.levelId)!;
   const chapter = getChapter(level.chapterId)!;
   const summary = sessionSummary(session.records);
   const score = scoreSession(session);
+  const nextLevel = playableLevels.find(candidate => !candidate.finalBoss && candidate.id > level.id);
   return <div className="results-page"><section className="results-hero"><span className="results-medal"><ShieldCheck size={42} /></span>
     <span className="eyebrow">BATTLE COMPLETE</span><h1>{session.passed === false ? '成績已保存，再挑戰一次！' : level.finalBoss ? '最終魔王被擊敗了！' : session.review ? '過往練習紀錄' : '挑戰成功！敵人被擊敗了！'}</h1><p>{modeNames[level.mode]} · {levelLabel(level)} · {level.title}{session.passed === false ? level.finalBoss ? ' · 魔王尚未被擊敗' : ' · 有超時題，尚未過關' : ''}</p>
     <div className="result-skill"><Sparkles size={18} />{chapter.skill}<span>學會的事，比勝率更重要</span></div></section>
@@ -614,8 +620,8 @@ function Results({ session, onLevel, onMap }: {
       return <details key={q.id}><summary><div className="result-question"><strong>第 {i + 1} 題</strong><b>{text.prompt}</b><small>{describeAttempt(r)}{r.timed ? ' · 作答 ' + ((r.elapsedMs ?? 0) / 1000).toFixed(1) + ' 秒' : ''}</small></div><span className="result-question-score">{score.rows[i].points}／{Number(score.rows[i].maxPoints.toFixed(2))} 分{score.rows[i].bonusPoints > 0 && <small>必殺＋{score.rows[i].bonusPoints}</small>}</span><ChevronRight size={18} /></summary><p><b>你的答案：</b>{r.action === null ? '超時，未完成作答' : text.choices[r.action].text}<br />{text.explanation}</p></details>;
     })}</div></section>
     <div className="results-actions"><button className="button secondary" onClick={onMap}><Home size={18} />回冒險地圖</button>
-      {session.passed === false ? <button className="button primary" onClick={() => onLevel(level)}>再挑戰這一關<RotateCcw size={18} /></button>
-        : !level.finalBoss && level.id < 12 && <button className="button primary" onClick={() => onLevel(getLevel(level.id + 1)!)}>前往{modeNames[getLevel(level.id + 1).mode]}{levelLabel(getLevel(level.id + 1))}<ArrowRight size={18} /></button>}</div>
+      {session.passed === false && isPlayableLevel(level.id) ? <button className="button primary" onClick={() => onLevel(level)}>再挑戰這一關<RotateCcw size={18} /></button>
+        : session.passed !== false && !level.finalBoss && nextLevel && <button className="button primary" onClick={() => onLevel(nextLevel)}>前往{modeNames[nextLevel.mode]}{levelLabel(nextLevel)}<ArrowRight size={18} /></button>}</div>
   </div>;
 }
 

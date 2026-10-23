@@ -26,10 +26,10 @@ describe('thinking footprints', () => {
     expect(latestThinkingRecords(records).map(item => item.status)).toEqual(['first', 'timeout']);
   });
 
-  it('separates both seven-level routes, and the practice filter does not change totals', () => {
+  it('separates six starter and seven advanced levels, and the practice filter does not change totals', () => {
     const progress = { ...createProgress(), completed: [1, 7], attempts: [record(1, 'practice'), record(2, 'supported'), record(7, 'timeout')] };
     const starter = buildThinkingFootprints(progress, 'starter', true);
-    expect(starter.total).toBe(7);
+    expect(starter.total).toBe(6);
     expect(starter.completed).toBe(1);
     expect(starter.practiced).toBe(2);
     expect(starter.practice).toBe(1);
@@ -52,7 +52,7 @@ describe('thinking footprints', () => {
   it('shows empty routes and ignores unknown question records safely', () => {
     const progress = { ...createProgress(), attempts: [{ ...record(1, 'practice'), questionId: 'no-longer-present' }] };
     const data = buildThinkingFootprints(progress, 'starter');
-    expect(data.items).toHaveLength(7);
+    expect(data.items).toHaveLength(6);
     expect(data.completed).toBe(0);
     expect(data.practiced).toBe(0);
     expect(data.items.every(item => Object.values(item.counts).every(count => count === 0))).toBe(true);

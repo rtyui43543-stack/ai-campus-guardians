@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { questions } from '../content';
-import { levels } from '../content/levels';
+import { isPlayableLevel, levels, playableLevels } from '../content/levels';
 import {
   advanceSession, applySession, battleHealth, chooseAction, chooseReason, createProgress, currentQuestion,
   demonstrate, finishSession, isDefeated, requiresReason, restartBattle, retryQuestion, sessionSummary, startSession,
@@ -24,9 +24,9 @@ function wrongIndex(session: Session) {
 
 describe('direct-answer battle engine', () => {
   it('binds each level to its actual curriculum rather than relabelling its difficulty', () => {
-    expect(levels.filter(level => level.mode === 'starter' && !level.finalBoss)).toHaveLength(6);
-    expect(levels.filter(level => level.mode === 'advanced' && !level.finalBoss)).toHaveLength(6);
-    for (const level of levels.filter(level => !level.finalBoss)) {
+    expect(playableLevels.filter(level => level.mode === 'starter' && !level.finalBoss)).toHaveLength(5);
+    expect(playableLevels.filter(level => level.mode === 'advanced' && !level.finalBoss)).toHaveLength(6);
+    for (const level of playableLevels.filter(level => !level.finalBoss)) {
       const requested: Mode = level.mode === 'starter' ? 'advanced' : 'starter';
       expect(startSession(level.id, requested).mode).toBe(level.mode);
     }
@@ -48,7 +48,7 @@ describe('direct-answer battle engine', () => {
   });
 
   it('uses direct answers for every ordinary main question in both curricula', () => {
-    for (const question of questions.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss)) {
+    for (const question of questions.filter(q => isPlayableLevel(q.levelId) && !levels.find(level => level.id === q.levelId)?.finalBoss)) {
       const session = reachSlot(question.levelId, question.slot);
       expect(requiresReason(session)).toBe(false);
       expect(solve(session)).toMatchObject({ step: 'feedback', success: true, reason: null });

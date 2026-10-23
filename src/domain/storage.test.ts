@@ -20,7 +20,7 @@ function wrong(session: Session): Session {
   return submitAction(chooseAction(session, q.choices.findIndex((_, index) => !q.valid[index]?.length)));
 }
 function reachSlot(levelId: number, slot: number, legacyFiveQuestions = false): Session {
-  let session = startSession(levelId, 'starter');
+  let session = levelId === 6 ? { ...startSession(5, 'starter'), levelId: 6, questionIds: getQuestions(6).map(question => question.id) } : startSession(levelId, 'starter');
   if (legacyFiveQuestions) {
     const firstId = `V4L${String(levelId).padStart(2, '0')}Q01`;
     session = { ...session, questionIds: getQuestionsForHistory(levelId, false, firstId).map(question => question.id) };
@@ -222,7 +222,7 @@ describe('new campaign storage and backups', () => {
     }
   });
 
-  it.each([6, 12])('keeps the former tree shield and zero attack damage in old mission %i saves and history', async levelId => {
+  it.each([12])('keeps the former tree shield and zero attack damage in old mission %i saves and history', async levelId => {
     const storage = await import('./storage');
     const oldRelease = { ...solve(reachSlot(levelId, 4, levelId === 6)), barrier: true, enemyBonusDamage: 0 };
     delete oldRelease.barrierCharges;

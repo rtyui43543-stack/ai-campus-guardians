@@ -2,27 +2,29 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { questions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, legacyFiveQuestionQuestions, questionById, presentQuestion, questionBank } from '../src/content';
-import { chapters, levels } from '../src/content/levels';
+import { questions, playableQuestions, legacyReviewQuestions, legacyFinalQuestions, legacyReasoningQuestions, legacyFiveQuestionQuestions, questionById, presentQuestion, questionBank } from '../src/content';
+import { chapters, levels, playableLevels, getPlayableLevels } from '../src/content/levels';
 import { getOpeningStory, getLevelStory } from '../src/content/stories';
 import type { Question } from '../src/domain/types';
 
 export interface AuditResult { errors: string[]; summary: Record<string, number> }
 
-export function auditContent(items: readonly Question[] = questions): AuditResult {
+export function auditContent(items: readonly Question[] = playableQuestions): AuditResult {
   const errors: string[] = [];
   const ids = new Set(items.map(q => q.id));
-  if (items.length !== 84 || ids.size !== 84) errors.push('現行題庫必須有84個不重複題目ID。');
+  if (items.length !== 80 || ids.size !== 80) errors.push('現行題庫必須有80個不重複題目ID。');
   const main = items.filter(q => !levels.find(level => level.id === q.levelId)?.finalBoss).length;
   const finals = items.filter(q => levels.find(level => level.id === q.levelId)?.finalBoss).length;
   const variations = items.filter(q => q.variantOf !== undefined).length;
-  if (main !== 54 || finals !== 30 || variations !== 0) errors.push('主題關必須54題、最終關必須30題，現行題庫不提供複習變式。');
-  if (levels.length !== 14 || chapters.length !== 6 || questionBank.schemaVersion !== 2) errors.push('需要第2版題庫、14關和6個主題。');
-  for (const mode of ['starter', 'advanced']) {
-    if (levels.filter(level => level.mode === mode && !level.finalBoss).length !== 6) errors.push(mode + '必須各有6個主題關。');
-    if (levels.filter(level => level.mode === mode && level.finalBoss).length !== 1) errors.push(mode + '必須各有1個最終關。');
+  if (main !== 50 || finals !== 30 || variations !== 0) errors.push('主題關必須50題、最終關必須30題，現行題庫不提供複習變式。');
+  if (playableLevels.length !== 13 || chapters.length !== 6 || questionBank.schemaVersion !== 2) errors.push('需要第2版題庫、13個現行關卡和6個主題。');
+  if (items.some(q => q.levelId === 6)) errors.push('已移除的初階生活合作隊不可進入現行題庫。');
+  for (const mode of ['starter', 'advanced'] as const) {
+    const count = mode === 'starter' ? 5 : 6;
+    if (getPlayableLevels(mode).filter(level => !level.finalBoss).length !== count) errors.push(mode + `必須有${count}個主題關。`);
+    if (getPlayableLevels(mode).filter(level => level.finalBoss).length !== 1) errors.push(mode + '必須各有1個最終關。');
   }
-  for (let level = 1; level <= 12; level++) {
+  for (const { id: level } of playableLevels.filter(item => !item.finalBoss)) {
     const slots = items.filter(q => q.levelId === level).map(q => q.slot).sort((a, b) => a - b);
     const count = level <= 6 ? 4 : 5;
     if (slots.join(',') !== Array.from({ length: count }, (_, i) => i + 1).join(',')) errors.push(`第${level}關必須各有slot1–${count}。`);
@@ -80,13 +82,13 @@ export function auditContent(items: readonly Question[] = questions): AuditResul
     if (p.kind === 'tradeoff' && actions.length < 2) errors.push(prefix + '取捨題必須接受至少兩個完整方案。');
     for (const evidence of p.evidence) if (!evidence.title.trim() || !evidence.body.trim()) errors.push(prefix + '證據卡有空白。');
   }
-  if (items.length === 84 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
+  if (items.length === 80 && answerPositions.size !== 4) errors.push('正確答案位置必須分布在A–D。');
   if (!items.some(q => q.levelId === 12 && q.slot === 3 && Object.keys(q.valid).length >= 2)) errors.push('最後合作關需接受至少兩個完整合理方案。');
   errors.push(...auditLegacyReview().errors);
   errors.push(...auditLegacyFinal().errors);
   errors.push(...auditLegacyReasoning().errors);
   errors.push(...auditLegacyFiveQuestion().errors);
-  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, legacyReasoning: legacyReasoningQuestions.length, legacyFiveQuestion: legacyFiveQuestionQuestions.length, levels: levels.length, beginnerLevels: 6, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
+  return { errors, summary: { questions: items.length, uniqueIds: ids.size, main, final: finals, variations, legacyVariations: legacyReviewQuestions.length, legacyFinals: legacyFinalQuestions.length, legacyReasoning: legacyReasoningQuestions.length, legacyFiveQuestion: legacyFiveQuestionQuestions.length, levels: playableLevels.length, beginnerLevels: 5, advancedLevels: 6, finalLevels: 2, modes: 2, tradeoffs: items.filter(q => q.kind === 'tradeoff').length } };
 }
 
 /** Retain every original starter choice and its five-question denominator. */

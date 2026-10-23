@@ -1,5 +1,5 @@
 import { questionById } from './index';
-import { levels } from './levels';
+import { getPlayableLevels, levels } from './levels';
 import type { Mode } from '../domain/types';
 
 export type UltimateSpellCategory = 'attack' | 'defense' | 'support';
@@ -35,7 +35,7 @@ const upgrades = [
   { name: '森羅歸位界', upgradeDescription: '萬葉歸位升級！葉片化成整座森林的拼圖，恢復更多力量。', description: '葉片拼圖展開森林領域，恢復 24 HP，最多回到 100 HP。後續每題完成再恢復 4 HP，持續到本關結束；不疊加，也不會在血量歸零後復活。' },
   { name: '千鏡破偽陣', extraDamage: 15, effectDescription: '對方下兩次攻擊各有 50% 機率落空，每次只判定一次', upgradeDescription: '鏡界破偽升級！多面查證鏡展開成大型鏡陣，一起擊碎魔王製造的假象。', description: '召喚大型查證鏡陣，鏡刃飛向魔王並擊破假象，命中後鏡片散開，額外扣除魔王 15 HP。魔王下兩次攻擊各有 50% 機率落空；每次攻擊的機會只判定一次，不重複抽取。' },
   { name: '智慧烈焰鳳', extraDamage: 15, effectDescription: '後續每題完成燃燒扣 4 HP；進階最終魔王扣 6 HP', upgradeDescription: '智慧火鳳升級！烈焰鳳變大展翼，飛向魔王撞擊；命中後火焰從對手周圍擴散，燃燒整個戰場。', description: '召喚巨型烈焰鳳飛向魔王，命中後烈焰燃燒整個戰場，額外扣除魔王 15 HP。後續每題完成，魔王再受 4 HP 燃燒傷害；挑戰進階最終大魔王時改為每回合 6 HP。持續到本關結束，不疊加。' },
-  { name: '極寒冰龍', extraDamage: 15, effectDescription: '對方下兩次命中攻擊的傷害減半', upgradeDescription: '寒晶冰矛升級！冰晶凝成巨龍飛向魔王，命中後冰刺與寒霜蔓延整個戰場。', description: '召喚極寒冰龍衝擊魔王，冰刺碎裂並展開寒霜，額外扣除魔王 15 HP。魔王下兩次命中攻擊的傷害減半，再計算城堡護盾的抵擋；攻擊落空不消耗減傷次數。' },
+  { name: '極寒冰龍', extraDamage: 15, effectDescription: '對方下兩次命中攻擊的傷害減半', upgradeDescription: '進階專屬！冰晶凝成巨龍飛向魔王，命中後冰刺與寒霜蔓延整個戰場。', description: '召喚極寒冰龍衝擊魔王，冰刺碎裂並展開寒霜，額外扣除魔王 15 HP。魔王下兩次命中攻擊的傷害減半，再計算城堡護盾的抵擋；攻擊落空不消耗減傷次數。' },
 ] as const;
 
 /** Advanced forms can upgrade combat effects; the separate ten-point reward stays the same. */
@@ -45,6 +45,18 @@ export const advancedUltimateSpells: readonly UltimateSpell[] = Object.freeze(ul
 })));
 
 export const allUltimateSpells: readonly UltimateSpell[] = Object.freeze([...ultimateSpells, ...advancedUltimateSpells]);
+
+/** Keep retired definitions for history and advanced upgrades; new play and collections use this list. */
+export const availableUltimateSpells: readonly UltimateSpell[] = Object.freeze(allUltimateSpells.filter(spell =>
+  getPlayableLevels(spell.mode).some(level => !level.finalBoss && level.chapterId === spell.id)));
+
+export function getAvailableUltimateSpells(mode: Mode): readonly UltimateSpell[] {
+  return availableUltimateSpells.filter(spell => spell.mode === mode);
+}
+
+export function isAvailableUltimateSpell(id: number, mode: Mode): boolean {
+  return getAvailableUltimateSpells(mode).some(spell => spell.id === id);
+}
 
 export function getUltimateSpell(id: number, mode: Mode = 'starter'): UltimateSpell | undefined {
   return (mode === 'advanced' ? advancedUltimateSpells : ultimateSpells).find((spell) => spell.id === id);

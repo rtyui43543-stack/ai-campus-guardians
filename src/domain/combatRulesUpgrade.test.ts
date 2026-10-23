@@ -36,8 +36,8 @@ function restore(session: Session): Session {
   return parseBackup(exportBackup(applySession(unlocked(session.mode), session))).active!;
 }
 
-describe('full castle blocks and twelve main-boss pursuits', () => {
-  it.each(Array.from({ length: 12 }, (_, index) => index + 1))('adds exactly 10 HP from the second wrong answer in main mission %i', levelId => {
+describe('full castle blocks and eleven main-boss pursuits', () => {
+  it.each([1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12])('adds exactly 10 HP from the second wrong answer in main mission %i', levelId => {
     let session = startSession(levelId, levelId > 6 ? 'advanced' : 'starter');
     for (let attack = 1; attack <= 5; attack++) {
       session = restore(wrong(session));

@@ -22,3 +22,11 @@ it('retains a level pass when the highest-scoring attempt timed out', () => {
   expect(html).toContain('答題 60');
   expect(html).not.toContain('最高答題 80 分，尚未過關');
 });
+
+it('keeps the historical-records entry visible for a retired starter mission without any legacy review run', () => {
+  const progress = createProgress();
+  progress.runs = [{ sessionId: 'retired-sixth', levelId: 6, mode: 'starter', review: false, passed: true, at: '2026-10-23T04:00:00Z', records: [] }];
+  const html = renderToStaticMarkup(<GrowthDashboard progress={progress} onRun={() => {}} onLevel={() => {}} />);
+  expect(html).toContain('過往練習紀錄');
+  expect(html).not.toContain('初階第 6 關');
+});

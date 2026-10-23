@@ -1,7 +1,7 @@
 .battle-shell .sidebar,.battle-shell .topbar,.battle-shell .app-footer{display:none}
 .battle-shell .content-shell{margin-left:0;width:100%;min-width:0}
 .battle-shell .main-content{padding:0;max-width:none;margin:0;outline:none}
-.duel-stage{position:relative;isolation:isolate;width:100%;height:100dvh;min-height:650px;overflow:hidden;background:linear-gradient(160deg,#183d53,#071d32);color:#fff}
+.duel-stage{position:relative;isolation:isolate;width:100%;height:100vh;height:var(--legacy-viewport-height,100vh);height:100dvh;min-height:650px;overflow:hidden;background:linear-gradient(160deg,#183d53,#071d32);color:#fff}
 .duel-stage button{font-family:inherit}.duel-stage button:focus-visible{outline:3px solid #ffe495;outline-offset:4px}
 /* Keep HP, Home and post-cast navigation above the upgraded summon effects. */
 .duel-stage:has(>.ultimate-illustrated-summon) .duel-hud{z-index:7}

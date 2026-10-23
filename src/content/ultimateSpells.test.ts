@@ -41,7 +41,7 @@ describe('chapter ultimate collectible definitions', () => {
       expect(spell).toMatchObject({ id: base.id, mode: 'advanced', baseName: base.name,
         category: base.category, bonus: base.bonus });
       if (spell.category === 'attack') expect(spell.extraDamage).toBe(15);
-      expect(spell.upgradeDescription).toContain(`${base.name}升級`);
+      expect(spell.upgradeDescription).toContain(spell.id === 6 ? '進階專屬' : `${base.name}升級`);
       expect(spell.artPath).toBe(`/art/ultimate-advanced-${spell.id}${spell.id === 6 ? '-ice-v2' : '-v1'}.webp`);
       expect(getUltimateSpell(spell.id, 'advanced')).toBe(spell);
       expect(getUltimateSpell(spell.id)).toBe(base);
