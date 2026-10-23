@@ -43,9 +43,10 @@ function memoryDatabase(initial?: Progress, failWrites: boolean | ((value: unkno
   } } as unknown as IDBFactory, value: () => stored };
 }
 
-function populated(): Progress {
+function populated(includeRetired = false): Progress {
   let progress = createProgress();
   for (let level = 1; level <= 14; level++) {
+    if (level === 6 && !includeRetired) continue;
     const mode = level >= 7 && level <= 12 || level === 14 ? 'advanced' : 'starter';
     let session = level > 12 ? startFinalBossSession(progress, mode) : level === 6 ? { ...startSession(5, 'starter'), levelId: 6, questionIds: getQuestions(6).map(question => question.id) } : startSession(level, mode);
     while (true) {
@@ -73,9 +74,9 @@ describe('global learning reset', () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('clears all 14 levels, both spell collections, every run and proposal while copying all preferences', async () => {
+  it('also clears all 14 historical levels, both spell collections, every run and proposal while copying all preferences', async () => {
     const { resetLearningProgress } = await import('./progressReset');
-    const previous = populated();
+    const previous = populated(true);
     const original = structuredClone(previous);
     expect(previous.completed).toHaveLength(14);
     expect(previous.ultimateCards).toHaveLength(12);
@@ -195,6 +196,8 @@ describe('global learning reset', () => {
     const storage = await import('./storage');
     const { resetLearningProgress, persistLearningReset } = await import('./progressReset');
     const previous = populated(); const backup = storage.exportBackup(previous);
+    expect(previous.completed).toHaveLength(13);
+    expect(previous.ultimateCards).toHaveLength(11);
     await persistLearningReset(resetLearningProgress(previous));
     const restoredBackup = storage.parseBackup(backup);
     expect(restoredBackup).toEqual(previous);

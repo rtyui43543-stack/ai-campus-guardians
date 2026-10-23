@@ -13,7 +13,7 @@ afterEach(() => vi.restoreAllMocks());
 
 function unlocked(mode: Mode): Progress {
   const progress = createProgress();
-  progress.ultimateCards = Array.from({ length: 6 }, (_, index) => ({ ultimateId: index + 1,
+  progress.ultimateCards = Array.from({ length: mode === 'starter' ? 5 : 6 }, (_, index) => ({ ultimateId: index + 1,
     unlockedAt: progress.updatedAt, sessionId: `earned-${mode}-${index + 1}`,
     questionId: getQuestions(index + 1 + (mode === 'advanced' ? 6 : 0))[3].id }));
   return progress;

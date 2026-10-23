@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
 import { getQuestions } from '../content';
-import { createProgress } from '../domain/engine';
+import { advanceSession, chooseAction, createProgress, currentQuestion, finishSession, startSession, submitAction } from '../domain/engine';
+import { validateProgress } from '../domain/storage';
 import type { CompletedRun } from '../domain/types';
 import { GrowthDashboard } from './GrowthDashboard';
 
@@ -23,10 +24,13 @@ it('retains a level pass when the highest-scoring attempt timed out', () => {
   expect(html).not.toContain('最高答題 80 分，尚未過關');
 });
 
-it('keeps the historical-records entry visible for a retired starter mission without any legacy review run', () => {
-  const progress = createProgress();
-  progress.runs = [{ sessionId: 'retired-sixth', levelId: 6, mode: 'starter', review: false, passed: true, at: '2026-10-23T04:00:00Z', records: [] }];
+it('removes a retired starter-only score from the dashboard after loading old progress', () => {
+  let session = { ...startSession(5, 'starter'), levelId: 6, questionIds: getQuestions(6).map(question => question.id) };
+  const solve = () => submitAction(chooseAction(session, Number(Object.keys(currentQuestion(session).valid)[0])));
+  while (session.index < session.questionIds.length - 1) session = advanceSession(solve()).session!;
+  const progress = validateProgress(finishSession(createProgress(), solve()));
   const html = renderToStaticMarkup(<GrowthDashboard progress={progress} onRun={() => {}} onLevel={() => {}} />);
-  expect(html).toContain('過往練習紀錄');
+  expect(html).not.toContain('過往練習紀錄');
   expect(html).not.toContain('初階第 6 關');
+  expect(html).toContain('完成挑戰，留下第一筆成績');
 });

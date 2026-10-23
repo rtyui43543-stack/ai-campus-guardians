@@ -422,19 +422,46 @@ function migrateStarterBossHealth(progress: Progress): Progress {
   return migrated;
 }
 
-/** Retire an entry point without discarding an unfinished run or rewriting any earned results. */
+/** Load-time cleanup is also persisted, so old checkpoints cannot restore the removed records. */
+const retiredStarterMigrations = new WeakSet<Progress>();
+
+/** Remove only starter mission six and its collectible; advanced ice and final-boss results remain intact. */
 function migrateRetiredStarterMission(progress: Progress): Progress {
-  const active = progress.active;
-  if (!active) return progress;
-  if (!isPlayableLevel(active.levelId)) {
-    return { ...progress, active: null, archivedSessions: [...(progress.archivedSessions ?? []), active] };
+  const retiredQuestion = (questionId: string) => questionById.get(questionId)?.levelId === 6;
+  const removedSessions = new Set([
+    ...(progress.runs ?? []).filter(run => run.levelId === 6).map(run => run.sessionId),
+    ...(progress.archivedSessions ?? []).filter(session => session.levelId === 6).map(session => session.id),
+    ...(progress.active?.levelId === 6 ? [progress.active.id] : []),
+    ...(progress.ultimateCards ?? []).filter(card => retiredQuestion(card.questionId)).map(card => card.sessionId),
+  ]);
+  const completed = progress.completed.filter(id => id !== 6);
+  const attempts = progress.attempts.filter(record => !retiredQuestion(record.questionId));
+  const runs = progress.runs?.filter(run => run.levelId !== 6);
+  const archivedSessions = progress.archivedSessions?.filter(session => session.levelId !== 6);
+  const ultimateCards = progress.ultimateCards?.filter(card => getUltimateCardKey(card) !== 'starter:6');
+  // A legacy card may have a stale session ID. Never remove a marker belonging to another known run.
+  const retainedSessions = new Set([...(runs ?? []).map(run => run.sessionId),
+    ...(progress.active && progress.active.levelId !== 6 ? [progress.active.id] : [])]);
+  const finishedSessionIds = progress.finishedSessionIds?.filter(id => !removedSessions.has(id) || retainedSessions.has(id));
+  let migrated = progress;
+  if (completed.length !== progress.completed.length || attempts.length !== progress.attempts.length
+    || runs?.length !== progress.runs?.length || archivedSessions?.length !== progress.archivedSessions?.length
+    || ultimateCards?.length !== progress.ultimateCards?.length || finishedSessionIds?.length !== progress.finishedSessionIds?.length
+    || progress.active?.levelId === 6) {
+    migrated = { ...progress, completed, attempts, active: progress.active?.levelId === 6 ? null : progress.active,
+      ...(runs === undefined ? {} : { runs }), ...(ultimateCards === undefined ? {} : { ultimateCards }),
+      ...(finishedSessionIds === undefined ? {} : { finishedSessionIds }) };
+    if (archivedSessions?.length) migrated.archivedSessions = archivedSessions;
+    else delete migrated.archivedSessions;
   }
+  const active = migrated.active;
+  if (!active) return migrated;
   if (active.preparedUltimateId !== undefined && !isAvailableUltimateSpell(active.preparedUltimateId, active.mode)) {
     const resumed = { ...active };
     delete resumed.preparedUltimateId;
-    return { ...progress, active: resumed };
+    return { ...migrated, active: resumed };
   }
-  return progress;
+  return migrated;
 }
 
 export function validateProgress(value: unknown): Progress {
@@ -467,7 +494,7 @@ export function validateProgress(value: unknown): Progress {
   let ultimateCards = recoverEarnedUltimateCards(savedUltimateCards, runs, attempts, active, updatedAt);
   for (const archived of archivedSessions ?? []) ultimateCards = recoverEarnedUltimateCards(ultimateCards, [], [], archived, updatedAt);
   if (active && levels.find(level => level.id === active.levelId)?.finalBoss && !finalBossUnlocked({ ultimateCards }, active.mode)) reject('active最終關尚未解鎖本等級的必殺技收藏卡');
-  return migrateStarterBossHealth(migrateRetiredStarterMission({
+  const validated: Progress = {
     schemaVersion: 2, completed,
     attempts, runs, ...(ultimateCards === undefined ? {} : { ultimateCards }),
     active,
@@ -478,7 +505,11 @@ export function validateProgress(value: unknown): Progress {
       music: settings.music === undefined ? true : boolean(settings.music, 'settings.music'),
       narration: false, reducedMotion: boolean(settings.reducedMotion, 'settings.reducedMotion'),
     }, finishedSessionIds, updatedAt,
-  }));
+  };
+  const cleaned = migrateRetiredStarterMission(validated);
+  const migrated = migrateStarterBossHealth(cleaned);
+  if (cleaned !== validated) retiredStarterMigrations.add(migrated);
+  return migrated;
 }
 
 export function parseBackup(input: string): Progress {
@@ -629,8 +660,12 @@ export async function loadProgress(): Promise<Progress> {
   await writes.catch(() => undefined);
   let stored: unknown;
   try { stored = await readDb(); } catch { /* Read the fallback below. */ }
-  if (stored !== undefined) return validateProgress(stored);
+  const persistMigration = async (progress: Progress) => {
+    if (retiredStarterMigrations.has(progress)) await saveProgress(progress);
+    return progress;
+  };
+  if (stored !== undefined) return persistMigration(validateProgress(stored));
   let fallback: string | null = null;
   try { fallback = globalThis.localStorage.getItem(LOCAL_KEY); } catch { /* A new session can still play and export its progress. */ }
-  return fallback === null ? createProgress() : parseBackup(fallback);
+  return fallback === null ? createProgress() : persistMigration(parseBackup(fallback));
 }

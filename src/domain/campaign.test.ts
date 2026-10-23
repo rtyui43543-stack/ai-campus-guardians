@@ -101,7 +101,7 @@ describe('complete eleven-level campaign', () => {
     expect(rejected).toBe(149);
   });
 
-  it('reads all twenty-four historical review variants without creating new play entries', () => {
+  it('imports historical review variants except retired starter-six records without creating new play entries', () => {
     let progress = completeLevel(createProgress(), 1).progress;
     for (const level of levels.filter(level => !level.finalBoss)) {
       const records: AttemptRecord[] = getQuestions(level.id, true).map(q => ({ questionId: q.id, mode: level.mode,
@@ -113,7 +113,14 @@ describe('complete eleven-level campaign', () => {
       expect(progress.completed).toEqual([1]);
     }
     expect(progress.attempts).toHaveLength(28);
-    expect(parseBackup(exportBackup(progress))).toEqual(progress);
+    const retiredIds = new Set(getQuestions(6, true).map(question => question.id));
+    const restored = parseBackup(exportBackup(progress));
+    expect(restored).toEqual({ ...progress,
+      attempts: progress.attempts.filter(record => !retiredIds.has(record.questionId)),
+      runs: progress.runs!.filter(run => run.levelId !== 6),
+    });
+    expect(restored.attempts).toHaveLength(26);
+    expect(parseBackup(exportBackup(restored))).toEqual(restored);
   });
 
   it('backs up all five final mission decisions as the learner’s AI-use commitment', () => {

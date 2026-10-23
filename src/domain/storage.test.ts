@@ -110,7 +110,8 @@ function delayedIndexedDb() {
       return request;
     },
   };
-  return { factory: factory as unknown as IDBFactory, maxWriting: () => maxWriting, openedNames, readKeys, writeKeys };
+  return { factory: factory as unknown as IDBFactory, maxWriting: () => maxWriting, openedNames, readKeys, writeKeys,
+    seed: (value: unknown) => { stored = structuredClone(value); }, snapshot: () => structuredClone(stored) };
 }
 
 describe('new campaign storage and backups', () => {
@@ -342,18 +343,52 @@ describe('new campaign storage and backups', () => {
     expect(storage.validateProgress(noCast).ultimateCards).toEqual([]);
   });
 
-  it('accepts all twelve independently earned forms and rejects a duplicate inside one tier', async () => {
+  it('imports twelve formerly earned forms as eleven current forms and rejects a duplicate inside one tier', async () => {
     const storage = await import('./storage');
     let all = createProgress();
     for (let level = 1; level <= 12; level++) all = complete(all, level);
     expect(all.ultimateCards).toHaveLength(12);
     expect(new Set(all.ultimateCards!.map(getUltimateCardKey)).size).toBe(12);
-    expect(storage.parseBackup(storage.exportBackup(all))).toEqual(all);
+    const restored = storage.parseBackup(storage.exportBackup(all));
+    expect(restored.ultimateCards).toEqual(all.ultimateCards!.filter(card => getUltimateCardKey(card) !== 'starter:6'));
+    expect(restored.ultimateCards).toHaveLength(11);
+    expect(restored.completed).toEqual(all.completed.filter(id => id !== 6));
+    expect(restored.runs).toEqual(all.runs!.filter(run => run.levelId !== 6));
+    expect(storage.parseBackup(storage.exportBackup(restored))).toEqual(restored);
     all.ultimateCards!.push({ ...all.ultimateCards![0] });
     expect(() => storage.validateProgress(all)).toThrow();
     const duplicate = complete(createProgress(), 1);
     duplicate.ultimateCards!.push({ ...duplicate.ultimateCards![0] });
     expect(() => storage.validateProgress(duplicate)).toThrow('重複收藏');
+  });
+
+  it.each(['localStorage', 'IndexedDB'])('removes starter-six records on load and writes the cleanup to both stores from %s', async source => {
+    const storage = await import('./storage');
+    const db = delayedIndexedDb();
+    vi.stubGlobal('indexedDB', db.factory);
+    const old = complete(complete(complete(createProgress(), 5), 6), 12);
+    const archived = solve(reachSlot(6, 4));
+    old.archivedSessions = [archived];
+    old.settings = { mode: 'advanced', sound: false, music: false, narration: false, reducedMotion: true };
+    const original = structuredClone(old);
+    globalThis.localStorage.setItem(V2_KEY, JSON.stringify(old));
+    if (source === 'IndexedDB') db.seed(old);
+
+    const restored = await storage.loadProgress();
+    expect(restored.completed).toEqual([5, 12]);
+    expect(restored.runs).toEqual(old.runs!.filter(run => run.levelId !== 6));
+    expect(restored.attempts).toEqual(old.runs!.filter(run => run.levelId !== 6).flatMap(run => run.records));
+    expect(restored.finishedSessionIds).toEqual(old.runs!.filter(run => run.levelId !== 6).map(run => run.sessionId));
+    expect(restored.ultimateCards).toEqual(old.ultimateCards!.filter(card => getUltimateCardKey(card) !== 'starter:6'));
+    expect(restored.archivedSessions).toBeUndefined();
+    expect(restored.settings).toEqual(old.settings);
+    expect(restored.updatedAt).toBe(old.updatedAt);
+    expect(old).toEqual(original);
+    expect(db.snapshot()).toEqual(restored);
+    expect(JSON.parse(globalThis.localStorage.getItem(V2_KEY)!)).toEqual(restored);
+    expect(storage.parseBackup(JSON.stringify(old))).toEqual(restored);
+    expect(storage.parseBackup(storage.exportBackup(old))).toEqual(restored);
+    expect(await storage.loadProgress()).toEqual(restored);
   });
 
   it('recovers genuine casts in incomplete legacy history with a stable recovery identifier', async () => {
